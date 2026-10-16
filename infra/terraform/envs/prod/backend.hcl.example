@@ -1,0 +1,4 @@
+# Copiar a backend.hcl (no versionado) y ajustar. El bucket debe existir, con versionado y cifrado.
+bucket = "nicolas-tfstate"
+key    = "cmdvault/prod/terraform.tfstate"
+region = "us-east-1"

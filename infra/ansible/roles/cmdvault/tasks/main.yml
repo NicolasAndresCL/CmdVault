@@ -1,0 +1,43 @@
+---
+- name: Código de CmdVault en la versión indicada
+  ansible.builtin.git:
+    repo: "{{ cmdvault_repo }}"
+    dest: "{{ cmdvault_dir }}"
+    version: "{{ cmdvault_version }}"
+    force: true
+  register: cmdvault_git
+
+- name: Archivo .env con los secretos del vault (solo root lo lee)
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ cmdvault_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  register: cmdvault_env
+
+- name: Construir y levantar el stack (espera a los healthchecks)
+  community.docker.docker_compose_v2:
+    project_src: "{{ cmdvault_dir }}"
+    build: "{{ 'always' if (cmdvault_git.changed or cmdvault_env.changed) else 'policy' }}"
+    remove_orphans: true
+    wait: true
+    wait_timeout: 300
+    state: present
+
+- name: Comprobar /healthz de la API desde el propio servidor
+  ansible.builtin.uri:
+    url: http://127.0.0.1:8000/healthz
+    status_code: 200
+  register: cmdvault_health
+  until: cmdvault_health.status == 200
+  retries: "{{ cmdvault_healthcheck_retries }}"
+  delay: 5
+  changed_when: false
+
+- name: Comprobar que la UI responde
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ cmdvault_frontend_port }}/healthz"
+    status_code: 200
+  changed_when: false

@@ -1,0 +1,6 @@
+---
+- name: Reiniciar sshd
+  ansible.builtin.systemd_service:
+    # El servicio se llama "ssh" en Ubuntu y "sshd" en AlmaLinux.
+    name: "{{ 'ssh' if ansible_facts['os_family'] == 'Debian' else 'sshd' }}"
+    state: restarted

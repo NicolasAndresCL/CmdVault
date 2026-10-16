@@ -1,0 +1,7 @@
+---
+cmdvault_repo: https://github.com/NicolasAndresCL/CmdVault.git
+cmdvault_version: main
+cmdvault_dir: /opt/cmdvault
+cmdvault_frontend_port: 80
+cmdvault_default_theme: eren
+cmdvault_healthcheck_retries: 30

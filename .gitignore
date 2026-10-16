@@ -15,6 +15,26 @@ __pycache__/
 coverage.xml
 htmlcov/
 
+# Terraform: el lockfile SÍ se versiona; estado, planes y valores reales no
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+infra/terraform/envs/*/terraform.tfvars
+infra/terraform/envs/*/backend.hcl
+
+# Ansible: inventario real, vault y colecciones descargadas
+infra/ansible/inventory/hosts.yml
+infra/ansible/group_vars/*/vault.yml
+infra/ansible/collections/
+.vault_pass*
+
+# Jenkins (venvs y reportes del workspace)
+.venv*/
+reports/
+
 # Datos locales
 *.db
 *.sqlite3

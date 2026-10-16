@@ -1,0 +1,6 @@
+# Copiar a terraform.tfvars (no versionado).
+region            = "us-east-1"
+tipo_instancia    = "t3.small"
+disco_gb          = 20
+llave_publica_ssh = "ssh-ed25519 AAAA... nicolas@lenovo"
+cidr_admin_ssh    = ["203.0.113.7/32"] # tu IP: curl -s https://checkip.amazonaws.com

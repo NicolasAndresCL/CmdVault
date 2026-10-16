@@ -1,0 +1,17 @@
+---
+# Variables no secretas. Los secretos van en vault.yml (cifrado con ansible-vault, no versionado).
+cmdvault_repo: https://github.com/NicolasAndresCL/CmdVault.git
+cmdvault_version: main            # rama, tag (v1.0.1) o commit
+cmdvault_dir: /opt/cmdvault
+cmdvault_frontend_port: 80        # UI publicada en el puerto 80 del host
+cmdvault_default_theme: eren
+
+common_admin_user: deploy
+common_admin_pubkey_file: ~/.ssh/id_ed25519.pub
+common_timezone: America/Santiago
+docker_users:
+  - "{{ common_admin_user }}"
+
+cmdvault_postgres_password: "{{ vault_postgres_password }}"
+cmdvault_api_key: "{{ vault_api_key }}"
+cmdvault_storage_secret: "{{ vault_storage_secret }}"

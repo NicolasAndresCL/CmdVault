@@ -1,0 +1,14 @@
+---
+# Aprovisiona un VPS (Ubuntu 24.04 o AlmaLinux 9/10) y despliega CmdVault con Docker Compose.
+#   ansible-playbook playbooks/site.yml --ask-vault-pass            # todo
+#   ansible-playbook playbooks/site.yml --tags deploy --ask-vault-pass  # solo redeploy
+- name: Aprovisionar y desplegar CmdVault
+  hosts: cmdvault
+  become: true
+  roles:
+    - role: common
+      tags: [common]
+    - role: docker
+      tags: [docker]
+    - role: cmdvault
+      tags: [deploy]

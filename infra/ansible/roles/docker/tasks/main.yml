@@ -1,0 +1,51 @@
+---
+# Docker Engine desde el repositorio oficial (no el paquete docker.io / podman-docker de la distro).
+- name: Directorio de llaves APT (Ubuntu)
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Repositorio oficial de Docker (Ubuntu, formato deb822)
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: [deb]
+    uris: https://download.docker.com/linux/ubuntu
+    suites: ["{{ ansible_facts['distribution_release'] }}"]
+    components: [stable]
+    signed_by: https://download.docker.com/linux/ubuntu/gpg
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Docker Engine (Ubuntu)
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Repositorio oficial de Docker (AlmaLinux usa el de RHEL)
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/rhel/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+    mode: "0644"
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Docker Engine (AlmaLinux)
+  ansible.builtin.dnf:
+    name: "{{ docker_packages }}"
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Servicio docker activo
+  ansible.builtin.systemd_service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Usuarios en el grupo docker
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: docker
+    append: true
+  loop: "{{ docker_users }}"

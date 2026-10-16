@@ -1,0 +1,6 @@
+---
+# 1) cp vault.yml.example vault.yml   2) reemplazar valores   3) ansible-vault encrypt vault.yml
+# Generar cada valor con: python -c "import secrets; print(secrets.token_urlsafe(32))"
+vault_postgres_password: cambia-esto
+vault_api_key: cambia-esto-con-32-caracteres-o-mas
+vault_storage_secret: cambia-esto-con-32-caracteres-o-mas

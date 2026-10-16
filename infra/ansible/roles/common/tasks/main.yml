@@ -1,0 +1,95 @@
+---
+- name: Paquetes base (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: [git, curl, ca-certificates, tmux, htop, ufw, fail2ban, unattended-upgrades]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: EPEL (RedHat/AlmaLinux) — necesario para fail2ban
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Paquetes base (RedHat/AlmaLinux)
+  ansible.builtin.dnf:
+    name: [git, curl, ca-certificates, tmux, htop, firewalld, fail2ban, dnf-automatic, python3-libselinux]
+    state: present
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Zona horaria
+  community.general.timezone:
+    name: "{{ common_timezone }}"
+
+- name: Usuario administrador
+  ansible.builtin.user:
+    name: "{{ common_admin_user }}"
+    groups: "{{ 'sudo' if ansible_facts['os_family'] == 'Debian' else 'wheel' }}"
+    append: true
+    shell: /bin/bash
+    create_home: true
+
+- name: Llave SSH del administrador
+  ansible.posix.authorized_key:
+    user: "{{ common_admin_user }}"
+    key: "{{ lookup('ansible.builtin.file', common_admin_pubkey_file) }}"
+    state: present
+
+- name: Endurecer sshd (se valida con sshd -t antes de escribir)
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?\\s*{{ item.key }}\\s"
+    line: "{{ item.key }} {{ item.value }}"
+    validate: /usr/sbin/sshd -t -f %s
+  loop:
+    - { key: PermitRootLogin, value: "no" }
+    - { key: PasswordAuthentication, value: "no" }
+    - { key: KbdInteractiveAuthentication, value: "no" }
+    - { key: MaxAuthTries, value: "3" }
+  notify: Reiniciar sshd
+
+- name: Firewall ufw (Ubuntu) — reglas
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: ["22", "80", "443"]
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Firewall ufw (Ubuntu) — activar con política deny
+  community.general.ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Firewalld (AlmaLinux) — servicio activo
+  ansible.builtin.systemd_service:
+    name: firewalld
+    state: started
+    enabled: true
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Firewalld (AlmaLinux) — ssh/http/https
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: [ssh, http, https]
+  when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Fail2ban activo
+  ansible.builtin.systemd_service:
+    name: fail2ban
+    state: started
+    enabled: true
+
+- name: Actualizaciones de seguridad automáticas (AlmaLinux)
+  ansible.builtin.systemd_service:
+    name: dnf-automatic-install.timer
+    state: started
+    enabled: true
+  when: ansible_facts['os_family'] == 'RedHat'

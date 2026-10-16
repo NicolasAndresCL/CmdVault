@@ -1,0 +1,12 @@
+---
+# Copiar a hosts.yml (no versionado). El bloque de AWS lo imprime Terraform:
+#   terraform -chdir=../terraform/envs/prod output -raw inventario_ansible
+cmdvault:
+  hosts:
+    cmdvault-prod:          # EC2 Ubuntu 24.04 creada por infra/terraform
+      ansible_host: 203.0.113.10
+      ansible_user: ubuntu
+    vps-hostgator:          # VPS AlmaLinux 9 propio
+      ansible_host: 198.51.100.20
+      ansible_user: nicolas
+      ansible_port: 22
