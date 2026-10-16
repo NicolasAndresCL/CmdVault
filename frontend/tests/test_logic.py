@@ -40,6 +40,18 @@ def test_solo_luffy_es_claro():
         ("ansible", "Playbooks", "- hosts: web\n  tasks: []", "yaml"),
         ("docker", "Build y registro", "FROM python:3.13-slim\nUSER app", "docker"),
         ("linux", "Ubuntu", "sudo apt update", "bash"),
+        ("postgres", "Consultas y esquema", "SELECT pg_size_pretty(pg_database_size('app'));", "sql"),
+        ("postgres", "psql y conexión", "psql -h localhost -U app -d app", "bash"),
+        ("mysql", "Usuarios y permisos", "GRANT SELECT ON app.* TO 'lector'@'%';", "sql"),
+        ("mongodb", "CRUD y consultas", "db.users.find({ activo: true })", "javascript"),
+        ("mongodb", "mongosh y conexión", "mongosh 'mongodb://localhost:27017'", "bash"),
+        ("web", "Nginx", "server {\n  listen 80;\n}", "nginx"),
+        ("web", "Apache", "<VirtualHost *:80>\n</VirtualHost>", "apacheconf"),
+        ("web", "TLS y certificados", "sudo certbot --nginx -d ejemplo.cl", "bash"),
+        ("claude", "SDK Python", "import anthropic\nclient = anthropic.Anthropic()", "python"),
+        ("claude", "API con curl", "curl -s https://api.anthropic.com/v1/models", "bash"),
+        ("vps", "Despliegue", "services:\n  web:\n    image: nginx", "yaml"),
+        ("git", "Día a día", "git status -sb", "bash"),
     ],
 )
 def test_guess_language(cat, section, code, lang):

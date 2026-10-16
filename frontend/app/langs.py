@@ -31,8 +31,27 @@ def guess_language(category: str, section: str, code: str) -> str:
             if re.match(r"^\s*(\$ )?(terraform|tofu|tflint|checkov|trivy|infracost|terraform-docs|export|TF_)", code)
             else "terraform"
         )
-    if category in {"kubernetes", "ansible", "docker"} and re.match(
+    if category in {"mysql", "postgres"}:
+        return "sql" if _SQL.match(code) else "bash"
+    if category == "mongodb":
+        return "javascript" if re.match(r"^\s*(db\.|rs\.|sh\.|use |show |const |let )", code) else "bash"
+    if category == "web":
+        if re.match(r"^\s*(server|location|upstream|http|map|limit_req_zone)\b.*\{?", code) and "{" in code:
+            return "nginx"
+        if re.match(r"^\s*<(VirtualHost|Directory|IfModule|Location)", code):
+            return "apacheconf"
+        return "bash"
+    if category == "claude" and re.match(r"^\s*(import |from |client\s*=|try:|with client)", code):
+        return "python"
+    if category in {"kubernetes", "ansible", "docker", "vps"} and re.match(
         r"^\s*(---|apiVersion:|- name:|- hosts:|services:|[a-z_]+:\s*$)", code
     ):
         return "yaml"
     return "bash"
+
+
+_SQL = re.compile(
+    r"^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|GRANT|REVOKE|SHOW|EXPLAIN|WITH|SET|BEGIN|VACUUM|ANALYZE|"
+    r"COPY|TRUNCATE|CALL|DESCRIBE|USE|FLUSH|CHANGE|START|STOP|RESET|LOAD|PURGE|KILL|REINDEX|CLUSTER|COMMENT)\b",
+    re.IGNORECASE,
+)
