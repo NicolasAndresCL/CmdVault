@@ -47,6 +47,24 @@ description: >
    `PYTHONUNBUFFERED=1` (logs sin buffer, se ven en tiempo real), `PIP_NO_CACHE_DIR=1`
    en el builder.
 
+## Lo que se levanta para probar, se baja al terminar
+
+**Norma fija de Nicolás (2026-10-16):** todo `docker compose up -d` (o `docker run -d`) que se haga
+para **probar** algo termina con su `docker compose down` (o `docker stop`/`rm`) **en la misma tarea**,
+antes del reporte final. Un stack de prueba olvidado ocupa puertos (choca con Jenkins en 8080, con el
+siguiente proyecto), consume RAM de la VM de Docker Desktop y deja dudas de qué está corriendo.
+(Origen: CmdVault, 2026-10-16 — el stack de prueba quedó arriba tras cerrar la tarea.)
+
+- **Al cerrar la prueba**: `docker compose down` y comprobar con
+  `docker ps -a --filter name=<proyecto>` que no quedó nada. Usar `down -v` solo si los volúmenes
+  también son de prueba (nunca sobre datos reales sin confirmar).
+- **En scripts de verificación**: proyecto aparte y puertos propios (`COMPOSE_PROJECT_NAME=<app>-verificar`,
+  puertos 18xxx) para no tocar el stack de uso diario, y `trap '... compose down -v --remove-orphans' EXIT`
+  para que se baje **aunque la prueba falle**. Contenedores sueltos con `--rm` + `trap 'docker stop ...'`.
+- **Excepción**: solo queda arriba lo que Nicolás pidió explícitamente dejar corriendo (p. ej. "déjalo
+  levantado para probarlo yo"); en ese caso decirlo en el reporte final con el comando para bajarlo.
+- En el reporte final, **decir qué se bajó** (y qué volúmenes se conservaron).
+
 ## Esqueleto de referencia (Django + gunicorn)
 
 ```dockerfile

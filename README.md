@@ -13,7 +13,7 @@
 Biblioteca de consulta para un roadmap **DevOps → SRE → Arquitecto Fullstack (IA, Cloud, Software)**:
 **826 comandos y 2.090 ejemplos** sobre 8 entornos. Cada comando trae descripción, sintaxis, ejemplos de
 uso común, notas con trampas reales (Ubuntu vs AlmaLinux, PowerShell 5.1 vs 7, Helm 4, `use_lockfile` de
-Terraform…), nivel, tags y la ruta del roadmap a la que pertenece. Incluye además mis **11 skills de
+Terraform…), nivel, tags y la ruta del roadmap a la que pertenece. Incluye además mis **12 skills de
 ingeniería** —los estándares con los que trabajo— como documentación navegable.
 
 | Entorno | Secciones | Comandos |
@@ -64,7 +64,7 @@ CmdVault/
 │   │       ├── sync.py       #   sincronización idempotente con la BD
 │   │       ├── validate.py   #   validador para CI: contrato + títulos duplicados
 │   │       ├── data/         #   37 JSON con los 826 comandos
-│   │       └── skills/       #   11 SKILL.md de ingeniería
+│   │       └── skills/       #   12 SKILL.md de ingeniería
 │   └── tests/                # pytest: lógica pura, seed, API (TestClient); SQLite o Postgres
 └── frontend/
     ├── Dockerfile            # multi-stage, no-root (UID 1000), HEALTHCHECK a /healthz
