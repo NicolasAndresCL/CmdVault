@@ -1,0 +1,7 @@
+{
+  "category": {"slug": "docker", "name": "Docker", "icon": "directions_boat", "description": "Contenedores de prueba.", "order": 5},
+  "commands": [
+    {"title": "Levantar stack con Compose", "command": "docker compose up -d --build", "section": "Compose", "topic": "Ciclo de vida", "description": "Construye y levanta los servicios en segundo plano.", "examples": [{"description": "Esperar healthchecks", "code": "docker compose up -d --wait"}], "tags": ["compose"], "level": "básico", "roadmap": ["DevOps"]},
+    {"title": "Ver uso de 50% de CPU", "command": "docker stats --no-stream", "section": "Sistema y diagnóstico", "topic": "Métricas", "description": "Muestra consumo de recursos de cada contenedor.", "examples": [{"description": "Formato tabla", "code": "docker stats --format 'table {{.Name}}\t{{.CPUPerc}}'"}], "tags": ["métricas"], "level": "avanzado", "roadmap": ["SRE"]}
+  ]
+}

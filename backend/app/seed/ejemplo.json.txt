@@ -1,0 +1,21 @@
+{
+  "category": {"slug": "linux", "name": "Linux", "icon": "terminal", "description": "Comandos de Linux para Ubuntu y AlmaLinux.", "order": 1},
+  "commands": [
+    {
+      "title": "Listar archivos con detalle",
+      "command": "ls -lah",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Lista el contenido de un directorio en formato largo (permisos, dueño, tamaño, fecha), incluyendo ocultos y con tamaños legibles.",
+      "syntax": "ls [opciones] [ruta...]",
+      "examples": [
+        {"description": "Ordenar por fecha de modificación, lo más reciente al final", "code": "ls -lahtr /var/log"},
+        {"description": "Solo directorios", "code": "ls -d */"}
+      ],
+      "tags": ["archivos", "listado"],
+      "level": "básico",
+      "roadmap": ["DevOps", "SRE"],
+      "notes": "En AlmaLinux 'll' es alias de 'ls -l' por defecto; en Ubuntu es 'ls -alF'."
+    }
+  ]
+}

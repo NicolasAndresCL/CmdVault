@@ -1,0 +1,7 @@
+{
+  "category": {"slug": "linux", "name": "Linux", "icon": "terminal", "description": "Comandos de Linux de prueba.", "order": 1},
+  "commands": [
+    {"title": "Listar archivos con detalle", "command": "ls -lah", "section": "Común", "topic": "Archivos", "description": "Lista archivos en formato largo con ocultos.", "examples": [{"description": "Por fecha", "code": "ls -lahtr"}], "tags": ["archivos", "Listado"], "level": "básico", "roadmap": ["DevOps"]},
+    {"title": "Abrir puerto en firewalld", "command": "firewall-cmd --add-port=80/tcp --permanent", "section": "AlmaLinux", "topic": "Firewall", "description": "Abre un puerto de forma permanente en firewalld.", "examples": [{"description": "Recargar", "code": "firewall-cmd --reload"}], "tags": ["red", "seguridad"], "level": "intermedio", "roadmap": ["SRE", "DevOps"], "notes": "Recuerda --reload."}
+  ]
+}
