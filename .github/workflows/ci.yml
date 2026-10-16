@@ -33,6 +33,15 @@ jobs:
         run: |
           for f in backend frontend; do docker run --rm -i hadolint/hadolint < "$f/Dockerfile"; done
 
+  iac:
+    name: IaC (Terraform + Ansible)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # Terraform fmt/validate, tflint, Trivy y ansible-lint en contenedores fijados: el mismo
+      # script que usan el Jenkinsfile y scripts/verificar.sh.
+      - run: ./scripts/lint-iac.sh
+
   test-backend:
     name: Tests backend (SQLite)
     needs: lint
@@ -102,7 +111,7 @@ jobs:
 
   build:
     name: Build + arranque del stack
-    needs: [test-backend, test-postgres, test-frontend]
+    needs: [iac, test-backend, test-postgres, test-frontend]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

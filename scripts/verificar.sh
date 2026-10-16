@@ -21,6 +21,8 @@ if git ls-files -s -- '*.sh' | grep -v '^100755'; then
   echo "Scripts sin bit de ejecución en git: git update-index --chmod=+x <archivo>"; exit 1
 fi
 
+[[ "${1:-}" == "--sin-docker" ]] || { paso "iac: Terraform + Ansible"; ./scripts/lint-iac.sh; }
+
 paso "test-backend (SQLite, cobertura >= 90)"
 (cd backend && "$PYTEST" -rs --cov --cov-fail-under=90 -q)
 

@@ -24,10 +24,13 @@ check "$API/api/v1/categories/no-existe" 404
 echo "UI"
 check "$UI/healthz" 200
 for p in / /favoritos /skills /skills/docker /nuevo "/buscar?q=compose" /comando/1; do check "$UI$p" 200; done
-for c in linux python windows jenkins docker kubernetes terraform ansible; do check "$UI/c/$c" 200; done
+# Una página por entorno, según lo que la API diga que existe (no una lista fija que se desactualiza).
+for c in $(curl -s "$API/api/v1/categories" | python3 -c 'import json,sys; print(" ".join(c["slug"] for c in json.load(sys.stdin)))'); do
+  check "$UI/c/$c" 200
+done
 
 total=$(curl -s "$API/api/v1/stats" | python3 -c 'import json,sys; print(json.load(sys.stdin)["commands"])')
 echo "Comandos en la biblioteca: $total"
-[[ "$total" -ge 100 ]] || { echo "  FAIL: seed casi vacío"; fallos=$((fallos+1)); }
+[[ "$total" -ge 1000 ]] || { echo "  FAIL: seed casi vacío"; fallos=$((fallos+1)); }
 
 [[ $fallos -eq 0 ]] && echo "Smoke OK" || { echo "$fallos fallos"; exit 1; }
