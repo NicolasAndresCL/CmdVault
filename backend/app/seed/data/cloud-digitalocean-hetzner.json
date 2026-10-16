@@ -1,0 +1,966 @@
+{
+  "category": {
+    "slug": "cloud",
+    "name": "Cloud",
+    "icon": "cloud_queue",
+    "order": 13,
+    "description": "Otras nubes desde la terminal: Google Cloud, Azure, DigitalOcean, Cloudflare y Hetzner."
+  },
+  "commands": [
+    {
+      "title": "Autenticar doctl",
+      "command": "doctl auth init",
+      "section": "DigitalOcean (doctl)",
+      "topic": "Configuración",
+      "description": "Pide un token personal de API (creado en el panel de DigitalOcean) y lo guarda para los siguientes comandos.",
+      "examples": [
+        {
+          "description": "Verificar la cuenta",
+          "code": "doctl account get"
+        },
+        {
+          "description": "Varios contextos de autenticación",
+          "code": "doctl auth init --context personal && doctl auth switch --context personal"
+        },
+        {
+          "description": "Listar contextos",
+          "code": "doctl auth list"
+        }
+      ],
+      "tags": [
+        "doctl",
+        "auth",
+        "token",
+        "cuenta"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El token tiene permisos completos de escritura: guárdalo en un gestor de secretos. En CI usa la variable DIGITALOCEAN_ACCESS_TOKEN en vez de doctl auth init."
+    },
+    {
+      "title": "Crear un Droplet",
+      "command": "doctl compute droplet create web-01 --region nyc3 --size s-1vcpu-2gb --image ubuntu-24-04-x64 --ssh-keys <id-o-huella> --wait",
+      "section": "DigitalOcean (doctl)",
+      "topic": "Droplets",
+      "description": "Crea una VM (Droplet). --wait bloquea hasta que esté activa y devuelve su IP.",
+      "examples": [
+        {
+          "description": "Con datos de inicio (cloud-init)",
+          "code": "doctl compute droplet create web-01 --region nyc3 --size s-1vcpu-2gb --image ubuntu-24-04-x64 --ssh-keys <id-o-huella> --user-data-file cloud-init.yaml --wait"
+        },
+        {
+          "description": "Con etiqueta y monitoreo",
+          "code": "doctl compute droplet create web-01 --region nyc3 --size s-1vcpu-2gb --image ubuntu-24-04-x64 --ssh-keys <id-o-huella> --tag-name web --enable-monitoring --wait"
+        },
+        {
+          "description": "Consultar regiones y tamaños",
+          "code": "doctl compute region list && doctl compute size list"
+        }
+      ],
+      "tags": [
+        "digitalocean",
+        "doctl",
+        "droplet",
+        "crear"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Los slugs de región, tamaño e imagen cambian: verifica con doctl compute region list, size list e image list --public. Sin --ssh-keys DigitalOcean envía la contraseña root por correo (inseguro)."
+    },
+    {
+      "title": "Listar, conectar y eliminar Droplets",
+      "command": "doctl compute droplet list --format ID,Name,PublicIPv4,Status,Region",
+      "section": "DigitalOcean (doctl)",
+      "topic": "Droplets",
+      "description": "Lista tus Droplets con las columnas elegidas. doctl compute ssh evita buscar la IP.",
+      "examples": [
+        {
+          "description": "Conectar por SSH",
+          "code": "doctl compute ssh web-01 --ssh-user root"
+        },
+        {
+          "description": "Eliminar",
+          "code": "doctl compute droplet delete web-01"
+        },
+        {
+          "description": "Solo la IP de uno (para scripts)",
+          "code": "doctl compute droplet get web-01 --format PublicIPv4 --no-header"
+        },
+        {
+          "description": "Filtrar por etiqueta",
+          "code": "doctl compute droplet list --tag-name web"
+        }
+      ],
+      "tags": [
+        "digitalocean",
+        "doctl",
+        "droplet",
+        "ssh"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Borrar un Droplet no elimina snapshots ni volúmenes adjuntos. El usuario inicial en imágenes Ubuntu es root (crea un usuario deploy y deshabilita root)."
+    },
+    {
+      "title": "Snapshots y volúmenes",
+      "command": "doctl compute droplet-action snapshot web-01 --snapshot-name web-01-2026-10-16 --wait",
+      "section": "DigitalOcean (doctl)",
+      "topic": "Droplets",
+      "description": "Los snapshots guardan una imagen del disco para restaurar o clonar. Los volúmenes son discos adicionales persistentes.",
+      "examples": [
+        {
+          "description": "Listar snapshots",
+          "code": "doctl compute snapshot list"
+        },
+        {
+          "description": "Crear un volumen",
+          "code": "doctl compute volume create datos --region nyc3 --size 50GiB"
+        },
+        {
+          "description": "Adjuntar el volumen",
+          "code": "doctl compute volume-action attach <volume-id> <droplet-id>"
+        }
+      ],
+      "tags": [
+        "digitalocean",
+        "doctl",
+        "snapshot",
+        "volumen",
+        "backup"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Firewall y DNS",
+      "command": "doctl compute firewall list",
+      "section": "DigitalOcean (doctl)",
+      "topic": "Red",
+      "description": "Los firewalls en la nube de DigitalOcean filtran el tráfico antes de que llegue al Droplet. DNS se gestiona con doctl compute domain.",
+      "examples": [
+        {
+          "description": "Registros DNS de un dominio",
+          "code": "doctl compute domain records list ejemplo.cl"
+        },
+        {
+          "description": "Crear un registro A",
+          "code": "doctl compute domain records create ejemplo.cl --record-type A --record-name app --record-data 203.0.113.10 --record-ttl 300"
+        },
+        {
+          "description": "IP reservada",
+          "code": "doctl compute reserved-ip create --region nyc3"
+        }
+      ],
+      "tags": [
+        "digitalocean",
+        "doctl",
+        "firewall",
+        "dns"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Para delegar DNS a DigitalOcean cambia los NS del dominio hacia ns1/ns2/ns3.digitalocean.com en tu registrador."
+    },
+    {
+      "title": "Bases de datos gestionadas",
+      "command": "doctl databases list",
+      "section": "DigitalOcean (doctl)",
+      "topic": "Bases de datos",
+      "description": "Lista los clústeres gestionados de PostgreSQL, MySQL, Valkey y otros.",
+      "examples": [
+        {
+          "description": "Detalles y cadena de conexión",
+          "code": "doctl databases connection <db-id>"
+        },
+        {
+          "description": "Crear un clúster PostgreSQL",
+          "code": "doctl databases create tienda-pg --engine pg --version 17 --size db-s-1vcpu-1gb --region nyc3 --num-nodes 1"
+        },
+        {
+          "description": "Restringir quién se conecta",
+          "code": "doctl databases firewalls append <db-id> --rule ip_addr:203.0.113.10"
+        }
+      ],
+      "tags": [
+        "digitalocean",
+        "doctl",
+        "databases",
+        "postgres"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Verifica los slugs de tamaño y versión con doctl databases options. Añade reglas de firewall: por defecto puede ser accesible desde cualquier origen."
+    },
+    {
+      "title": "Kubeconfig de DOKS",
+      "command": "doctl kubernetes cluster kubeconfig save mi-cluster",
+      "section": "DigitalOcean (doctl)",
+      "topic": "Kubernetes",
+      "description": "Descarga y mezcla en ~/.kube/config las credenciales del clúster DigitalOcean Kubernetes.",
+      "examples": [
+        {
+          "description": "Listar clústeres",
+          "code": "doctl kubernetes cluster list"
+        },
+        {
+          "description": "Crear un clúster",
+          "code": "doctl kubernetes cluster create mi-cluster --region nyc3 --node-pool \"name=pool;size=s-2vcpu-4gb;count=2\""
+        },
+        {
+          "description": "Verificar",
+          "code": "kubectl get nodes"
+        }
+      ],
+      "tags": [
+        "digitalocean",
+        "doctl",
+        "kubernetes",
+        "doks"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Desplegar con App Platform",
+      "command": "doctl apps create --spec .do/app.yaml",
+      "section": "DigitalOcean (doctl)",
+      "topic": "App Platform",
+      "description": "App Platform despliega apps desde un repositorio Git usando un archivo de especificación.",
+      "examples": [
+        {
+          "description": "Listar apps",
+          "code": "doctl apps list"
+        },
+        {
+          "description": "Actualizar con una spec nueva",
+          "code": "doctl apps update <app-id> --spec .do/app.yaml"
+        },
+        {
+          "description": "Ver logs de ejecución",
+          "code": "doctl apps logs <app-id> --type run"
+        },
+        {
+          "description": "Forzar un nuevo despliegue",
+          "code": "doctl apps create-deployment <app-id>"
+        }
+      ],
+      "tags": [
+        "digitalocean",
+        "doctl",
+        "apps",
+        "app-platform"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "El archivo app.yaml se puede exportar de una app existente con doctl apps spec get <app-id>. Revisa las variables secretas: usa type: SECRET."
+    },
+    {
+      "title": "Container Registry de DigitalOcean",
+      "command": "doctl registry login",
+      "section": "DigitalOcean (doctl)",
+      "topic": "Registro",
+      "description": "Configura Docker para subir imágenes al registro privado de DigitalOcean.",
+      "examples": [
+        {
+          "description": "Subir una imagen",
+          "code": "docker tag mi-app:1.0.0 registry.digitalocean.com/mi-registro/mi-app:1.0.0 && docker push registry.digitalocean.com/mi-registro/mi-app:1.0.0"
+        },
+        {
+          "description": "Ver repositorios",
+          "code": "doctl registry repository list-v2"
+        },
+        {
+          "description": "Recolector de basura",
+          "code": "doctl registry garbage-collection start mi-registro"
+        }
+      ],
+      "tags": [
+        "digitalocean",
+        "doctl",
+        "registry",
+        "docker"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Autenticar wrangler",
+      "command": "npx wrangler login",
+      "section": "Cloudflare (wrangler)",
+      "topic": "Configuración",
+      "description": "Abre el navegador para autorizar Wrangler (CLI de Cloudflare Workers y Pages) con tu cuenta.",
+      "examples": [
+        {
+          "description": "Quién soy y qué cuentas tengo",
+          "code": "npx wrangler whoami"
+        },
+        {
+          "description": "Cerrar sesión",
+          "code": "npx wrangler logout"
+        },
+        {
+          "description": "En CI usar un token de API",
+          "code": "CLOUDFLARE_API_TOKEN=$CF_TOKEN CLOUDFLARE_ACCOUNT_ID=$CF_ACCOUNT npx wrangler whoami"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "login",
+        "workers"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "En CI no uses login: crea un API Token con permisos mínimos (Workers/Pages) y pásalo por variable de entorno. Wrangler 4 es la versión actual; ejecútalo con npx o instálalo como dependencia del proyecto."
+    },
+    {
+      "title": "Crear un Worker y probarlo en local",
+      "command": "npm create cloudflare@latest mi-worker",
+      "section": "Cloudflare (wrangler)",
+      "topic": "Workers",
+      "description": "Genera un proyecto Worker con plantilla. wrangler dev lo ejecuta en local con recarga automática.",
+      "examples": [
+        {
+          "description": "Servidor local",
+          "code": "npx wrangler dev"
+        },
+        {
+          "description": "Probar contra recursos reales (remoto)",
+          "code": "npx wrangler dev --remote"
+        },
+        {
+          "description": "Archivo de configuración mínimo (wrangler.toml)",
+          "code": "name = \"mi-worker\"\nmain = \"src/index.ts\"\ncompatibility_date = \"2026-10-01\""
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "workers",
+        "dev"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Los proyectos nuevos pueden usar wrangler.jsonc en vez de wrangler.toml. compatibility_date fija el comportamiento del runtime: actualízala conscientemente."
+    },
+    {
+      "title": "Desplegar un Worker",
+      "command": "npx wrangler deploy",
+      "section": "Cloudflare (wrangler)",
+      "topic": "Workers",
+      "description": "Publica el Worker en la red global de Cloudflare y muestra la URL workers.dev.",
+      "examples": [
+        {
+          "description": "Simular sin publicar",
+          "code": "npx wrangler deploy --dry-run --outdir dist"
+        },
+        {
+          "description": "Ver versiones desplegadas",
+          "code": "npx wrangler deployments list"
+        },
+        {
+          "description": "Volver a una versión anterior",
+          "code": "npx wrangler rollback"
+        },
+        {
+          "description": "Eliminar el Worker",
+          "code": "npx wrangler delete"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "deploy",
+        "workers"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "wrangler publish fue renombrado a deploy. rollback pide confirmación y restaura el código, no los datos de KV/D1. Confirma el entorno con --env cuando uses varios."
+    },
+    {
+      "title": "Ver logs en vivo con wrangler tail",
+      "command": "npx wrangler tail",
+      "section": "Cloudflare (wrangler)",
+      "topic": "Workers",
+      "description": "Transmite en tiempo real los logs y excepciones del Worker en producción.",
+      "examples": [
+        {
+          "description": "Solo errores",
+          "code": "npx wrangler tail --status error"
+        },
+        {
+          "description": "Salida JSON",
+          "code": "npx wrangler tail --format json"
+        },
+        {
+          "description": "Un Worker concreto",
+          "code": "npx wrangler tail mi-worker"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "tail",
+        "logs"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Secretos del Worker",
+      "command": "npx wrangler secret put API_KEY",
+      "section": "Cloudflare (wrangler)",
+      "topic": "Workers",
+      "description": "Guarda un secreto cifrado asociado al Worker; no queda en el código ni en wrangler.toml. Pide el valor por entrada estándar.",
+      "examples": [
+        {
+          "description": "Listar",
+          "code": "npx wrangler secret list"
+        },
+        {
+          "description": "Desde una tubería (CI)",
+          "code": "printf '%s' \"$API_KEY\" | npx wrangler secret put API_KEY"
+        },
+        {
+          "description": "Eliminar",
+          "code": "npx wrangler secret delete API_KEY"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "secret",
+        "secretos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Para desarrollo local usa un archivo .dev.vars (ignorado por git). Nunca pongas secretos en la sección [vars], que es texto plano."
+    },
+    {
+      "title": "Publicar un sitio estático con Pages",
+      "command": "npx wrangler pages deploy ./dist --project-name=mi-sitio",
+      "section": "Cloudflare (wrangler)",
+      "topic": "Pages",
+      "description": "Sube la carpeta compilada a Cloudflare Pages y crea un despliegue con URL propia. Ideal para frontends y sitios estáticos.",
+      "examples": [
+        {
+          "description": "Crear el proyecto primero",
+          "code": "npx wrangler pages project create mi-sitio --production-branch=main"
+        },
+        {
+          "description": "Despliegue de vista previa en otra rama",
+          "code": "npx wrangler pages deploy ./dist --project-name=mi-sitio --branch=staging"
+        },
+        {
+          "description": "Listar despliegues",
+          "code": "npx wrangler pages deployment list --project-name=mi-sitio"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "pages",
+        "deploy",
+        "estatico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Cada rama distinta de la de producción genera una URL de vista previa. En Pages el HTTPS y el CDN vienen incluidos; el dominio propio se añade desde el panel."
+    },
+    {
+      "title": "Almacén clave-valor con KV",
+      "command": "npx wrangler kv namespace create CACHE",
+      "section": "Cloudflare (wrangler)",
+      "topic": "KV",
+      "description": "KV es un almacén clave-valor distribuido con lectura rápida y consistencia eventual. Se enlaza al Worker mediante un binding.",
+      "examples": [
+        {
+          "description": "Guardar un valor",
+          "code": "npx wrangler kv key put --binding=CACHE \"config\" \"{\\\"modo\\\":\\\"prod\\\"}\""
+        },
+        {
+          "description": "Leer",
+          "code": "npx wrangler kv key get --binding=CACHE \"config\""
+        },
+        {
+          "description": "Listar claves",
+          "code": "npx wrangler kv key list --binding=CACHE"
+        },
+        {
+          "description": "Contra el namespace remoto (no el local)",
+          "code": "npx wrangler kv key put --binding=CACHE \"config\" \"valor\" --remote"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "kv",
+        "almacenamiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Desde Wrangler 3 los comandos son 'kv key put' (con espacio) y no 'kv:key put'. Las escrituras tardan en propagarse (consistencia eventual): no sirve para contadores exactos. Con Wrangler 4 los comandos de datos suelen operar en local salvo --remote."
+    },
+    {
+      "title": "Base de datos D1 (SQLite)",
+      "command": "npx wrangler d1 create tienda-db",
+      "section": "Cloudflare (wrangler)",
+      "topic": "D1",
+      "description": "D1 es una base SQLite serverless de Cloudflare. Se administra con migraciones versionadas.",
+      "examples": [
+        {
+          "description": "Crear una migración",
+          "code": "npx wrangler d1 migrations create tienda-db crear_usuarios"
+        },
+        {
+          "description": "Aplicar migraciones en producción",
+          "code": "npx wrangler d1 migrations apply tienda-db --remote"
+        },
+        {
+          "description": "Ejecutar una consulta",
+          "code": "npx wrangler d1 execute tienda-db --remote --command \"SELECT count(*) FROM usuarios\""
+        },
+        {
+          "description": "Ejecutar un archivo SQL",
+          "code": "npx wrangler d1 execute tienda-db --remote --file=./esquema.sql"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "d1",
+        "sqlite",
+        "migraciones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Sin --remote los comandos actúan sobre la base local de desarrollo. Antes de migraciones destructivas exporta: npx wrangler d1 export tienda-db --remote --output=backup.sql."
+    },
+    {
+      "title": "Almacenamiento de objetos R2",
+      "command": "npx wrangler r2 bucket create mis-archivos",
+      "section": "Cloudflare (wrangler)",
+      "topic": "R2",
+      "description": "R2 es almacenamiento compatible con S3 sin cargos de salida de datos. Se usa desde Workers o con herramientas S3.",
+      "examples": [
+        {
+          "description": "Subir un objeto",
+          "code": "npx wrangler r2 object put mis-archivos/backups/db.sql.gz --file=./db.sql.gz"
+        },
+        {
+          "description": "Descargar",
+          "code": "npx wrangler r2 object get mis-archivos/backups/db.sql.gz --file=./restaurado.sql.gz"
+        },
+        {
+          "description": "Listar buckets",
+          "code": "npx wrangler r2 bucket list"
+        },
+        {
+          "description": "Borrar un objeto",
+          "code": "npx wrangler r2 object delete mis-archivos/backups/db.sql.gz"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "r2",
+        "objetos",
+        "s3"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Para sincronizar muchas cosas usa aws s3 sync con --endpoint-url de R2 (más cómodo que wrangler). Wrangler 4 puede requerir --remote en comandos de objetos."
+    },
+    {
+      "title": "Dominios y rutas de un Worker",
+      "command": "npx wrangler deploy --routes \"api.ejemplo.cl/*\"",
+      "section": "Cloudflare (wrangler)",
+      "topic": "Configuración",
+      "description": "Asocia el Worker a un dominio propio de tu zona en Cloudflare. También puede definirse en wrangler.toml.",
+      "examples": [
+        {
+          "description": "Definir en wrangler.toml",
+          "code": "routes = [\n  { pattern = \"api.ejemplo.cl\", custom_domain = true }\n]"
+        },
+        {
+          "description": "Variables por entorno",
+          "code": "npx wrangler deploy --env staging"
+        },
+        {
+          "description": "Tareas programadas (cron triggers) en wrangler.toml",
+          "code": "[triggers]\ncrons = [\"0 8 * * *\"]"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "dominios",
+        "rutas",
+        "cron"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "El dominio debe estar en tu cuenta de Cloudflare (DNS gestionado por ellos). Los cron triggers usan UTC."
+    },
+    {
+      "title": "Crear contexto de hcloud",
+      "command": "hcloud context create produccion",
+      "section": "Hetzner (hcloud)",
+      "topic": "Configuración",
+      "description": "Un contexto guarda el token de API de un proyecto de Hetzner Cloud. Pide el token por teclado.",
+      "examples": [
+        {
+          "description": "Listar contextos",
+          "code": "hcloud context list"
+        },
+        {
+          "description": "Cambiar de contexto",
+          "code": "hcloud context use produccion"
+        },
+        {
+          "description": "Token por variable de entorno",
+          "code": "HCLOUD_TOKEN=$HCLOUD_TOKEN hcloud server list"
+        }
+      ],
+      "tags": [
+        "hetzner",
+        "hcloud",
+        "contexto",
+        "token"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El token se genera en la consola del proyecto (Seguridad > Tokens de API). Un token de solo lectura es suficiente para listados y monitoreo."
+    },
+    {
+      "title": "Crear un servidor",
+      "command": "hcloud server create --name web-01 --type cx23 --image ubuntu-24.04 --location nbg1 --ssh-key mi-clave",
+      "section": "Hetzner (hcloud)",
+      "topic": "Servidores",
+      "description": "Crea un servidor en Hetzner Cloud, conocido por su excelente relación precio/rendimiento para VPS.",
+      "examples": [
+        {
+          "description": "Ver tipos disponibles y precios",
+          "code": "hcloud server-type list"
+        },
+        {
+          "description": "Ver imágenes",
+          "code": "hcloud image list --type system"
+        },
+        {
+          "description": "Con cloud-init",
+          "code": "hcloud server create --name web-01 --type cx23 --image ubuntu-24.04 --ssh-key mi-clave --user-data-from-file cloud-init.yaml"
+        },
+        {
+          "description": "Con firewall asociado desde el inicio",
+          "code": "hcloud server create --name web-01 --type cx23 --image ubuntu-24.04 --ssh-key mi-clave --firewall web-fw"
+        }
+      ],
+      "tags": [
+        "hetzner",
+        "hcloud",
+        "server",
+        "vps",
+        "crear"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Los nombres de los tipos cambian con el tiempo (la línea cx se renueva): confirma con hcloud server-type list antes de usar uno. Ubicaciones frecuentes: nbg1, fsn1, hel1 (Europa), ash y hil (EE.UU.). La latencia a Chile es alta desde Europa."
+    },
+    {
+      "title": "Listar, conectar y administrar servidores",
+      "command": "hcloud server list",
+      "section": "Hetzner (hcloud)",
+      "topic": "Servidores",
+      "description": "Muestra tus servidores. hcloud server ssh abre una sesión SSH sin tener que buscar la IP.",
+      "examples": [
+        {
+          "description": "Conectar por SSH",
+          "code": "hcloud server ssh web-01"
+        },
+        {
+          "description": "Reiniciar o apagar",
+          "code": "hcloud server reboot web-01"
+        },
+        {
+          "description": "Apagar",
+          "code": "hcloud server poweroff web-01"
+        },
+        {
+          "description": "Eliminar",
+          "code": "hcloud server delete web-01"
+        }
+      ],
+      "tags": [
+        "hetzner",
+        "hcloud",
+        "server",
+        "ssh",
+        "listar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Un servidor apagado SIGUE facturándose en Hetzner (el recurso está reservado). Para dejar de pagar hay que eliminarlo, idealmente tras tomar un snapshot."
+    },
+    {
+      "title": "Snapshots, rescate y reconstrucción",
+      "command": "hcloud server create-image --type snapshot --description \"web-01 pre-actualizacion\" web-01",
+      "section": "Hetzner (hcloud)",
+      "topic": "Servidores",
+      "description": "Crea una imagen de un servidor para restaurar o clonar. También hay modo rescate y rebuild.",
+      "examples": [
+        {
+          "description": "Listar snapshots",
+          "code": "hcloud image list --type snapshot"
+        },
+        {
+          "description": "Reinstalar desde otra imagen (borra datos)",
+          "code": "hcloud server rebuild web-01 --image ubuntu-24.04"
+        },
+        {
+          "description": "Activar el modo rescate",
+          "code": "hcloud server enable-rescue web-01 --ssh-key mi-clave && hcloud server reboot web-01"
+        }
+      ],
+      "tags": [
+        "hetzner",
+        "hcloud",
+        "snapshot",
+        "rescue",
+        "rebuild"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "rebuild destruye todos los datos del disco. El snapshot se factura por GB almacenado. Hetzner también ofrece backups automáticos (+20 % del precio del servidor)."
+    },
+    {
+      "title": "Claves SSH",
+      "command": "hcloud ssh-key create --name mi-clave --public-key-from-file ~/.ssh/id_ed25519.pub",
+      "section": "Hetzner (hcloud)",
+      "topic": "Seguridad",
+      "description": "Sube tu clave pública para inyectarla en servidores nuevos.",
+      "examples": [
+        {
+          "description": "Listar",
+          "code": "hcloud ssh-key list"
+        },
+        {
+          "description": "Eliminar",
+          "code": "hcloud ssh-key delete mi-clave"
+        }
+      ],
+      "tags": [
+        "hetzner",
+        "hcloud",
+        "ssh-key",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Firewall de Hetzner Cloud",
+      "command": "hcloud firewall create --name web-fw",
+      "section": "Hetzner (hcloud)",
+      "topic": "Seguridad",
+      "description": "Los firewalls de Hetzner filtran el tráfico antes de llegar al servidor. Se definen reglas y se aplican a servidores o etiquetas.",
+      "examples": [
+        {
+          "description": "Permitir HTTPS",
+          "code": "hcloud firewall add-rule web-fw --direction in --protocol tcp --port 443 --source-ips 0.0.0.0/0 --source-ips ::/0 --description \"HTTPS\""
+        },
+        {
+          "description": "Permitir SSH solo desde tu IP",
+          "code": "hcloud firewall add-rule web-fw --direction in --protocol tcp --port 22 --source-ips 203.0.113.10/32 --description \"SSH\""
+        },
+        {
+          "description": "Aplicar a un servidor",
+          "code": "hcloud firewall apply-to-resource web-fw --type server --server web-01"
+        },
+        {
+          "description": "Ver el firewall",
+          "code": "hcloud firewall describe web-fw"
+        }
+      ],
+      "tags": [
+        "hetzner",
+        "hcloud",
+        "firewall",
+        "red",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Cuando un firewall se aplica, todo el tráfico entrante no permitido se bloquea: asegura la regla SSH antes. El firewall de la nube no sustituye al del SO (ufw/firewalld), úsalos juntos."
+    },
+    {
+      "title": "Volúmenes y redes",
+      "command": "hcloud volume create --name datos --size 50 --server web-01 --automount --format ext4",
+      "section": "Hetzner (hcloud)",
+      "topic": "Almacenamiento",
+      "description": "Los volúmenes añaden almacenamiento persistente a un servidor. Las redes privadas conectan servidores sin pasar por Internet.",
+      "examples": [
+        {
+          "description": "Listar volúmenes",
+          "code": "hcloud volume list"
+        },
+        {
+          "description": "Crear una red privada",
+          "code": "hcloud network create --name privada --ip-range 10.0.0.0/16"
+        },
+        {
+          "description": "Añadir subred",
+          "code": "hcloud network add-subnet privada --type cloud --network-zone eu-central --ip-range 10.0.1.0/24"
+        },
+        {
+          "description": "Conectar un servidor",
+          "code": "hcloud server attach-to-network web-01 --network privada --ip 10.0.1.5"
+        }
+      ],
+      "tags": [
+        "hetzner",
+        "hcloud",
+        "volumen",
+        "red",
+        "privada"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El volumen debe estar en la misma ubicación que el servidor. --automount lo monta en /mnt/HC_Volume_<id>; para uso permanente configura /etc/fstab."
+    },
+    {
+      "title": "IP flotante y primary IP",
+      "command": "hcloud floating-ip create --type ipv4 --home-location nbg1 --name ip-web",
+      "section": "Hetzner (hcloud)",
+      "topic": "Servidores",
+      "description": "Una IP flotante se mueve entre servidores de la misma ubicación, útil para failover o migraciones sin cambiar DNS.",
+      "examples": [
+        {
+          "description": "Asignarla a un servidor",
+          "code": "hcloud floating-ip assign ip-web web-01"
+        },
+        {
+          "description": "Listar",
+          "code": "hcloud floating-ip list"
+        },
+        {
+          "description": "Configurar la IP dentro del servidor (netplan, Ubuntu)",
+          "code": "# /etc/netplan/60-floating-ip.yaml\nnetwork:\n  version: 2\n  ethernets:\n    eth0:\n      addresses:\n        - 203.0.113.50/32"
+        }
+      ],
+      "tags": [
+        "hetzner",
+        "hcloud",
+        "floating-ip",
+        "failover"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Asignar la IP en Hetzner NO la configura dentro del sistema operativo: debes añadirla en la interfaz (netplan, NetworkManager en AlmaLinux). Las IP flotantes IPv4 se cobran aunque no estén asignadas."
+    }
+  ]
+}

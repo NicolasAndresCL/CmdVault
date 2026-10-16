@@ -1,0 +1,914 @@
+{
+  "category": {
+    "slug": "vps",
+    "name": "VPS y producción",
+    "icon": "dns",
+    "order": 15,
+    "description": "Operar un servidor en producción: hardening, SSH, despliegue, servicios, backups, monitoreo y mantenimiento."
+  },
+  "commands": [
+    {
+      "title": "Backup de PostgreSQL con cron y rotación",
+      "command": "0 2 * * * /usr/local/bin/backup-pg.sh >> /var/log/backup-pg.log 2>&1",
+      "section": "Backups",
+      "topic": "Bases de datos",
+      "description": "Entrada de crontab que ejecuta un script diario de pg_dump. La rotación borra copias viejas para que el disco no se llene.",
+      "examples": [
+        {
+          "description": "Contenido del script",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\nDEST=/var/backups/postgres\nmkdir -p \"$DEST\"\ndocker exec postgres pg_dump -U postgres -Fc tienda > \"$DEST/tienda_$(date +%F_%H%M).dump\"\nfind \"$DEST\" -name 'tienda_*.dump' -mtime +14 -delete"
+        },
+        {
+          "description": "Instalar la entrada de cron",
+          "code": "crontab -e"
+        },
+        {
+          "description": "Verificar que el dump es restaurable",
+          "code": "pg_restore -l /var/backups/postgres/tienda_2026-10-16_0200.dump | head"
+        },
+        {
+          "description": "Sin Docker (PostgreSQL nativo)",
+          "code": "sudo -u postgres pg_dump -Fc tienda > /var/backups/postgres/tienda_$(date +%F).dump"
+        }
+      ],
+      "tags": [
+        "vps",
+        "backup",
+        "postgres",
+        "pg_dump",
+        "cron"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En docker exec NO uses -t cuando rediriges la salida (corrompe el binario). Un backup solo existe si se restaura: prueba la restauración cada cierto tiempo. Guarda una copia fuera del VPS (restic, rclone, rsync)."
+    },
+    {
+      "title": "Backup cifrado e incremental con restic",
+      "command": "restic init --repo /var/backups/restic",
+      "section": "Backups",
+      "topic": "Archivos",
+      "description": "restic crea un repositorio cifrado y deduplicado. Cada backup es una instantánea incremental que se puede restaurar por completo o por archivo.",
+      "examples": [
+        {
+          "description": "Hacer un backup",
+          "code": "restic -r /var/backups/restic backup /opt/miapp /etc /var/backups/postgres"
+        },
+        {
+          "description": "Listar instantáneas",
+          "code": "restic -r /var/backups/restic snapshots"
+        },
+        {
+          "description": "Restaurar la última a una carpeta",
+          "code": "restic -r /var/backups/restic restore latest --target /tmp/restaurado"
+        },
+        {
+          "description": "Política de retención",
+          "code": "restic -r /var/backups/restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune"
+        }
+      ],
+      "tags": [
+        "vps",
+        "backup",
+        "restic",
+        "cifrado",
+        "incremental"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "La contraseña del repositorio es lo único que permite recuperar los datos: guárdala en un gestor de claves FUERA del VPS (RESTIC_PASSWORD_FILE para automatizar). Si pierdes la clave, pierdes el backup."
+    },
+    {
+      "title": "restic hacia almacenamiento remoto (S3, SFTP, R2)",
+      "command": "restic -r s3:s3.amazonaws.com/mi-bucket/vps init",
+      "section": "Backups",
+      "topic": "Archivos",
+      "description": "El repositorio puede vivir en S3, SFTP, rclone o cualquier almacenamiento compatible: lo que protege ante la pérdida total del servidor.",
+      "examples": [
+        {
+          "description": "SFTP a otro servidor",
+          "code": "restic -r sftp:backup@203.0.113.20:/srv/restic init"
+        },
+        {
+          "description": "Backblaze B2 o Cloudflare R2 vía endpoint S3",
+          "code": "AWS_ACCESS_KEY_ID=$KEY AWS_SECRET_ACCESS_KEY=$SECRET restic -r s3:https://<account_id>.r2.cloudflarestorage.com/mi-bucket init"
+        },
+        {
+          "description": "Verificar la integridad del repositorio",
+          "code": "restic -r /var/backups/restic check"
+        },
+        {
+          "description": "Cron diario con variables en un archivo protegido",
+          "code": "0 3 * * * . /etc/restic.env && restic backup /opt/miapp /var/backups/postgres && restic forget --keep-daily 7 --keep-weekly 4 --prune"
+        }
+      ],
+      "tags": [
+        "vps",
+        "backup",
+        "restic",
+        "remoto",
+        "s3",
+        "sftp"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Ejecuta restic check periódicamente (y restic check --read-data de vez en cuando). Aísla las credenciales del bucket con un usuario que solo pueda escribir en el prefijo."
+    },
+    {
+      "title": "Copiar backups a otro servidor con rsync",
+      "command": "rsync -az --delete -e 'ssh -i ~/.ssh/id_backup' /var/backups/ backup@203.0.113.20:/srv/backups/vps-prod/",
+      "section": "Backups",
+      "topic": "Archivos",
+      "description": "Envía los backups locales a un segundo servidor por SSH. Con una clave exclusiva para esta tarea se limita el riesgo.",
+      "examples": [
+        {
+          "description": "Restringir esa clave a rsync en el destino (authorized_keys)",
+          "code": "command=\"rrsync /srv/backups/vps-prod\",no-pty,no-port-forwarding ssh-ed25519 AAAA... backup"
+        },
+        {
+          "description": "Con límite de ancho de banda",
+          "code": "rsync -az --bwlimit=5000 /var/backups/ backup@203.0.113.20:/srv/backups/vps-prod/"
+        },
+        {
+          "description": "Con rclone a un proveedor cloud",
+          "code": "rclone sync /var/backups remote:vps-prod --transfers 4"
+        }
+      ],
+      "tags": [
+        "vps",
+        "backup",
+        "rsync",
+        "remoto",
+        "rclone"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "--delete propaga borrados: si alguien elimina datos en el origen se borran en el destino. Para protegerte de ransomware usa copias con versiones (restic, snapshots) en vez de un espejo."
+    },
+    {
+      "title": "Backup de volúmenes Docker con un contenedor alpine",
+      "command": "docker run --rm -v n8n_data:/datos:ro -v $PWD:/backup alpine tar czf /backup/n8n_data_$(date +%F).tgz -C /datos .",
+      "section": "Backups",
+      "topic": "Docker",
+      "description": "Empaqueta el contenido de un volumen nombrado en un tar.gz del host sin instalar nada. :ro garantiza que no se modifica.",
+      "examples": [
+        {
+          "description": "Restaurar en un volumen nuevo",
+          "code": "docker volume create n8n_data_restaurado && docker run --rm -v n8n_data_restaurado:/datos -v $PWD:/backup alpine tar xzf /backup/n8n_data_2026-10-16.tgz -C /datos"
+        },
+        {
+          "description": "Para bases con datos en memoria, detener antes",
+          "code": "docker compose stop n8n && docker run --rm -v n8n_data:/datos:ro -v $PWD:/backup alpine tar czf /backup/n8n.tgz -C /datos . && docker compose start n8n"
+        },
+        {
+          "description": "Listar contenido del tar sin extraer",
+          "code": "tar tzf n8n_data_2026-10-16.tgz | head"
+        },
+        {
+          "description": "Ver los volúmenes",
+          "code": "docker volume ls"
+        }
+      ],
+      "tags": [
+        "vps",
+        "backup",
+        "docker",
+        "volumen",
+        "tar",
+        "alpine"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Un tar de un volumen con una base de datos activa puede quedar inconsistente: usa el dump de la base (pg_dump, mysqldump) o detén el contenedor un momento. En compose, el nombre real del volumen lleva el prefijo del proyecto (por ejemplo miapp_n8n_data): verifícalo con docker volume ls."
+    },
+    {
+      "title": "Backup de configuración con tar",
+      "command": "sudo tar czf /var/backups/etc_$(date +%F).tgz /etc /opt/miapp --exclude='*.log' --exclude='node_modules'",
+      "section": "Backups",
+      "topic": "Archivos",
+      "description": "Respalda configuraciones y despliegues (compose, .env, unidades systemd, certificados). Reconstruir un VPS será mucho más rápido.",
+      "examples": [
+        {
+          "description": "Listar el contenido",
+          "code": "tar tzf /var/backups/etc_2026-10-16.tgz | head -20"
+        },
+        {
+          "description": "Restaurar un único archivo",
+          "code": "sudo tar xzf /var/backups/etc_2026-10-16.tgz -C / etc/nginx/nginx.conf"
+        },
+        {
+          "description": "Calcular el tamaño",
+          "code": "ls -lh /var/backups/"
+        }
+      ],
+      "tags": [
+        "vps",
+        "backup",
+        "tar",
+        "configuracion",
+        "etc"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los respaldos contienen secretos (.env, claves): chmod 600 y cifra antes de subir fuera del servidor (restic, age o gpg). Con tar por rutas absolutas, GNU tar quita la barra inicial; al restaurar con -C / queda en su lugar."
+    },
+    {
+      "title": "Gestionar tareas con cron",
+      "command": "crontab -e",
+      "section": "Backups",
+      "topic": "Automatización",
+      "description": "Edita las tareas programadas del usuario. Formato: minuto hora día-mes mes día-semana comando.",
+      "examples": [
+        {
+          "description": "Listar",
+          "code": "crontab -l"
+        },
+        {
+          "description": "Ejemplo: cada 5 minutos un healthcheck",
+          "code": "*/5 * * * * curl -fsS --max-time 10 https://app.ejemplo.cl/salud > /dev/null || echo 'caído' | logger -t healthcheck"
+        },
+        {
+          "description": "Cron del sistema (con usuario) en /etc/cron.d",
+          "code": "echo '0 3 * * * root /usr/local/bin/backup.sh' | sudo tee /etc/cron.d/backup"
+        },
+        {
+          "description": "Validar las expresiones",
+          "code": "# usa crontab.guru o systemd-analyze calendar para comprobarlas"
+        }
+      ],
+      "tags": [
+        "vps",
+        "cron",
+        "crontab",
+        "programacion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Cron tiene un PATH mínimo: usa rutas absolutas y redirige la salida a un log. Cron usa la zona horaria del servidor. Si el servidor está apagado a esa hora, la tarea se pierde (systemd timers con Persistent=true no)."
+    },
+    {
+      "title": "Verificar automáticamente que el backup existe y es reciente",
+      "command": "find /var/backups/postgres -name '*.dump' -mtime -1 | grep -q . || echo 'ALERTA: no hay backup de las últimas 24 h'",
+      "section": "Backups",
+      "topic": "Automatización",
+      "description": "Un chequeo simple que avisa si el backup de ayer no se generó. Combínalo con un aviso por correo o webhook.",
+      "examples": [
+        {
+          "description": "Avisar a un webhook de n8n si falta",
+          "code": "find /var/backups/postgres -name '*.dump' -mtime -1 | grep -q . || curl -fsS -X POST https://n8n.ejemplo.cl/webhook/alerta -d 'mensaje=falta backup postgres'"
+        },
+        {
+          "description": "Comprobar el tamaño mínimo esperado",
+          "code": "find /var/backups/postgres -name '*.dump' -mtime -1 -size +1M | grep -q . || echo 'backup sospechosamente pequeño'"
+        },
+        {
+          "description": "Servicio externo tipo dead man's switch",
+          "code": "curl -fsS --retry 3 https://hc-ping.com/<uuid> > /dev/null"
+        }
+      ],
+      "tags": [
+        "vps",
+        "backup",
+        "verificacion",
+        "alerta",
+        "monitoreo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Los dead man's switch (Healthchecks.io y similares) avisan cuando la tarea NO se ejecuta, que es el fallo silencioso más peligroso. Úsalos al final del script, solo si todo salió bien."
+    },
+    {
+      "title": "Carga, uptime y memoria de un vistazo",
+      "command": "uptime && free -h",
+      "section": "Monitoreo y logs",
+      "topic": "Recursos",
+      "description": "uptime muestra el tiempo encendido y la carga media (1, 5, 15 minutos). Una carga mayor al número de CPU sostenida indica saturación.",
+      "examples": [
+        {
+          "description": "Número de CPU",
+          "code": "nproc"
+        },
+        {
+          "description": "Procesos interactivos por consumo",
+          "code": "htop"
+        },
+        {
+          "description": "Memoria disponible real (columna available)",
+          "code": "free -h"
+        },
+        {
+          "description": "Vista rápida de CPU, memoria y I/O por segundo",
+          "code": "vmstat 1 5"
+        }
+      ],
+      "tags": [
+        "vps",
+        "uptime",
+        "free",
+        "htop",
+        "carga"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "En free -h mira 'available', no 'free': Linux usa la RAM libre como caché. Si 'si/so' en vmstat es distinto de cero de forma sostenida, el servidor está haciendo swap."
+    },
+    {
+      "title": "Espacio en disco: df y du",
+      "command": "df -h",
+      "section": "Monitoreo y logs",
+      "topic": "Disco",
+      "description": "df muestra el espacio por partición; du calcula lo que ocupa cada carpeta. Un disco lleno es una de las causas más comunes de caídas en VPS.",
+      "examples": [
+        {
+          "description": "Carpetas más grandes del directorio",
+          "code": "sudo du -xh --max-depth=1 /var | sort -h | tail"
+        },
+        {
+          "description": "Inodos (otro motivo de 'disco lleno')",
+          "code": "df -i"
+        },
+        {
+          "description": "Navegador interactivo de espacio",
+          "code": "sudo ncdu -x /"
+        },
+        {
+          "description": "Espacio usado por Docker",
+          "code": "docker system df"
+        }
+      ],
+      "tags": [
+        "vps",
+        "df",
+        "du",
+        "ncdu",
+        "disco",
+        "espacio"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "-x evita cruzar a otros sistemas de archivos. Candidatos frecuentes: /var/log, /var/lib/docker, backups y journal. Si df dice lleno y du no cuadra, mira archivos borrados abiertos con lsof +L1."
+    },
+    {
+      "title": "Encontrar archivos grandes",
+      "command": "sudo find / -xdev -type f -size +500M -exec ls -lh {} + 2>/dev/null",
+      "section": "Monitoreo y logs",
+      "topic": "Disco",
+      "description": "Busca archivos de más de 500 MB en la partición actual, ordenándolos para decidir qué limpiar.",
+      "examples": [
+        {
+          "description": "Los 20 más grandes",
+          "code": "sudo find / -xdev -type f -printf '%s %p\\n' 2>/dev/null | sort -rn | head -20"
+        },
+        {
+          "description": "Modificados en los últimos 2 días y grandes",
+          "code": "sudo find /var -xdev -type f -mtime -2 -size +50M"
+        },
+        {
+          "description": "Vaciar un log sin romper al proceso que lo escribe",
+          "code": "sudo truncate -s 0 /var/log/miapp/app.log"
+        }
+      ],
+      "tags": [
+        "vps",
+        "find",
+        "archivos-grandes",
+        "limpieza",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Usa truncate en vez de rm si un proceso mantiene el archivo abierto: rm no libera el espacio hasta que el proceso termine. Antes de borrar en /var/lib/docker usa los comandos de Docker."
+    },
+    {
+      "title": "Conexiones y puertos con ss",
+      "command": "ss -tulpn",
+      "section": "Monitoreo y logs",
+      "topic": "Red",
+      "description": "Muestra qué puertos escuchan y qué proceso los posee. Con otros filtros cuenta conexiones activas por estado.",
+      "examples": [
+        {
+          "description": "Conexiones establecidas por IP remota",
+          "code": "ss -tn state established | awk 'NR>1 {print $4}' | cut -d: -f1 | sort | uniq -c | sort -rn | head"
+        },
+        {
+          "description": "Resumen de sockets",
+          "code": "ss -s"
+        },
+        {
+          "description": "Uso de red por proceso (iftop o nethogs)",
+          "code": "sudo nethogs"
+        },
+        {
+          "description": "Ancho de banda por interfaz",
+          "code": "ip -s link show eth0"
+        }
+      ],
+      "tags": [
+        "vps",
+        "ss",
+        "red",
+        "puertos",
+        "conexiones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Muchos TIME_WAIT son normales; muchos SYN-RECV pueden indicar un ataque o una cola desbordada. nethogs y iftop no vienen preinstalados."
+    },
+    {
+      "title": "Healthcheck HTTP desde cron",
+      "command": "*/5 * * * * curl -fsS --max-time 10 https://app.ejemplo.cl/salud > /dev/null || /usr/local/bin/alerta.sh 'app.ejemplo.cl no responde'",
+      "section": "Monitoreo y logs",
+      "topic": "Healthchecks",
+      "description": "Comprueba cada 5 minutos que el sitio responde con éxito y lanza un aviso si no. -f hace fallar a curl ante 4xx/5xx.",
+      "examples": [
+        {
+          "description": "Script de alerta a Telegram (usa tus variables)",
+          "code": "curl -fsS -X POST \"https://api.telegram.org/bot$TG_TOKEN/sendMessage\" -d chat_id=$TG_CHAT -d text=\"$1\""
+        },
+        {
+          "description": "Alerta a un webhook de n8n",
+          "code": "curl -fsS -X POST https://n8n.ejemplo.cl/webhook/alerta -H 'Content-Type: application/json' -d '{\"mensaje\":\"app caída\"}'"
+        },
+        {
+          "description": "Comprobar varios endpoints",
+          "code": "for u in https://app.ejemplo.cl/salud https://n8n.ejemplo.cl/healthz; do curl -fsS --max-time 10 \"$u\" > /dev/null || echo \"FALLA $u\"; done"
+        }
+      ],
+      "tags": [
+        "vps",
+        "healthcheck",
+        "curl",
+        "cron",
+        "alertas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Un check desde el mismo VPS no detecta que el servidor entero esté caído: complementa con un monitor externo (UptimeRobot, Uptime Kuma, Healthchecks). Evita enviar la alerta si ya se envió: guarda estado en un archivo para no inundar de mensajes."
+    },
+    {
+      "title": "Logs del sistema con journalctl",
+      "command": "journalctl -p err -b --no-pager",
+      "section": "Monitoreo y logs",
+      "topic": "Logs",
+      "description": "Muestra errores del arranque actual. Con -p filtras por prioridad (emerg, alert, crit, err, warning, notice, info, debug).",
+      "examples": [
+        {
+          "description": "Mensajes del kernel (OOM killer, discos)",
+          "code": "sudo dmesg -T | grep -iE 'killed process|out of memory|i/o error'"
+        },
+        {
+          "description": "Logs de la última hora de todos los servicios",
+          "code": "journalctl --since '1 hour ago' --no-pager"
+        },
+        {
+          "description": "Arranques anteriores (si el journal es persistente)",
+          "code": "journalctl --list-boots"
+        },
+        {
+          "description": "Seguir logs de Docker",
+          "code": "journalctl -u docker -f"
+        }
+      ],
+      "tags": [
+        "vps",
+        "journalctl",
+        "dmesg",
+        "logs",
+        "oom"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Si ves 'Out of memory: Killed process' el servidor se quedó sin RAM y mató un proceso: añade swap, limita memoria de contenedores o sube el plan."
+    },
+    {
+      "title": "Rotación de logs con logrotate",
+      "command": "sudo logrotate -d /etc/logrotate.d/miapp",
+      "section": "Monitoreo y logs",
+      "topic": "Logs",
+      "description": "-d simula la rotación y muestra qué haría sin ejecutar nada. Imprescindible antes de cambiar la configuración.",
+      "examples": [
+        {
+          "description": "Archivo de configuración",
+          "code": "/var/log/miapp/*.log {\n    daily\n    rotate 14\n    compress\n    delaycompress\n    missingok\n    notifempty\n    copytruncate\n}"
+        },
+        {
+          "description": "Forzar una rotación",
+          "code": "sudo logrotate -f /etc/logrotate.d/miapp"
+        },
+        {
+          "description": "Ver el estado de logrotate",
+          "code": "cat /var/lib/logrotate/status | head"
+        }
+      ],
+      "tags": [
+        "vps",
+        "logrotate",
+        "logs",
+        "rotacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "copytruncate sirve cuando la app no reabre el log (puede perder algunas líneas); si soporta una señal, usa postrotate con ella. En contenedores Docker limita los logs en el compose: logging: { driver: json-file, options: { max-size: \"10m\", max-file: \"3\" } }."
+    },
+    {
+      "title": "Limitar el tamaño de logs de Docker",
+      "command": "sudo nano /etc/docker/daemon.json",
+      "section": "Monitoreo y logs",
+      "topic": "Logs",
+      "description": "Por defecto Docker no rota los logs de los contenedores (driver json-file) y pueden llenar el disco. Se limita globalmente en daemon.json.",
+      "examples": [
+        {
+          "description": "Contenido",
+          "code": "{\n  \"log-driver\": \"json-file\",\n  \"log-opts\": { \"max-size\": \"10m\", \"max-file\": \"3\" }\n}"
+        },
+        {
+          "description": "Aplicar (solo afecta a contenedores NUEVOS, hay que recrearlos)",
+          "code": "sudo systemctl restart docker && docker compose up -d --force-recreate"
+        },
+        {
+          "description": "Ver el tamaño de logs actuales",
+          "code": "sudo sh -c 'du -h /var/lib/docker/containers/*/*-json.log | sort -h | tail -5'"
+        }
+      ],
+      "tags": [
+        "vps",
+        "docker",
+        "logs",
+        "daemon-json",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Reiniciar docker reinicia (o detiene) los contenedores salvo que uses live-restore. Haz el cambio en una ventana de mantenimiento. Sin esto, un contenedor charlatán puede llenar el disco."
+    },
+    {
+      "title": "Rendimiento de disco y CPU con sysstat",
+      "command": "iostat -xz 1 3",
+      "section": "Monitoreo y logs",
+      "topic": "Recursos",
+      "description": "iostat (paquete sysstat) muestra uso y latencia de los discos. %util cercano a 100 y await alto indican cuello de botella de I/O.",
+      "examples": [
+        {
+          "description": "Instalar",
+          "code": "sudo apt install -y sysstat   # AlmaLinux: sudo dnf install -y sysstat"
+        },
+        {
+          "description": "CPU por núcleo",
+          "code": "mpstat -P ALL 1 3"
+        },
+        {
+          "description": "Procesos que más escriben",
+          "code": "sudo iotop -oPa"
+        }
+      ],
+      "tags": [
+        "vps",
+        "iostat",
+        "sysstat",
+        "disco",
+        "io"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Actualizar paquetes: apt y dnf",
+      "command": "sudo apt update && sudo apt full-upgrade -y && sudo apt autoremove -y",
+      "section": "Mantenimiento",
+      "topic": "Actualizaciones",
+      "description": "Mantenimiento periódico del sistema. En Ubuntu full-upgrade resuelve cambios de dependencias; en AlmaLinux dnf upgrade hace el equivalente.",
+      "examples": [
+        {
+          "description": "AlmaLinux",
+          "code": "sudo dnf upgrade -y && sudo dnf autoremove -y"
+        },
+        {
+          "description": "Ver qué se actualizaría",
+          "code": "apt list --upgradable   # AlmaLinux: dnf check-update"
+        },
+        {
+          "description": "Solo parches de seguridad en AlmaLinux",
+          "code": "sudo dnf upgrade --security -y"
+        },
+        {
+          "description": "Limpiar la caché de paquetes",
+          "code": "sudo apt clean   # AlmaLinux: sudo dnf clean all"
+        }
+      ],
+      "tags": [
+        "vps",
+        "actualizar",
+        "apt",
+        "dnf",
+        "mantenimiento"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Antes de actualizar el servidor de producción toma un snapshot del proveedor o un backup. Revisa los servicios después: systemctl --failed y docker ps."
+    },
+    {
+      "title": "Detectar servicios que necesitan reinicio tras actualizar",
+      "command": "sudo needrestart",
+      "section": "Mantenimiento",
+      "topic": "Actualizaciones",
+      "description": "Tras actualizar librerías, los procesos en ejecución siguen usando la versión vieja hasta reiniciarse. needrestart (Ubuntu) los detecta; dnf needs-restarting lo hace en AlmaLinux.",
+      "examples": [
+        {
+          "description": "Modo listado sin reiniciar",
+          "code": "sudo needrestart -r l"
+        },
+        {
+          "description": "AlmaLinux: ¿hace falta reiniciar el sistema?",
+          "code": "sudo dnf needs-restarting -r"
+        },
+        {
+          "description": "AlmaLinux: servicios a reiniciar",
+          "code": "sudo dnf needs-restarting -s"
+        }
+      ],
+      "tags": [
+        "vps",
+        "needrestart",
+        "reinicio",
+        "actualizaciones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "dnf needs-restarting viene en dnf-utils (yum-utils). Un kernel nuevo solo se usa tras reiniciar el servidor completo."
+    },
+    {
+      "title": "Reinicio planificado con shutdown",
+      "command": "sudo shutdown -r +10 \"Reinicio por mantenimiento en 10 minutos\"",
+      "section": "Mantenimiento",
+      "topic": "Reinicios",
+      "description": "Programa un reinicio con aviso a los usuarios conectados. Da tiempo a cerrar sesiones y permite cancelar si te equivocaste.",
+      "examples": [
+        {
+          "description": "Cancelar",
+          "code": "sudo shutdown -c"
+        },
+        {
+          "description": "A una hora concreta",
+          "code": "sudo shutdown -r 04:00"
+        },
+        {
+          "description": "Reiniciar ahora",
+          "code": "sudo reboot"
+        },
+        {
+          "description": "Tras reiniciar: ¿todo levantó?",
+          "code": "uptime && systemctl --failed && docker ps --format 'table {{.Names}}\\t{{.Status}}'"
+        }
+      ],
+      "tags": [
+        "vps",
+        "shutdown",
+        "reboot",
+        "reinicio",
+        "mantenimiento"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Antes de reiniciar un VPS con contenedores, verifica que tienen restart: unless-stopped y que los servicios están habilitados (systemctl enable). Tras el reinicio comprueba que Traefik, bases de datos y n8n están arriba."
+    },
+    {
+      "title": "Limpiar el journal de systemd",
+      "command": "sudo journalctl --vacuum-size=200M",
+      "section": "Mantenimiento",
+      "topic": "Limpieza",
+      "description": "Reduce el tamaño de los logs del journal hasta el límite indicado, borrando los más antiguos. Alternativa por tiempo: --vacuum-time=14d.",
+      "examples": [
+        {
+          "description": "Por tiempo",
+          "code": "sudo journalctl --vacuum-time=14d"
+        },
+        {
+          "description": "Ver cuánto ocupa",
+          "code": "journalctl --disk-usage"
+        },
+        {
+          "description": "Límite permanente en /etc/systemd/journald.conf",
+          "code": "SystemMaxUse=200M"
+        },
+        {
+          "description": "Aplicar el límite permanente",
+          "code": "sudo systemctl restart systemd-journald"
+        }
+      ],
+      "tags": [
+        "vps",
+        "journalctl",
+        "vacuum",
+        "logs",
+        "limpieza"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Limpiar Docker con cuidado: system prune",
+      "command": "docker system df",
+      "section": "Mantenimiento",
+      "topic": "Limpieza",
+      "description": "Primero mide cuánto espacio ocupan imágenes, contenedores y volúmenes. Luego limpia solo lo que no necesitas.",
+      "examples": [
+        {
+          "description": "Eliminar contenedores detenidos, redes sin uso e imágenes huérfanas (dangling)",
+          "code": "docker system prune"
+        },
+        {
+          "description": "Además, todas las imágenes sin uso (más agresivo)",
+          "code": "docker system prune -a"
+        },
+        {
+          "description": "Solo imágenes sin uso con más de 7 días",
+          "code": "docker image prune -a --filter 'until=168h'"
+        },
+        {
+          "description": "Volúmenes sin uso (PUEDE BORRAR DATOS)",
+          "code": "docker volume ls -f dangling=true"
+        }
+      ],
+      "tags": [
+        "vps",
+        "docker",
+        "prune",
+        "limpieza",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "CUIDADO: docker system prune --volumes y docker volume prune borran volúmenes no usados por ningún contenedor ACTIVO, lo que incluye datos de servicios detenidos (por ejemplo la base de datos si estaba parada). Revisa SIEMPRE la lista antes y respalda. Con -a pierdes el rollback por tag."
+    },
+    {
+      "title": "Eliminar kernels y paquetes viejos",
+      "command": "sudo apt autoremove --purge -y",
+      "section": "Mantenimiento",
+      "topic": "Limpieza",
+      "description": "Quita dependencias que ya nadie usa y kernels antiguos que ocupan /boot. En AlmaLinux dnf conserva por defecto 3 kernels.",
+      "examples": [
+        {
+          "description": "AlmaLinux: limitar kernels instalados",
+          "code": "sudo sed -i 's/^installonly_limit=.*/installonly_limit=2/' /etc/dnf/dnf.conf"
+        },
+        {
+          "description": "AlmaLinux: ver los kernels",
+          "code": "rpm -q kernel"
+        },
+        {
+          "description": "Ver el kernel en uso",
+          "code": "uname -r"
+        }
+      ],
+      "tags": [
+        "vps",
+        "autoremove",
+        "kernels",
+        "limpieza",
+        "boot"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Nunca borres el kernel en ejecución (uname -r). Si /boot se llena, las actualizaciones fallan: es común en imágenes con partición /boot pequeña."
+    },
+    {
+      "title": "Sincronización de hora con chrony",
+      "command": "chronyc tracking",
+      "section": "Mantenimiento",
+      "topic": "Hora",
+      "description": "Muestra el desfase del reloj del sistema respecto al servidor NTP. Una hora incorrecta rompe certificados TLS, tokens, 2FA y logs.",
+      "examples": [
+        {
+          "description": "Fuentes NTP",
+          "code": "chronyc sources -v"
+        },
+        {
+          "description": "Estado de systemd-timesyncd (Ubuntu por defecto)",
+          "code": "timedatectl timesync-status"
+        },
+        {
+          "description": "Forzar sincronización",
+          "code": "sudo chronyc makestep"
+        }
+      ],
+      "tags": [
+        "vps",
+        "chrony",
+        "ntp",
+        "hora",
+        "sincronizacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "AlmaLinux usa chronyd; Ubuntu usa systemd-timesyncd por defecto (puedes instalar chrony). Un desfase de pocos minutos ya invalida códigos TOTP y firmas de APIs."
+    },
+    {
+      "title": "Checklist de revisión semanal del VPS",
+      "command": "systemctl --failed && df -h / && free -h && docker ps --format 'table {{.Names}}\\t{{.Status}}'",
+      "section": "Mantenimiento",
+      "topic": "Checklist",
+      "description": "Cuatro comprobaciones rápidas: servicios caídos, disco, memoria y contenedores. Añade el estado de backups y certificados para completar la revisión.",
+      "examples": [
+        {
+          "description": "Backups recientes",
+          "code": "ls -lt /var/backups/postgres | head -3"
+        },
+        {
+          "description": "Certificados próximos a vencer (Traefik/Let's Encrypt)",
+          "code": "echo | openssl s_client -connect app.ejemplo.cl:443 -servername app.ejemplo.cl 2>/dev/null | openssl x509 -noout -enddate"
+        },
+        {
+          "description": "Actualizaciones pendientes",
+          "code": "apt list --upgradable 2>/dev/null | wc -l   # AlmaLinux: dnf check-update | wc -l"
+        },
+        {
+          "description": "Intentos de intrusión del día",
+          "code": "sudo fail2ban-client status sshd"
+        }
+      ],
+      "tags": [
+        "vps",
+        "checklist",
+        "mantenimiento",
+        "revision"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Automatiza lo que pueda: un script que ejecute esto y mande un resumen semanal a n8n o a un canal de chat. Lo que no se revisa periódicamente falla cuando menos conviene."
+    }
+  ]
+}

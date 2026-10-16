@@ -1,0 +1,752 @@
+{
+  "category": {
+    "slug": "aws",
+    "name": "AWS",
+    "icon": "cloud_circle",
+    "order": 12,
+    "description": "AWS CLI v2: identidad, EC2, S3, redes, bases de datos, contenedores, serverless, monitoreo y costos."
+  },
+  "commands": [
+    {
+      "title": "Listar instancias RDS",
+      "command": "aws rds describe-db-instances --query \"DBInstances[].[DBInstanceIdentifier,Engine,EngineVersion,DBInstanceStatus,Endpoint.Address]\" --output table",
+      "section": "Bases de datos y contenedores",
+      "topic": "RDS",
+      "description": "Muestra las bases gestionadas (MySQL, PostgreSQL, MariaDB...) con su estado y endpoint de conexión.",
+      "examples": [
+        {
+          "description": "Una instancia concreta",
+          "code": "aws rds describe-db-instances --db-instance-identifier tienda-prod"
+        },
+        {
+          "description": "Solo el endpoint",
+          "code": "aws rds describe-db-instances --db-instance-identifier tienda-prod --query \"DBInstances[0].Endpoint.Address\" --output text"
+        },
+        {
+          "description": "Versiones de PostgreSQL disponibles",
+          "code": "aws rds describe-db-engine-versions --engine postgres --query \"DBEngineVersions[].EngineVersion\" --output text"
+        }
+      ],
+      "tags": [
+        "aws",
+        "rds",
+        "describe-db-instances",
+        "base-datos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Snapshots de RDS: crear, listar y restaurar",
+      "command": "aws rds create-db-snapshot --db-instance-identifier tienda-prod --db-snapshot-identifier tienda-prod-2026-10-16",
+      "section": "Bases de datos y contenedores",
+      "topic": "RDS",
+      "description": "Crea una copia manual de la base. Los snapshots manuales no caducan solos, al contrario de los backups automáticos.",
+      "examples": [
+        {
+          "description": "Listar snapshots",
+          "code": "aws rds describe-db-snapshots --db-instance-identifier tienda-prod --query \"DBSnapshots[].[DBSnapshotIdentifier,Status,SnapshotCreateTime]\" --output table"
+        },
+        {
+          "description": "Restaurar en una instancia nueva",
+          "code": "aws rds restore-db-instance-from-db-snapshot --db-instance-identifier tienda-restaurada --db-snapshot-identifier tienda-prod-2026-10-16"
+        },
+        {
+          "description": "Esperar a que quede disponible",
+          "code": "aws rds wait db-instance-available --db-instance-identifier tienda-restaurada"
+        },
+        {
+          "description": "Borrar un snapshot",
+          "code": "aws rds delete-db-snapshot --db-snapshot-identifier tienda-prod-2026-10-16"
+        }
+      ],
+      "tags": [
+        "aws",
+        "rds",
+        "snapshot",
+        "backup",
+        "restaurar"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Restaurar SIEMPRE crea una instancia nueva con endpoint distinto; actualiza la configuración de la app. Para recuperar a un instante concreto usa restore-db-instance-to-point-in-time. Eliminar una instancia sin final snapshot es irreversible."
+    },
+    {
+      "title": "Detener, iniciar y reiniciar RDS",
+      "command": "aws rds stop-db-instance --db-instance-identifier tienda-dev",
+      "section": "Bases de datos y contenedores",
+      "topic": "RDS",
+      "description": "Detiene una instancia de desarrollo para ahorrar cómputo. AWS la vuelve a iniciar sola tras 7 días.",
+      "examples": [
+        {
+          "description": "Iniciar",
+          "code": "aws rds start-db-instance --db-instance-identifier tienda-dev"
+        },
+        {
+          "description": "Reiniciar (con failover Multi-AZ)",
+          "code": "aws rds reboot-db-instance --db-instance-identifier tienda-prod --force-failover"
+        },
+        {
+          "description": "Cambiar clase de instancia",
+          "code": "aws rds modify-db-instance --db-instance-identifier tienda-prod --db-instance-class db.t4g.medium --apply-immediately"
+        }
+      ],
+      "tags": [
+        "aws",
+        "rds",
+        "stop",
+        "start",
+        "modify"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El almacenamiento se sigue cobrando con la instancia detenida. --apply-immediately aplica en el momento (puede causar corte); sin él se espera a la ventana de mantenimiento."
+    },
+    {
+      "title": "Conectar a RDS desde la terminal",
+      "command": "psql \"host=$(aws rds describe-db-instances --db-instance-identifier tienda-prod --query 'DBInstances[0].Endpoint.Address' --output text) dbname=tienda user=app sslmode=require\"",
+      "section": "Bases de datos y contenedores",
+      "topic": "RDS",
+      "description": "Una vez conocido el endpoint se usa el cliente nativo. Con autenticación IAM se pide un token temporal en vez de contraseña.",
+      "examples": [
+        {
+          "description": "Token de autenticación IAM",
+          "code": "aws rds generate-db-auth-token --hostname tienda-prod.xxx.sa-east-1.rds.amazonaws.com --port 5432 --username app --region sa-east-1"
+        },
+        {
+          "description": "Túnel por SSM hacia una RDS privada",
+          "code": "aws ssm start-session --target i-0abc123def4567890 --document-name AWS-StartPortForwardingSessionToRemoteHost --parameters '{\"host\":[\"tienda-prod.xxx.sa-east-1.rds.amazonaws.com\"],\"portNumber\":[\"5432\"],\"localPortNumber\":[\"5432\"]}'"
+        }
+      ],
+      "tags": [
+        "aws",
+        "rds",
+        "conectar",
+        "psql",
+        "token",
+        "iam"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "No expongas RDS públicamente: ponla en subredes privadas y accede por bastión/SSM o la VPN. Los tokens IAM duran 15 minutos."
+    },
+    {
+      "title": "Autenticar Docker en ECR",
+      "command": "aws ecr get-login-password --region sa-east-1 | docker login --username AWS --password-stdin 123456789012.dkr.ecr.sa-east-1.amazonaws.com",
+      "section": "Bases de datos y contenedores",
+      "topic": "ECR",
+      "description": "Obtiene un token temporal (12 horas) y lo entrega a docker login mediante stdin, sin dejarlo en el historial.",
+      "examples": [
+        {
+          "description": "Crear el repositorio",
+          "code": "aws ecr create-repository --repository-name mi-app --image-scanning-configuration scanOnPush=true"
+        },
+        {
+          "description": "Etiquetar y subir la imagen",
+          "code": "docker tag mi-app:1.0.0 123456789012.dkr.ecr.sa-east-1.amazonaws.com/mi-app:1.0.0 && docker push 123456789012.dkr.ecr.sa-east-1.amazonaws.com/mi-app:1.0.0"
+        },
+        {
+          "description": "Listar imágenes",
+          "code": "aws ecr describe-images --repository-name mi-app --query \"imageDetails[].[imageTags[0],imagePushedAt]\" --output table"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ecr",
+        "docker",
+        "login",
+        "registro"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "El login caduca a las 12 horas. La región del comando debe coincidir con la del registro. Usa etiquetas inmutables (--image-tag-mutability IMMUTABLE al crear el repositorio) para despliegues reproducibles."
+    },
+    {
+      "title": "Limpiar imágenes de ECR con políticas de ciclo de vida",
+      "command": "aws ecr put-lifecycle-policy --repository-name mi-app --lifecycle-policy-text file://ecr-lifecycle.json",
+      "section": "Bases de datos y contenedores",
+      "topic": "ECR",
+      "description": "Elimina imágenes antiguas automáticamente para no pagar almacenamiento de versiones obsoletas.",
+      "examples": [
+        {
+          "description": "Ejemplo de ecr-lifecycle.json: conservar las últimas 20",
+          "code": "{\"rules\":[{\"rulePriority\":1,\"description\":\"Mantener 20\",\"selection\":{\"tagStatus\":\"any\",\"countType\":\"imageCountMoreThan\",\"countNumber\":20},\"action\":{\"type\":\"expire\"}}]}"
+        },
+        {
+          "description": "Borrar una imagen concreta",
+          "code": "aws ecr batch-delete-image --repository-name mi-app --image-ids imageTag=0.9.0"
+        },
+        {
+          "description": "Ver resultados del escaneo de vulnerabilidades",
+          "code": "aws ecr describe-image-scan-findings --repository-name mi-app --image-id imageTag=1.0.0"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ecr",
+        "lifecycle",
+        "limpieza",
+        "escaneo"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Servicios de ECS: listar y redesplegar",
+      "command": "aws ecs list-services --cluster prod",
+      "section": "Bases de datos y contenedores",
+      "topic": "ECS",
+      "description": "ECS ejecuta contenedores sin administrar servidores (Fargate) o sobre instancias EC2. El servicio mantiene el número deseado de tareas.",
+      "examples": [
+        {
+          "description": "Detalles de un servicio",
+          "code": "aws ecs describe-services --cluster prod --services api --query \"services[].[serviceName,runningCount,desiredCount,deployments[0].rolloutState]\""
+        },
+        {
+          "description": "Forzar nuevo despliegue (misma definición, nueva imagen :latest)",
+          "code": "aws ecs update-service --cluster prod --service api --force-new-deployment"
+        },
+        {
+          "description": "Escalar a 4 tareas",
+          "code": "aws ecs update-service --cluster prod --service api --desired-count 4"
+        },
+        {
+          "description": "Esperar a que se estabilice",
+          "code": "aws ecs wait services-stable --cluster prod --services api"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ecs",
+        "service",
+        "despliegue",
+        "fargate"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "--force-new-deployment re-descarga la imagen con la misma etiqueta; no sirve si el tag es inmutable y no cambió. Mejor registrar una nueva task definition con un tag nuevo."
+    },
+    {
+      "title": "Depurar tareas de ECS",
+      "command": "aws ecs list-tasks --cluster prod --service-name api",
+      "section": "Bases de datos y contenedores",
+      "topic": "ECS",
+      "description": "Para entender por qué una tarea falla: ver su estado, motivo de parada y entrar a un contenedor con ECS Exec.",
+      "examples": [
+        {
+          "description": "Detalle y motivo de parada",
+          "code": "aws ecs describe-tasks --cluster prod --tasks <task-arn> --query \"tasks[].[lastStatus,stoppedReason,containers[].reason]\""
+        },
+        {
+          "description": "Entrar a un contenedor (ECS Exec)",
+          "code": "aws ecs execute-command --cluster prod --task <task-id> --container api --interactive --command \"/bin/sh\""
+        },
+        {
+          "description": "Registrar una nueva task definition",
+          "code": "aws ecs register-task-definition --cli-input-json file://taskdef.json"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ecs",
+        "tasks",
+        "execute-command",
+        "debug"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "ECS Exec requiere enableExecuteCommand en el servicio, el plugin session-manager y permisos SSM en el rol de la tarea. Los logs normalmente van a CloudWatch Logs con el driver awslogs."
+    },
+    {
+      "title": "Configurar kubectl contra EKS",
+      "command": "aws eks update-kubeconfig --name mi-cluster --region sa-east-1",
+      "section": "Bases de datos y contenedores",
+      "topic": "EKS",
+      "description": "Añade el clúster EKS a tu ~/.kube/config con autenticación por AWS. Después usas kubectl normalmente.",
+      "examples": [
+        {
+          "description": "Listar clústeres",
+          "code": "aws eks list-clusters"
+        },
+        {
+          "description": "Con un perfil y alias de contexto",
+          "code": "aws eks update-kubeconfig --name mi-cluster --region sa-east-1 --profile produccion --alias eks-prod"
+        },
+        {
+          "description": "Detalle del clúster",
+          "code": "aws eks describe-cluster --name mi-cluster --query \"cluster.[version,endpoint,status]\""
+        },
+        {
+          "description": "Comprobar acceso",
+          "code": "kubectl get nodes"
+        }
+      ],
+      "tags": [
+        "aws",
+        "eks",
+        "kubeconfig",
+        "kubernetes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Si kubectl devuelve 'You must be logged in to the server' tu identidad IAM no está mapeada en el clúster (EKS access entries o aws-auth ConfigMap). Verifica con aws sts get-caller-identity."
+    },
+    {
+      "title": "Operaciones básicas de DynamoDB",
+      "command": "aws dynamodb list-tables",
+      "section": "Bases de datos y contenedores",
+      "topic": "DynamoDB",
+      "description": "DynamoDB es la base clave-valor serverless de AWS. Los comandos de bajo nivel usan JSON con tipos explícitos (S, N, BOOL...).",
+      "examples": [
+        {
+          "description": "Insertar un ítem",
+          "code": "aws dynamodb put-item --table-name usuarios --item '{\"id\":{\"S\":\"u1\"},\"email\":{\"S\":\"ana@ejemplo.cl\"}}'"
+        },
+        {
+          "description": "Leer por clave",
+          "code": "aws dynamodb get-item --table-name usuarios --key '{\"id\":{\"S\":\"u1\"}}'"
+        },
+        {
+          "description": "Consultar por clave de partición",
+          "code": "aws dynamodb query --table-name pedidos --key-condition-expression \"cliente = :c\" --expression-attribute-values '{\":c\":{\"S\":\"c42\"}}'"
+        },
+        {
+          "description": "Describir una tabla",
+          "code": "aws dynamodb describe-table --table-name usuarios --query \"Table.[TableStatus,ItemCount]\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "dynamodb",
+        "nosql",
+        "items"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "scan lee toda la tabla y es caro: prefiere query con la clave. En PowerShell las comillas JSON requieren escapes: guarda el JSON en un archivo y usa file://. Para pruebas locales existe DynamoDB Local."
+    },
+    {
+      "title": "Listar y describir funciones Lambda",
+      "command": "aws lambda list-functions --query \"Functions[].[FunctionName,Runtime,LastModified]\" --output table",
+      "section": "Serverless y mensajería",
+      "topic": "Lambda",
+      "description": "Muestra las funciones de la región con su runtime. Lambda ejecuta código sin servidores bajo demanda.",
+      "examples": [
+        {
+          "description": "Detalle de configuración",
+          "code": "aws lambda get-function-configuration --function-name procesar-pedido"
+        },
+        {
+          "description": "Código y URL de descarga",
+          "code": "aws lambda get-function --function-name procesar-pedido --query Code.Location --output text"
+        },
+        {
+          "description": "Variables de entorno",
+          "code": "aws lambda get-function-configuration --function-name procesar-pedido --query Environment.Variables"
+        }
+      ],
+      "tags": [
+        "aws",
+        "lambda",
+        "funciones",
+        "listar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Invocar una función Lambda",
+      "command": "aws lambda invoke --function-name procesar-pedido --cli-binary-format raw-in-base64-out --payload '{\"id\": 42}' respuesta.json",
+      "section": "Serverless y mensajería",
+      "topic": "Lambda",
+      "description": "Ejecuta la función de forma síncrona y guarda la respuesta en un archivo. En CLI v2 el payload necesita --cli-binary-format raw-in-base64-out para pasar JSON directo.",
+      "examples": [
+        {
+          "description": "Invocación asíncrona",
+          "code": "aws lambda invoke --function-name procesar-pedido --invocation-type Event --cli-binary-format raw-in-base64-out --payload '{\"id\": 42}' /dev/null"
+        },
+        {
+          "description": "Con registro del log en la respuesta",
+          "code": "aws lambda invoke --function-name procesar-pedido --log-type Tail --query LogResult --output text respuesta.json | base64 -d"
+        },
+        {
+          "description": "Payload desde archivo",
+          "code": "aws lambda invoke --function-name procesar-pedido --payload fileb://evento.json respuesta.json"
+        }
+      ],
+      "tags": [
+        "aws",
+        "lambda",
+        "invoke",
+        "payload",
+        "prueba"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Sin --cli-binary-format raw-in-base64-out el CLI v2 falla con 'Invalid base64'. El status 200 solo indica que se invocó; revisa FunctionError en la respuesta."
+    },
+    {
+      "title": "Desplegar código con update-function-code",
+      "command": "aws lambda update-function-code --function-name procesar-pedido --zip-file fileb://funcion.zip",
+      "section": "Serverless y mensajería",
+      "topic": "Lambda",
+      "description": "Sube una nueva versión del código empaquetado en zip. También acepta imágenes de contenedor desde ECR.",
+      "examples": [
+        {
+          "description": "Empaquetar antes",
+          "code": "zip -r funcion.zip . -x \".git/*\" \"*.pyc\""
+        },
+        {
+          "description": "Desde S3",
+          "code": "aws lambda update-function-code --function-name procesar-pedido --s3-bucket mi-bucket --s3-key funcion.zip"
+        },
+        {
+          "description": "Esperar a que quede activa",
+          "code": "aws lambda wait function-updated --function-name procesar-pedido"
+        },
+        {
+          "description": "Publicar una versión inmutable",
+          "code": "aws lambda publish-version --function-name procesar-pedido"
+        }
+      ],
+      "tags": [
+        "aws",
+        "lambda",
+        "deploy",
+        "update-function-code"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Las dependencias de Python con extensiones nativas deben compilarse para Amazon Linux (usa contenedor o capas). Para despliegues serios usa SAM, CDK o Terraform en vez de scripts manuales."
+    },
+    {
+      "title": "Seguir logs en tiempo real con logs tail",
+      "command": "aws logs tail /aws/lambda/procesar-pedido --follow",
+      "section": "Serverless y mensajería",
+      "topic": "Logs",
+      "description": "Muestra y sigue los eventos de un grupo de logs de CloudWatch, como un tail -f. Una de las novedades más cómodas del CLI v2.",
+      "examples": [
+        {
+          "description": "Última hora con filtro",
+          "code": "aws logs tail /aws/lambda/procesar-pedido --since 1h --filter-pattern ERROR"
+        },
+        {
+          "description": "Con formato corto y zona local",
+          "code": "aws logs tail /aws/ecs/api --follow --format short"
+        },
+        {
+          "description": "Listar grupos de logs",
+          "code": "aws logs describe-log-groups --query \"logGroups[].logGroupName\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "logs",
+        "tail",
+        "cloudwatch",
+        "lambda"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "--since acepta 5m, 1h, 2d o una fecha ISO. En grupos con mucho tráfico un filtro evita inundar la terminal. Define retención (put-retention-policy) para controlar costos de almacenamiento."
+    },
+    {
+      "title": "Consultas con CloudWatch Logs Insights",
+      "command": "aws logs start-query --log-group-name /aws/lambda/procesar-pedido --start-time $(date -d '1 hour ago' +%s) --end-time $(date +%s) --query-string 'fields @timestamp, @message | filter @message like /ERROR/ | limit 20'",
+      "section": "Serverless y mensajería",
+      "topic": "Logs",
+      "description": "Ejecuta consultas SQL-like sobre los logs. start-query devuelve un queryId y los resultados se piden aparte.",
+      "examples": [
+        {
+          "description": "Obtener los resultados",
+          "code": "aws logs get-query-results --query-id <query-id>"
+        },
+        {
+          "description": "Retención de 30 días",
+          "code": "aws logs put-retention-policy --log-group-name /aws/lambda/procesar-pedido --retention-in-days 30"
+        }
+      ],
+      "tags": [
+        "aws",
+        "logs",
+        "insights",
+        "consultas"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Enviar y recibir mensajes con SQS",
+      "command": "aws sqs send-message --queue-url https://sqs.sa-east-1.amazonaws.com/123456789012/trabajos --message-body '{\"tarea\":\"enviar-correo\"}'",
+      "section": "Serverless y mensajería",
+      "topic": "SQS",
+      "description": "SQS es una cola de mensajes gestionada. send-message encola; receive-message obtiene mensajes que luego hay que borrar.",
+      "examples": [
+        {
+          "description": "Recibir con long polling",
+          "code": "aws sqs receive-message --queue-url https://sqs.sa-east-1.amazonaws.com/123456789012/trabajos --wait-time-seconds 10 --max-number-of-messages 5"
+        },
+        {
+          "description": "Borrar un mensaje procesado",
+          "code": "aws sqs delete-message --queue-url https://sqs.sa-east-1.amazonaws.com/123456789012/trabajos --receipt-handle <handle>"
+        },
+        {
+          "description": "Cantidad de mensajes pendientes",
+          "code": "aws sqs get-queue-attributes --queue-url https://sqs.sa-east-1.amazonaws.com/123456789012/trabajos --attribute-names ApproximateNumberOfMessages"
+        },
+        {
+          "description": "Vaciar la cola",
+          "code": "aws sqs purge-queue --queue-url https://sqs.sa-east-1.amazonaws.com/123456789012/trabajos"
+        }
+      ],
+      "tags": [
+        "aws",
+        "sqs",
+        "cola",
+        "mensajes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Si no borras el mensaje, reaparece tras el visibility timeout. purge-queue es irreversible. Configura una dead-letter queue para mensajes que fallan repetidamente."
+    },
+    {
+      "title": "Crear y listar colas SQS",
+      "command": "aws sqs create-queue --queue-name trabajos --attributes VisibilityTimeout=60",
+      "section": "Serverless y mensajería",
+      "topic": "SQS",
+      "description": "Crea una cola estándar. Las FIFO deben terminar en .fifo y llevar FifoQueue=true.",
+      "examples": [
+        {
+          "description": "Cola FIFO",
+          "code": "aws sqs create-queue --queue-name pedidos.fifo --attributes FifoQueue=true,ContentBasedDeduplication=true"
+        },
+        {
+          "description": "Listar",
+          "code": "aws sqs list-queues"
+        },
+        {
+          "description": "Obtener la URL por nombre",
+          "code": "aws sqs get-queue-url --queue-name trabajos --query QueueUrl --output text"
+        }
+      ],
+      "tags": [
+        "aws",
+        "sqs",
+        "create-queue",
+        "fifo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Publicar notificaciones con SNS",
+      "command": "aws sns publish --topic-arn arn:aws:sns:sa-east-1:123456789012:alertas --subject \"Alerta\" --message \"Disco al 90 % en web-01\"",
+      "section": "Serverless y mensajería",
+      "topic": "SNS",
+      "description": "SNS distribuye un mensaje a todos sus suscriptores (correo, SMS, HTTP, SQS, Lambda). Base de las alertas de CloudWatch.",
+      "examples": [
+        {
+          "description": "Crear un tema",
+          "code": "aws sns create-topic --name alertas"
+        },
+        {
+          "description": "Suscribir un correo (requiere confirmación)",
+          "code": "aws sns subscribe --topic-arn arn:aws:sns:sa-east-1:123456789012:alertas --protocol email --notification-endpoint ops@ejemplo.cl"
+        },
+        {
+          "description": "Suscribir un webhook HTTPS (por ejemplo n8n)",
+          "code": "aws sns subscribe --topic-arn arn:aws:sns:sa-east-1:123456789012:alertas --protocol https --notification-endpoint https://n8n.ejemplo.cl/webhook/sns"
+        },
+        {
+          "description": "Listar suscripciones",
+          "code": "aws sns list-subscriptions-by-topic --topic-arn arn:aws:sns:sa-east-1:123456789012:alertas"
+        }
+      ],
+      "tags": [
+        "aws",
+        "sns",
+        "publicar",
+        "notificaciones",
+        "alertas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "El destinatario de correo debe confirmar la suscripción desde el enlace que recibe. Un endpoint HTTPS recibe primero un mensaje de confirmación que debe aceptar."
+    },
+    {
+      "title": "Leer secretos de Secrets Manager",
+      "command": "aws secretsmanager get-secret-value --secret-id prod/tienda/db --query SecretString --output text",
+      "section": "Serverless y mensajería",
+      "topic": "Secretos",
+      "description": "Obtiene el valor de un secreto (credenciales, tokens) sin guardarlo en archivos de configuración. La app lo pide en tiempo de ejecución.",
+      "examples": [
+        {
+          "description": "Extraer un campo con jq",
+          "code": "aws secretsmanager get-secret-value --secret-id prod/tienda/db --query SecretString --output text | jq -r .password"
+        },
+        {
+          "description": "Crear un secreto",
+          "code": "aws secretsmanager create-secret --name prod/tienda/db --secret-string file://credenciales.json"
+        },
+        {
+          "description": "Actualizar su valor",
+          "code": "aws secretsmanager put-secret-value --secret-id prod/tienda/db --secret-string file://credenciales.json"
+        },
+        {
+          "description": "Listar secretos",
+          "code": "aws secretsmanager list-secrets --query \"SecretList[].Name\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "secretsmanager",
+        "secretos",
+        "credenciales"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Cada secreto cuesta por mes y por llamadas. Nunca imprimas el valor en logs de CI. Usa --secret-string file:// para no dejar la clave en el historial del shell."
+    },
+    {
+      "title": "Parámetros con SSM Parameter Store",
+      "command": "aws ssm get-parameter --name /prod/tienda/api_url --with-decryption --query Parameter.Value --output text",
+      "section": "Serverless y mensajería",
+      "topic": "Secretos",
+      "description": "Parameter Store guarda configuración y secretos (SecureString cifrados con KMS). Más barato que Secrets Manager para parámetros simples.",
+      "examples": [
+        {
+          "description": "Guardar un valor cifrado",
+          "code": "aws ssm put-parameter --name /prod/tienda/api_key --type SecureString --value \"<valor>\" --overwrite"
+        },
+        {
+          "description": "Todos los parámetros de una ruta",
+          "code": "aws ssm get-parameters-by-path --path /prod/tienda/ --recursive --with-decryption --query \"Parameters[].[Name,Value]\" --output text"
+        },
+        {
+          "description": "Cargarlos como variables de entorno",
+          "code": "eval $(aws ssm get-parameters-by-path --path /prod/tienda/ --with-decryption --query \"Parameters[].[Name,Value]\" --output text | awk '{n=split($1,a,\"/\"); print \"export \" toupper(a[n]) \"=\\\"\" $2 \"\\\"\"}')"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ssm",
+        "parameter-store",
+        "configuracion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Sin --with-decryption un SecureString devuelve el texto cifrado. put-parameter con --value deja el secreto en el historial: léelo de un archivo o de stdin. El tier estándar permite hasta 4 KB por parámetro."
+    },
+    {
+      "title": "Programar tareas con EventBridge",
+      "command": "aws events put-rule --name respaldo-nocturno --schedule-expression \"cron(0 5 * * ? *)\"",
+      "section": "Serverless y mensajería",
+      "topic": "EventBridge",
+      "description": "EventBridge dispara destinos (Lambda, ECS, SSM) según un horario o eventos de AWS. Es el 'cron' nativo de la nube (hora UTC).",
+      "examples": [
+        {
+          "description": "Asignar un destino Lambda",
+          "code": "aws events put-targets --rule respaldo-nocturno --targets \"Id\"=\"1\",\"Arn\"=\"arn:aws:lambda:sa-east-1:123456789012:function:respaldo\""
+        },
+        {
+          "description": "Listar reglas",
+          "code": "aws events list-rules --query \"Rules[].[Name,ScheduleExpression,State]\" --output table"
+        },
+        {
+          "description": "Desactivar una regla",
+          "code": "aws events disable-rule --name respaldo-nocturno"
+        }
+      ],
+      "tags": [
+        "aws",
+        "eventbridge",
+        "cron",
+        "programacion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El cron de EventBridge usa 6 campos y trabaja en UTC; Chile es UTC-3/UTC-4 según horario de verano. Además la Lambda necesita permiso (add-permission) para ser invocada por la regla."
+    }
+  ]
+}

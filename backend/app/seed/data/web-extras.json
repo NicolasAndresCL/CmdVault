@@ -1,0 +1,441 @@
+{
+  "category": {
+    "slug": "web",
+    "name": "Servidores web",
+    "icon": "language",
+    "order": 14,
+    "description": "Publicar sitios y APIs: Nginx, Apache, Caddy, certificados TLS y pruebas HTTP desde la terminal."
+  },
+  "commands": [
+    {
+      "title": "Prioridad de los location en Nginx",
+      "command": "location = /salud { return 200 \"ok\\n\"; }\nlocation ^~ /static/ { root /var/www/app; }\nlocation ~* \\.php$ { return 403; }\nlocation / { proxy_pass http://127.0.0.1:8000; }",
+      "section": "Nginx",
+      "topic": "Configuración",
+      "description": "Nginx elige el location por prioridad, no por orden: primero coincidencia exacta (=), luego prefijo con ^~, luego expresiones regulares (~ y ~*) y por último el prefijo más largo.",
+      "examples": [
+        {
+          "description": "Probar qué responde cada ruta",
+          "code": "curl -i http://127.0.0.1/salud && curl -I http://127.0.0.1/static/app.css && curl -I http://127.0.0.1/x.php"
+        },
+        {
+          "description": "Depurar con cabecera propia por ruta",
+          "code": "location /api/ {\n    add_header X-Ruta \"api\" always;\n    proxy_pass http://127.0.0.1:8000;\n}"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "location",
+        "prioridad",
+        "regex"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Un location regex puede 'robar' peticiones a un prefijo si no usas ^~. Es una causa frecuente de comportamientos raros con archivos estáticos."
+    },
+    {
+      "title": "Redirecciones y reescrituras",
+      "command": "location = /viejo { return 301 /nuevo; }\nrewrite ^/blog/(.*)$ /articulos/$1 permanent;",
+      "section": "Nginx",
+      "topic": "Configuración",
+      "description": "return es la forma simple y preferida de redirigir; rewrite sirve cuando necesitas capturar partes de la URL.",
+      "examples": [
+        {
+          "description": "Redirigir un dominio completo",
+          "code": "server {\n    listen 80;\n    server_name viejo.cl;\n    return 301 https://nuevo.cl$request_uri;\n}"
+        },
+        {
+          "description": "Comprobar la redirección",
+          "code": "curl -sI http://viejo.cl/blog/hola | grep -iE '^(HTTP|location)'"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "rewrite",
+        "return",
+        "redireccion",
+        "301"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "IP real del cliente detrás de Cloudflare",
+      "command": "set_real_ip_from 173.245.48.0/20;\nreal_ip_header CF-Connecting-IP;",
+      "section": "Nginx",
+      "topic": "Seguridad",
+      "description": "Cuando hay un CDN delante, $remote_addr es la IP del CDN. El módulo realip restaura la IP real para logs y limit_req.",
+      "examples": [
+        {
+          "description": "Listado oficial de rangos de Cloudflare",
+          "code": "curl -s https://www.cloudflare.com/ips-v4 && curl -s https://www.cloudflare.com/ips-v6"
+        },
+        {
+          "description": "Verificar en el log",
+          "code": "sudo tail -f /var/log/nginx/access.log"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "cloudflare",
+        "real-ip",
+        "cdn"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Solo confía en cabeceras como CF-Connecting-IP desde los rangos del CDN (set_real_ip_from): si no, cualquiera puede falsificar su IP. Mantén la lista actualizada."
+    },
+    {
+      "title": "HTTP/3 (QUIC) en Nginx",
+      "command": "listen 443 quic reuseport;\nlisten 443 ssl;\nhttp2 on;\nadd_header Alt-Svc 'h3=\":443\"; ma=86400' always;",
+      "section": "Nginx",
+      "topic": "Rendimiento",
+      "description": "Habilita HTTP/3 sobre UDP en Nginx 1.25+. Requiere abrir el puerto 443/UDP en el firewall.",
+      "examples": [
+        {
+          "description": "Abrir UDP en firewalld",
+          "code": "sudo firewall-cmd --permanent --add-port=443/udp && sudo firewall-cmd --reload"
+        },
+        {
+          "description": "Abrir UDP en ufw",
+          "code": "sudo ufw allow 443/udp"
+        },
+        {
+          "description": "Probar con curl compilado con HTTP/3",
+          "code": "curl --http3 -I https://ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "http3",
+        "quic",
+        "udp"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Se necesita un Nginx compilado con soporte QUIC (paquetes oficiales nginx.org lo traen; el de la distribución puede no). Si el navegador no usa HTTP/3, revisa que 443/UDP no esté bloqueado."
+    },
+    {
+      "title": "Rotar logs y reabrir archivos",
+      "command": "sudo nginx -s reopen",
+      "section": "Nginx",
+      "topic": "Logs",
+      "description": "Hace que Nginx cierre y reabra sus archivos de log, necesario tras mover o rotar el log manualmente.",
+      "examples": [
+        {
+          "description": "Probar logrotate sin ejecutar",
+          "code": "sudo logrotate -d /etc/logrotate.d/nginx"
+        },
+        {
+          "description": "Forzar una rotación",
+          "code": "sudo logrotate -f /etc/logrotate.d/nginx"
+        },
+        {
+          "description": "Ver el tamaño de los logs",
+          "code": "sudo du -sh /var/log/nginx/*"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "logrotate",
+        "reopen",
+        "logs"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Si borras el log sin reopen, Nginx sigue escribiendo en el archivo borrado y el disco no se libera: reabre o recarga."
+    },
+    {
+      "title": "Nginx en contenedor",
+      "command": "docker run -d --name web -p 80:80 -v $PWD/dist:/usr/share/nginx/html:ro nginx:alpine",
+      "section": "Nginx",
+      "topic": "Docker",
+      "description": "Sirve archivos estáticos con la imagen oficial de Nginx. Para configuración propia se monta un archivo en /etc/nginx/conf.d/.",
+      "examples": [
+        {
+          "description": "Con configuración propia",
+          "code": "docker run -d --name web -p 80:80 -v $PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro -v $PWD/dist:/usr/share/nginx/html:ro nginx:alpine"
+        },
+        {
+          "description": "Validar y recargar dentro del contenedor",
+          "code": "docker exec web nginx -t && docker exec web nginx -s reload"
+        },
+        {
+          "description": "Ver logs",
+          "code": "docker logs -f web"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "docker",
+        "contenedor",
+        "alpine"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Los logs de la imagen oficial van a stdout/stderr (docker logs), no a /var/log/nginx. Dentro de Docker Compose, usa el nombre del servicio como host en proxy_pass (por ejemplo http://api:8000)."
+    },
+    {
+      "title": "Autenticación básica en Apache",
+      "command": "sudo htpasswd -c /etc/apache2/.htpasswd admin",
+      "section": "Apache",
+      "topic": "Seguridad",
+      "description": "Protege una ruta con usuario y contraseña mediante mod_auth_basic.",
+      "examples": [
+        {
+          "description": "Configuración en el VirtualHost o .htaccess",
+          "code": "<Location \"/admin\">\n    AuthType Basic\n    AuthName \"Zona privada\"\n    AuthUserFile /etc/apache2/.htpasswd\n    Require valid-user\n</Location>"
+        },
+        {
+          "description": "AlmaLinux: ruta del archivo",
+          "code": "sudo htpasswd -c /etc/httpd/.htpasswd admin"
+        }
+      ],
+      "tags": [
+        "apache",
+        "htpasswd",
+        "auth",
+        "basic",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Úsala siempre con HTTPS. El archivo debe estar fuera del DocumentRoot para que no se pueda descargar."
+    },
+    {
+      "title": "Autenticación básica con Caddy",
+      "command": "caddy hash-password",
+      "section": "Caddy",
+      "topic": "Caddyfile",
+      "description": "Genera el hash bcrypt de una contraseña para usarlo en la directiva basic_auth del Caddyfile.",
+      "examples": [
+        {
+          "description": "Uso en el Caddyfile",
+          "code": "admin.ejemplo.cl {\n    basic_auth {\n        nico <hash-generado>\n    }\n    reverse_proxy 127.0.0.1:9000\n}"
+        },
+        {
+          "description": "Reload tras editar",
+          "code": "sudo systemctl reload caddy"
+        }
+      ],
+      "tags": [
+        "caddy",
+        "basic_auth",
+        "hash-password",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "En versiones antiguas la directiva se llamaba basicauth; ahora es basic_auth. Nunca guardes la contraseña en claro en el Caddyfile."
+    },
+    {
+      "title": "Caddy en Docker con volúmenes persistentes",
+      "command": "docker run -d --name caddy -p 80:80 -p 443:443 -v $PWD/Caddyfile:/etc/caddy/Caddyfile:ro -v caddy_data:/data -v caddy_config:/config caddy:2",
+      "section": "Caddy",
+      "topic": "Caddyfile",
+      "description": "Ejecuta Caddy en contenedor. Los volúmenes /data y /config guardan los certificados: si los pierdes se reemita todo y puedes toparte con límites de Let's Encrypt.",
+      "examples": [
+        {
+          "description": "Recargar el Caddyfile",
+          "code": "docker exec caddy caddy reload --config /etc/caddy/Caddyfile"
+        },
+        {
+          "description": "Para llegar a otros contenedores, usar su nombre en una red compartida",
+          "code": "reverse_proxy api:8000"
+        }
+      ],
+      "tags": [
+        "caddy",
+        "docker",
+        "volumenes",
+        "certificados"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Certbot en Docker",
+      "command": "docker run --rm -p 80:80 -v /etc/letsencrypt:/etc/letsencrypt -v /var/lib/letsencrypt:/var/lib/letsencrypt certbot/certbot certonly --standalone -d ejemplo.cl --agree-tos -m admin@ejemplo.cl",
+      "section": "TLS y certificados",
+      "topic": "Certbot",
+      "description": "Obtiene certificados sin instalar certbot en el host. El modo standalone ocupa temporalmente el puerto 80.",
+      "examples": [
+        {
+          "description": "Renovar",
+          "code": "docker run --rm -p 80:80 -v /etc/letsencrypt:/etc/letsencrypt -v /var/lib/letsencrypt:/var/lib/letsencrypt certbot/certbot renew"
+        },
+        {
+          "description": "Con webroot compartido con Nginx",
+          "code": "docker run --rm -v /etc/letsencrypt:/etc/letsencrypt -v /var/www/certbot:/var/www/certbot certbot/certbot certonly --webroot -w /var/www/certbot -d ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "tls",
+        "certbot",
+        "docker",
+        "letsencrypt"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si ya tienes Traefik o Caddy, ellos obtienen y renuevan certificados solos (ACME integrado): no necesitas certbot. Evita mezclar ambos en los mismos puertos."
+    },
+    {
+      "title": "Monitorear la expiración de certificados",
+      "command": "for d in ejemplo.cl app.ejemplo.cl; do echo -n \"$d: \"; echo | openssl s_client -connect $d:443 -servername $d 2>/dev/null | openssl x509 -noout -enddate; done",
+      "section": "TLS y certificados",
+      "topic": "OpenSSL",
+      "description": "Revisa la fecha de vencimiento de varios dominios. Combinado con cron y un aviso, evita la caída silenciosa por certificados caducados.",
+      "examples": [
+        {
+          "description": "Script que avisa si faltan menos de 14 días",
+          "code": "for d in ejemplo.cl app.ejemplo.cl; do echo | openssl s_client -connect $d:443 -servername $d 2>/dev/null | openssl x509 -noout -checkend 1209600 >/dev/null || echo \"AVISO: $d vence pronto\"; done"
+        },
+        {
+          "description": "Programarlo a diario con cron",
+          "code": "0 8 * * * /usr/local/bin/check-certs.sh | mail -s 'Certificados' ops@ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "tls",
+        "openssl",
+        "expiracion",
+        "monitoreo",
+        "cron"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Probar HTTP/2 y HTTP/3 con curl",
+      "command": "curl -sI --http2 https://ejemplo.cl -o /dev/null -w '%{http_version}\\n'",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "curl",
+      "description": "Muestra la versión de HTTP negociada con el servidor. Útil para confirmar que HTTP/2 o HTTP/3 están activos.",
+      "examples": [
+        {
+          "description": "Versión que usa por defecto",
+          "code": "curl -s -o /dev/null -w '%{http_version}\\n' https://ejemplo.cl"
+        },
+        {
+          "description": "Forzar HTTP/1.1",
+          "code": "curl -sI --http1.1 https://ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "curl",
+        "http2",
+        "http3",
+        "version"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Cookies, autenticación y sesión con curl",
+      "command": "curl -c cookies.txt -d 'usuario=nico&clave=<contraseña>' https://ejemplo.cl/login",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "curl",
+      "description": "Guarda las cookies de una respuesta en un archivo para reutilizarlas en peticiones siguientes, simulando una sesión.",
+      "examples": [
+        {
+          "description": "Reutilizar la cookie",
+          "code": "curl -b cookies.txt https://ejemplo.cl/panel"
+        },
+        {
+          "description": "Autenticación básica",
+          "code": "curl -u usuario:<contraseña> https://ejemplo.cl/privado"
+        },
+        {
+          "description": "Usar un archivo netrc para no exponer credenciales",
+          "code": "curl --netrc https://ejemplo.cl/privado"
+        }
+      ],
+      "tags": [
+        "curl",
+        "cookies",
+        "sesion",
+        "autenticacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Los datos con -d quedan en el historial del shell y en ps; para secretos usa --data @archivo o netrc. En scripts evita imprimir tokens."
+    },
+    {
+      "title": "Descargas y comprobaciones con wget",
+      "command": "wget --spider -S https://ejemplo.cl 2>&1 | head -20",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "Red",
+      "description": "--spider comprueba que la URL responde sin descargar el contenido. wget también sirve para descargas recursivas y reanudables.",
+      "examples": [
+        {
+          "description": "Descargar reanudando",
+          "code": "wget -c https://ejemplo.cl/archivo.iso"
+        },
+        {
+          "description": "Espejo de un sitio estático (con cuidado)",
+          "code": "wget --mirror --convert-links --page-requisites --no-parent https://ejemplo.cl/"
+        },
+        {
+          "description": "Guardar con otro nombre",
+          "code": "wget -O salida.json https://ejemplo.cl/api/datos"
+        }
+      ],
+      "tags": [
+        "wget",
+        "spider",
+        "descarga"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    }
+  ]
+}

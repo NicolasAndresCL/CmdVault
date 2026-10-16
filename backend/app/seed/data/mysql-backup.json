@@ -1,0 +1,403 @@
+{
+  "category": {
+    "slug": "mysql",
+    "name": "MySQL",
+    "icon": "table_chart",
+    "order": 9,
+    "description": "MySQL y MariaDB desde la terminal: cliente, consultas, usuarios, backups, rendimiento y operación en producción."
+  },
+  "commands": [
+    {
+      "title": "Backup lógico consistente con mysqldump",
+      "command": "mysqldump -u root -p --single-transaction --routines --triggers --events tienda > tienda.sql",
+      "section": "Backup y restauración",
+      "topic": "mysqldump",
+      "description": "Genera un archivo SQL con el esquema y los datos. --single-transaction da una copia consistente de tablas InnoDB sin bloquear escrituras.",
+      "syntax": "mysqldump [opciones] BASE [TABLAS...] > archivo.sql",
+      "examples": [
+        {
+          "description": "Comprimir al vuelo con gzip",
+          "code": "mysqldump -u root -p --single-transaction --routines --triggers --events tienda | gzip > tienda_$(date +%F).sql.gz"
+        },
+        {
+          "description": "Todas las bases",
+          "code": "mysqldump -u root -p --single-transaction --routines --triggers --events --all-databases > todo.sql"
+        },
+        {
+          "description": "Con charset explícito",
+          "code": "mysqldump -u root -p --single-transaction --default-character-set=utf8mb4 tienda > tienda.sql"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "mysqldump",
+        "backup",
+        "single-transaction"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "--single-transaction solo es consistente con InnoDB (con MyISAM necesitarías --lock-tables). Sin --routines/--events esos objetos NO se incluyen. En PowerShell, la redirección > escribe en UTF-16 y rompe el dump: usa --result-file=tienda.sql o Git Bash/CMD."
+    },
+    {
+      "title": "mysqldump de tablas y solo estructura o datos",
+      "command": "mysqldump -u root -p --no-data tienda > esquema.sql",
+      "section": "Backup y restauración",
+      "topic": "mysqldump",
+      "description": "Variantes de mysqldump para exportar solo el esquema, solo los datos o tablas concretas. Útil para versionar el DDL o para copiar datos de pruebas.",
+      "examples": [
+        {
+          "description": "Solo datos",
+          "code": "mysqldump -u root -p --no-create-info tienda > datos.sql"
+        },
+        {
+          "description": "Tablas concretas",
+          "code": "mysqldump -u root -p --single-transaction tienda clientes pedidos > subset.sql"
+        },
+        {
+          "description": "Filtrar filas con WHERE",
+          "code": "mysqldump -u root -p --single-transaction tienda ventas --where=\"fecha >= '2026-01-01'\" > ventas_2026.sql"
+        },
+        {
+          "description": "Excluir una tabla pesada",
+          "code": "mysqldump -u root -p --single-transaction --ignore-table=tienda.logs tienda > sin_logs.sql"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "mysqldump",
+        "esquema",
+        "datos",
+        "where"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "mysqldump con GTID y para réplicas",
+      "command": "mysqldump -u root -p --single-transaction --source-data=2 --set-gtid-purged=OFF --all-databases > full.sql",
+      "section": "Backup y restauración",
+      "topic": "mysqldump",
+      "description": "Opciones para dumps que alimentan réplicas o restauraciones en otro servidor. Controlan la posición del binlog y la inclusión de GTID.",
+      "examples": [
+        {
+          "description": "Registrar la posición binlog como comentario (MySQL 8.2+: --source-data; antes --master-data)",
+          "code": "mysqldump -u root -p --single-transaction --source-data=2 tienda > tienda.sql"
+        },
+        {
+          "description": "Mantener los GTID para montar una réplica",
+          "code": "mysqldump -u root -p --single-transaction --set-gtid-purged=ON --all-databases > full.sql"
+        },
+        {
+          "description": "Ocultar GTID para restaurar en un servidor independiente",
+          "code": "mysqldump -u root -p --single-transaction --set-gtid-purged=OFF tienda > tienda.sql"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "mysqldump",
+        "gtid",
+        "replicacion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si restauras un dump con SET @@GLOBAL.GTID_PURGED en un servidor que ya tiene transacciones, falla. --master-data fue renombrado a --source-data en MySQL 8.2+; MariaDB usa --master-data y --gtid. mysqlpump está deprecado (retirado en 9.0): no lo adoptes, usa mysqldump o mydumper."
+    },
+    {
+      "title": "Restaurar un dump SQL",
+      "command": "mysql -u root -p tienda < tienda.sql",
+      "section": "Backup y restauración",
+      "topic": "Restauración",
+      "description": "Carga un dump creando todos los objetos. Si el dump no incluye CREATE DATABASE, la base destino debe existir antes.",
+      "examples": [
+        {
+          "description": "Crear la base y restaurar",
+          "code": "mysql -u root -p -e \"CREATE DATABASE IF NOT EXISTS tienda CHARACTER SET utf8mb4\" && mysql -u root -p tienda < tienda.sql"
+        },
+        {
+          "description": "Restaurar desde un .gz",
+          "code": "gunzip -c tienda.sql.gz | mysql -u root -p tienda"
+        },
+        {
+          "description": "Con barra de progreso usando pv",
+          "code": "pv tienda.sql | mysql -u root -p tienda"
+        },
+        {
+          "description": "Restaurar una sola tabla desde un dump grande",
+          "code": "sed -n '/^-- Table structure for table `clientes`/,/^-- Table structure for table `pedidos`/p' tienda.sql | mysql -u root -p tienda"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "restaurar",
+        "dump",
+        "import"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Restaurar en una base con datos duplica o falla por claves: los dumps de mysqldump incluyen DROP TABLE IF EXISTS por defecto, así que SOBRESCRIBEN. Prueba siempre la restauración en un servidor de pruebas antes de confiar en el backup."
+    },
+    {
+      "title": "Backups por cron con rotación",
+      "command": "0 3 * * * /usr/local/bin/backup-mysql.sh",
+      "section": "Backup y restauración",
+      "topic": "mysqldump",
+      "description": "Script programado que hace dump comprimido y borra copias antiguas. Un backup que nunca se prueba ni se rota no es un backup.",
+      "examples": [
+        {
+          "description": "Contenido del script (usa credenciales de ~/.my.cnf)",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\nDEST=/var/backups/mysql\nmkdir -p \"$DEST\"\nmysqldump --single-transaction --routines --triggers --events --all-databases | gzip > \"$DEST/full_$(date +%F_%H%M).sql.gz\"\nfind \"$DEST\" -name 'full_*.sql.gz' -mtime +7 -delete"
+        },
+        {
+          "description": "Instalar la entrada de cron para el usuario root",
+          "code": "( crontab -l 2>/dev/null; echo '0 3 * * * /usr/local/bin/backup-mysql.sh >> /var/log/backup-mysql.log 2>&1' ) | crontab -"
+        },
+        {
+          "description": "Desde un contenedor Docker",
+          "code": "docker exec mysql sh -c 'exec mysqldump -uroot -p\"$MYSQL_ROOT_PASSWORD\" --single-transaction --all-databases' | gzip > /var/backups/mysql/full_$(date +%F).sql.gz"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "backup",
+        "cron",
+        "rotacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Copia también los backups fuera del servidor (rclone, restic, rsync a otro host): un VPS que muere se lleva sus backups locales. Con 'set -o pipefail' un mysqldump fallido no deja un .gz vacío pasando por bueno. Chequea el tamaño del resultado en el monitoreo."
+    },
+    {
+      "title": "Backup paralelo con mydumper",
+      "command": "mydumper --user=root --ask-password --database=tienda --threads=4 --compress --outputdir=/var/backups/tienda",
+      "section": "Backup y restauración",
+      "topic": "mydumper",
+      "description": "Herramienta de terceros que hace dumps lógicos en paralelo, mucho más rápida que mysqldump en bases grandes. Genera un archivo por tabla.",
+      "examples": [
+        {
+          "description": "Todas las bases, excluyendo el sistema",
+          "code": "mydumper --user=root --ask-password --threads=4 --regex '^(?!(mysql\\.|sys\\.|performance_schema\\.|information_schema\\.))' --outputdir=/var/backups/full"
+        },
+        {
+          "description": "Dividir tablas grandes en trozos de filas",
+          "code": "mydumper --user=root --ask-password --database=tienda --rows=500000 --outputdir=/var/backups/tienda"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "mydumper",
+        "backup",
+        "paralelo"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "No viene en los repos base; instálalo desde el paquete del proyecto. Las opciones cambian entre versiones (0.x vs 0.1x): verifica con mydumper --help. Para restaurar se usa myloader."
+    },
+    {
+      "title": "Restaurar con myloader",
+      "command": "myloader --user=root --ask-password --directory=/var/backups/tienda --threads=4 --overwrite-tables",
+      "section": "Backup y restauración",
+      "topic": "mydumper",
+      "description": "Carga en paralelo un directorio generado por mydumper. Restaura estructura y datos de todas las tablas respaldadas.",
+      "examples": [
+        {
+          "description": "Restaurar en otra base",
+          "code": "myloader --user=root --ask-password --directory=/var/backups/tienda --source-db=tienda --database=tienda_copia --threads=4"
+        },
+        {
+          "description": "Ver todas las opciones disponibles",
+          "code": "myloader --help"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "myloader",
+        "restauracion",
+        "paralelo"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "--overwrite-tables borra las tablas existentes antes de cargarlas. Verifica espacio en disco: el servidor necesita espacio para datos más índices más binlogs."
+    },
+    {
+      "title": "Backup físico con Percona XtraBackup o MariaDB Backup",
+      "command": "xtrabackup --backup --user=root --password --target-dir=/var/backups/xb_full",
+      "section": "Backup y restauración",
+      "topic": "Físico",
+      "description": "Copia en caliente los archivos de datos de InnoDB, sin bloquear escrituras. Es la opción cuando la base pesa cientos de GB y mysqldump es demasiado lento.",
+      "examples": [
+        {
+          "description": "Preparar el backup (aplica el redo log) antes de restaurar",
+          "code": "xtrabackup --prepare --target-dir=/var/backups/xb_full"
+        },
+        {
+          "description": "Restaurar con el servidor detenido y datadir vacío",
+          "code": "xtrabackup --copy-back --target-dir=/var/backups/xb_full && chown -R mysql:mysql /var/lib/mysql"
+        },
+        {
+          "description": "Equivalente en MariaDB",
+          "code": "mariadb-backup --backup --user=root --password --target-dir=/var/backups/mb_full"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "xtrabackup",
+        "backup",
+        "fisico"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "XtraBackup es de Percona (usa la versión 8.4 con MySQL 8.4; no sirve para MariaDB, que tiene mariadb-backup). El datadir debe estar vacío al restaurar y el servidor detenido."
+    },
+    {
+      "title": "Ver y leer binlogs con mysqlbinlog",
+      "command": "mysqlbinlog --base64-output=DECODE-ROWS -v /var/lib/mysql/binlog.000012 | less",
+      "section": "Backup y restauración",
+      "topic": "Binlog",
+      "description": "Decodifica los registros binarios, que contienen todos los cambios de datos. Base de la recuperación a un punto en el tiempo (PITR).",
+      "examples": [
+        {
+          "description": "Listar los binlogs disponibles",
+          "code": "SHOW BINARY LOGS;"
+        },
+        {
+          "description": "Ver el binlog actual y posición",
+          "code": "SHOW BINARY LOG STATUS;"
+        },
+        {
+          "description": "Extraer eventos de una ventana de tiempo",
+          "code": "mysqlbinlog --start-datetime='2026-10-16 09:00:00' --stop-datetime='2026-10-16 09:30:00' /var/lib/mysql/binlog.000012 > ventana.sql"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "binlog",
+        "mysqlbinlog",
+        "pitr"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En MySQL 8.4 el comando es SHOW BINARY LOG STATUS (SHOW MASTER STATUS fue retirado); en MariaDB sigue SHOW MASTER STATUS. Los binlogs están activos por defecto en MySQL 8 y se llaman binlog.NNNNNN; en MariaDB deben activarse con log_bin."
+    },
+    {
+      "title": "Recuperación a un punto en el tiempo (PITR)",
+      "command": "mysqlbinlog --stop-datetime='2026-10-16 09:14:59' /var/lib/mysql/binlog.000012 | mysql -u root -p",
+      "section": "Backup y restauración",
+      "topic": "Binlog",
+      "description": "Tras restaurar el último backup completo, reaplica los binlogs hasta justo antes del error (por ejemplo un DELETE sin WHERE).",
+      "examples": [
+        {
+          "description": "Pasos: restaurar el backup completo",
+          "code": "mysql -u root -p < full_2026-10-16.sql"
+        },
+        {
+          "description": "Reaplicar binlogs desde la posición del backup",
+          "code": "mysqlbinlog --start-position=157 --stop-datetime='2026-10-16 09:14:59' /var/lib/mysql/binlog.000011 /var/lib/mysql/binlog.000012 | mysql -u root -p"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "pitr",
+        "recuperacion",
+        "binlog"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Hazlo primero en una copia, nunca en producción de golpe. Necesitas haber guardado la posición binlog del backup (--source-data=2). Sin binlogs conservados no hay PITR: configura binlog_expire_logs_seconds acorde a tu RPO."
+    },
+    {
+      "title": "Purgar binlogs antiguos",
+      "command": "PURGE BINARY LOGS BEFORE NOW() - INTERVAL 7 DAY;",
+      "section": "Backup y restauración",
+      "topic": "Binlog",
+      "description": "Elimina binlogs viejos para liberar disco. Asegúrate de que ninguna réplica los necesite aún.",
+      "examples": [
+        {
+          "description": "Hasta un archivo concreto",
+          "code": "PURGE BINARY LOGS TO 'binlog.000020';"
+        },
+        {
+          "description": "Ver y fijar la retención automática (MySQL 8)",
+          "code": "SET PERSIST binlog_expire_logs_seconds = 604800;"
+        },
+        {
+          "description": "Ver el espacio que ocupan",
+          "code": "SHOW BINARY LOGS;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "binlog",
+        "purge",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Nunca borres los binlogs con rm: rompe el índice. Con réplicas, comprueba antes con SHOW REPLICA STATUS que todas hayan leído el archivo. Disco lleno por binlogs es una causa típica de caída: expiración corta o monitoreo de df."
+    },
+    {
+      "title": "Exportar e importar una tabla a CSV con mysqlimport",
+      "command": "mysqlimport --local --fields-terminated-by=',' --ignore-lines=1 -u root -p tienda /tmp/clientes.csv",
+      "section": "Backup y restauración",
+      "topic": "Importar y exportar",
+      "description": "Cliente de línea de comandos que envuelve LOAD DATA. El nombre del archivo (sin extensión) debe coincidir con el de la tabla destino.",
+      "examples": [
+        {
+          "description": "Forzar charset",
+          "code": "mysqlimport --local --default-character-set=utf8mb4 --fields-terminated-by=',' --fields-optionally-enclosed-by='\"' --ignore-lines=1 -u root -p tienda /tmp/clientes.csv"
+        },
+        {
+          "description": "Reemplazar filas con la misma clave",
+          "code": "mysqlimport --local --replace -u root -p tienda /tmp/clientes.csv"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "mysqlimport",
+        "csv",
+        "importar"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "El archivo /tmp/clientes.csv carga en la tabla 'clientes'. Requiere local_infile habilitado. Para controles finos (transformaciones de columnas) usa LOAD DATA desde el cliente."
+    }
+  ]
+}

@@ -1,0 +1,511 @@
+{
+  "category": {
+    "slug": "cloud",
+    "name": "Cloud",
+    "icon": "cloud_queue",
+    "order": 13,
+    "description": "Otras nubes desde la terminal: Google Cloud, Azure, DigitalOcean, Cloudflare y Hetzner."
+  },
+  "commands": [
+    {
+      "title": "Construir imágenes con Cloud Build",
+      "command": "gcloud builds submit --tag southamerica-west1-docker.pkg.dev/mi-proyecto-123/repo/mi-api:1.0.0 .",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Cloud Build",
+      "description": "Construye la imagen en la nube a partir del Dockerfile local y la publica en Artifact Registry, sin necesidad de Docker en tu máquina.",
+      "examples": [
+        {
+          "description": "Con archivo de configuración",
+          "code": "gcloud builds submit --config=cloudbuild.yaml ."
+        },
+        {
+          "description": "Listar las últimas construcciones",
+          "code": "gcloud builds list --limit=5"
+        },
+        {
+          "description": "Ver el log de una construcción",
+          "code": "gcloud builds log <id-build>"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "cloud-build",
+        "imagenes",
+        "docker",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Jobs de Cloud Run",
+      "command": "gcloud run jobs deploy respaldo --image=southamerica-west1-docker.pkg.dev/mi-proyecto-123/repo/respaldo:1.0.0 --region=southamerica-west1",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Cloud Run",
+      "description": "Los jobs ejecutan contenedores que corren hasta terminar (migraciones, ETL, backups) sin servir HTTP.",
+      "examples": [
+        {
+          "description": "Ejecutarlo",
+          "code": "gcloud run jobs execute respaldo --region=southamerica-west1 --wait"
+        },
+        {
+          "description": "Programarlo con Cloud Scheduler",
+          "code": "gcloud scheduler jobs create http respaldo-diario --location=southamerica-west1 --schedule=\"0 5 * * *\" --uri=\"https://run.googleapis.com/v2/projects/mi-proyecto-123/locations/southamerica-west1/jobs/respaldo:run\" --http-method=POST --oauth-service-account-email=ci-deploy@mi-proyecto-123.iam.gserviceaccount.com"
+        },
+        {
+          "description": "Ver ejecuciones",
+          "code": "gcloud run jobs executions list --job=respaldo --region=southamerica-west1"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "cloud-run",
+        "jobs",
+        "scheduler",
+        "batch"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "La cuenta de servicio del Scheduler necesita rol run.invoker sobre el job. Cloud Scheduler usa hora UTC salvo que indiques --time-zone."
+    },
+    {
+      "title": "Snapshots de discos y descripción de VM",
+      "command": "gcloud compute disks snapshot web-01 --zone=southamerica-west1-a --snapshot-names=web-01-2026-10-16",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Compute Engine",
+      "description": "Crea una copia incremental del disco de una VM. Se pueden programar con políticas de snapshot.",
+      "examples": [
+        {
+          "description": "Listar snapshots",
+          "code": "gcloud compute snapshots list"
+        },
+        {
+          "description": "Describir la VM",
+          "code": "gcloud compute instances describe web-01 --zone=southamerica-west1-a --format=\"yaml(name,status,networkInterfaces[0].networkIP)\""
+        },
+        {
+          "description": "Ver metadatos de SSH y etiquetas",
+          "code": "gcloud compute instances describe web-01 --zone=southamerica-west1-a --format=\"value(tags.items)\""
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "compute",
+        "snapshot",
+        "disco",
+        "backup"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Pub/Sub desde la terminal",
+      "command": "gcloud pubsub topics create eventos",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Mensajería",
+      "description": "Pub/Sub es el servicio de mensajería asíncrona de Google. Se crean temas y suscripciones y se publican mensajes.",
+      "examples": [
+        {
+          "description": "Crear una suscripción pull",
+          "code": "gcloud pubsub subscriptions create eventos-sub --topic=eventos"
+        },
+        {
+          "description": "Publicar un mensaje",
+          "code": "gcloud pubsub topics publish eventos --message='{\"id\":42}'"
+        },
+        {
+          "description": "Leer y confirmar mensajes",
+          "code": "gcloud pubsub subscriptions pull eventos-sub --auto-ack --limit=5"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "pubsub",
+        "mensajeria",
+        "eventos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Exportar una base de Cloud SQL a un bucket",
+      "command": "gcloud sql export sql tienda-pg gs://mi-bucket/dumps/tienda.sql.gz --database=tienda",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Bases de datos",
+      "description": "Genera un dump SQL comprimido de la instancia en Cloud Storage. Base de la estrategia de backup lógico.",
+      "examples": [
+        {
+          "description": "Importar",
+          "code": "gcloud sql import sql tienda-pg gs://mi-bucket/dumps/tienda.sql.gz --database=tienda"
+        },
+        {
+          "description": "Listar los backups automáticos",
+          "code": "gcloud sql backups list --instance=tienda-pg"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "cloud-sql",
+        "export",
+        "backup",
+        "dump"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "La cuenta de servicio de la instancia necesita permiso de escritura en el bucket. Para dumps consistentes de PostgreSQL grandes considera pg_dump contra el proxy."
+    },
+    {
+      "title": "Desplegar plantillas Bicep o ARM",
+      "command": "az deployment group create --resource-group rg-tienda --template-file main.bicep --parameters entorno=prod",
+      "section": "Azure (az)",
+      "topic": "Infraestructura como código",
+      "description": "Despliega infraestructura declarativa en un grupo de recursos. what-if muestra los cambios antes de aplicarlos.",
+      "examples": [
+        {
+          "description": "Vista previa de cambios",
+          "code": "az deployment group what-if --resource-group rg-tienda --template-file main.bicep --parameters entorno=prod"
+        },
+        {
+          "description": "Compilar Bicep a ARM",
+          "code": "az bicep build --file main.bicep"
+        },
+        {
+          "description": "Historial de despliegues",
+          "code": "az deployment group list --resource-group rg-tienda --output table"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "bicep",
+        "deployment",
+        "iac"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Ejecuta SIEMPRE what-if antes del despliegue real. Para flujos con estado y multi-nube, Terraform es la alternativa habitual."
+    },
+    {
+      "title": "Reglas de red (NSG)",
+      "command": "az network nsg rule create --resource-group rg-tienda --nsg-name web-01NSG --name permitir-https --priority 1020 --destination-port-ranges 443 --access Allow --protocol Tcp",
+      "section": "Azure (az)",
+      "topic": "Redes",
+      "description": "Los grupos de seguridad de red filtran el tráfico a las VM. Cada regla tiene una prioridad única (menor número = mayor prioridad).",
+      "examples": [
+        {
+          "description": "Listar reglas",
+          "code": "az network nsg rule list --resource-group rg-tienda --nsg-name web-01NSG --output table"
+        },
+        {
+          "description": "Limitar SSH a tu IP",
+          "code": "az network nsg rule create --resource-group rg-tienda --nsg-name web-01NSG --name ssh-mi-ip --priority 1000 --destination-port-ranges 22 --source-address-prefixes 203.0.113.10/32 --access Allow --protocol Tcp"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "nsg",
+        "firewall",
+        "red"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Cambiar tamaño de una VM y listar tamaños",
+      "command": "az vm resize --resource-group rg-tienda --name web-01 --size Standard_B4ms",
+      "section": "Azure (az)",
+      "topic": "Máquinas virtuales",
+      "description": "Cambia el tamaño de una VM (puede reiniciarla). Primero consulta los tamaños disponibles en la región.",
+      "examples": [
+        {
+          "description": "Tamaños disponibles",
+          "code": "az vm list-sizes --location brazilsouth --output table"
+        },
+        {
+          "description": "Imágenes de Ubuntu",
+          "code": "az vm image list --publisher Canonical --all --offer ubuntu-24_04-lts --output table"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "vm",
+        "resize",
+        "sizes",
+        "imagenes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Desplegar un zip en App Service",
+      "command": "az webapp deploy --resource-group rg-tienda --name mi-app-tienda --src-path build.zip --type zip",
+      "section": "Azure (az)",
+      "topic": "App Service",
+      "description": "Despliega un paquete ya construido (CI) en App Service, sin depender de la compilación remota.",
+      "examples": [
+        {
+          "description": "Reiniciar la aplicación",
+          "code": "az webapp restart --resource-group rg-tienda --name mi-app-tienda"
+        },
+        {
+          "description": "Slots de despliegue: intercambiar staging y producción",
+          "code": "az webapp deployment slot swap --resource-group rg-tienda --name mi-app-tienda --slot staging --target-slot production"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "webapp",
+        "deploy",
+        "zip",
+        "slot"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Acciones sobre Droplets: apagar y redimensionar",
+      "command": "doctl compute droplet-action power-off <droplet-id> --wait",
+      "section": "DigitalOcean (doctl)",
+      "topic": "Droplets",
+      "description": "Las acciones son operaciones asíncronas sobre un Droplet. --wait espera a que terminen.",
+      "examples": [
+        {
+          "description": "Encender",
+          "code": "doctl compute droplet-action power-on <droplet-id> --wait"
+        },
+        {
+          "description": "Redimensionar (solo CPU/RAM)",
+          "code": "doctl compute droplet-action resize <droplet-id> --size s-2vcpu-4gb --wait"
+        },
+        {
+          "description": "Activar backups semanales",
+          "code": "doctl compute droplet-action enable-backups <droplet-id>"
+        }
+      ],
+      "tags": [
+        "digitalocean",
+        "doctl",
+        "droplet-action",
+        "resize"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Un Droplet apagado se sigue facturando; hay que destruirlo (tras un snapshot) para dejar de pagar. Para resize sin disco se puede revertir; con --resize-disk no."
+    },
+    {
+      "title": "Proyectos e imágenes",
+      "command": "doctl projects list",
+      "section": "DigitalOcean (doctl)",
+      "topic": "Proyectos",
+      "description": "Los proyectos agrupan recursos de DigitalOcean. También puedes ver imágenes públicas y tamaños disponibles.",
+      "examples": [
+        {
+          "description": "Imágenes públicas de distribuciones",
+          "code": "doctl compute image list-distribution"
+        },
+        {
+          "description": "Tamaños disponibles",
+          "code": "doctl compute size list --format Slug,Memory,VCPUs,Disk,PriceMonthly"
+        }
+      ],
+      "tags": [
+        "digitalocean",
+        "doctl",
+        "proyectos",
+        "imagenes"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Probar un sitio de Pages en local",
+      "command": "npx wrangler pages dev ./dist",
+      "section": "Cloudflare (wrangler)",
+      "topic": "Pages",
+      "description": "Sirve el directorio compilado con Functions de Pages en tu máquina, útil antes del despliegue.",
+      "examples": [
+        {
+          "description": "Con un binding KV local",
+          "code": "npx wrangler pages dev ./dist --kv=CACHE"
+        },
+        {
+          "description": "Puerto específico",
+          "code": "npx wrangler pages dev ./dist --port 8788"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "pages",
+        "dev",
+        "local"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Exportar una base D1",
+      "command": "npx wrangler d1 export tienda-db --remote --output=backup-tienda.sql",
+      "section": "Cloudflare (wrangler)",
+      "topic": "D1",
+      "description": "Descarga el esquema y los datos de D1 como archivo SQL. Esencial antes de migraciones y para backups periódicos.",
+      "examples": [
+        {
+          "description": "Solo el esquema",
+          "code": "npx wrangler d1 export tienda-db --remote --no-data --output=esquema.sql"
+        },
+        {
+          "description": "Listar bases D1",
+          "code": "npx wrangler d1 list"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "d1",
+        "export",
+        "backup"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Programa el export en CI (GitHub Actions con API token) y súbelo a R2. Cloudflare ofrece además Time Travel para restaurar a un minuto pasado en D1."
+    },
+    {
+      "title": "Tipos y configuración de bindings",
+      "command": "npx wrangler types",
+      "section": "Cloudflare (wrangler)",
+      "topic": "Workers",
+      "description": "Genera un archivo de tipos TypeScript a partir de wrangler.toml (bindings, vars) para tener autocompletado.",
+      "examples": [
+        {
+          "description": "Ver versiones y despliegues",
+          "code": "npx wrangler deployments list"
+        },
+        {
+          "description": "Información de ayuda de un comando",
+          "code": "npx wrangler d1 --help"
+        }
+      ],
+      "tags": [
+        "cloudflare",
+        "wrangler",
+        "types",
+        "typescript"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Cambiar tipo de servidor",
+      "command": "hcloud server change-type --keep-disk web-01 cpx22",
+      "section": "Hetzner (hcloud)",
+      "topic": "Servidores",
+      "description": "Escala el servidor hacia otro tipo. Con --keep-disk el disco no cambia y la operación es reversible.",
+      "examples": [
+        {
+          "description": "Detalle de un servidor",
+          "code": "hcloud server describe web-01"
+        },
+        {
+          "description": "Tipos disponibles",
+          "code": "hcloud server-type list"
+        }
+      ],
+      "tags": [
+        "hetzner",
+        "hcloud",
+        "server",
+        "change-type",
+        "escalar"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El servidor debe estar apagado para cambiar de tipo. Sin --keep-disk el disco aumenta y ya no podrás volver a un tipo menor. Confirma los nombres vigentes con hcloud server-type list."
+    },
+    {
+      "title": "Etiquetas y selectores",
+      "command": "hcloud server add-label web-01 env=prod",
+      "section": "Hetzner (hcloud)",
+      "topic": "Servidores",
+      "description": "Las etiquetas permiten filtrar servidores y aplicar firewalls o acciones a grupos.",
+      "examples": [
+        {
+          "description": "Filtrar por etiqueta",
+          "code": "hcloud server list --selector env=prod"
+        },
+        {
+          "description": "Aplicar el firewall a todos los de una etiqueta",
+          "code": "hcloud firewall apply-to-resource web-fw --type label_selector --label-selector env=prod"
+        }
+      ],
+      "tags": [
+        "hetzner",
+        "hcloud",
+        "etiquetas",
+        "labels"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1221 @@
+{
+  "category": {
+    "slug": "terminal",
+    "name": "Terminal",
+    "icon": "keyboard",
+    "order": 18,
+    "description": "Dominar la terminal: atajos de Bash, búsqueda moderna (rg, fd, fzf), JSON/YAML con jq y yq, tmux, Vim, scripting robusto y productividad."
+  },
+  "commands": [
+    {
+      "title": "Atajos de edición de línea (readline)",
+      "command": "Ctrl+A / Ctrl+E / Ctrl+W / Ctrl+U",
+      "section": "Atajos y shell",
+      "topic": "Edición",
+      "description": "Moverse y borrar en la línea de comandos sin flechas: inicio, fin, borrar palabra, borrar hasta el inicio.",
+      "examples": [
+        {
+          "description": "Ir al inicio / al final de la línea",
+          "code": "Ctrl+A   /   Ctrl+E"
+        },
+        {
+          "description": "Borrar la palabra anterior / hasta el inicio",
+          "code": "Ctrl+W   /   Ctrl+U"
+        },
+        {
+          "description": "Saltar palabra a palabra",
+          "code": "Alt+B   /   Alt+F"
+        }
+      ],
+      "tags": [
+        "bash",
+        "atajos",
+        "readline"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Funcionan en bash, zsh, psql, mysql, python y casi cualquier REPL: se aprenden una vez y sirven en todas partes."
+    },
+    {
+      "title": "Buscar en el historial",
+      "command": "Ctrl+R",
+      "section": "Atajos y shell",
+      "topic": "Historial",
+      "description": "Búsqueda incremental hacia atrás en el historial de comandos; Ctrl+R otra vez salta a la coincidencia anterior.",
+      "examples": [
+        {
+          "description": "Encontrar el último docker compose",
+          "code": "Ctrl+R  →  escribir: compose"
+        },
+        {
+          "description": "Listar el historial filtrado",
+          "code": "history | grep 'terraform plan'"
+        },
+        {
+          "description": "Ejecutar el comando 421 del historial",
+          "code": "!421"
+        }
+      ],
+      "tags": [
+        "bash",
+        "historial"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Expansiones del historial",
+      "command": "!! / !$ / ^viejo^nuevo",
+      "section": "Atajos y shell",
+      "topic": "Historial",
+      "description": "Reutiliza el comando anterior o sus argumentos sin reescribirlos.",
+      "examples": [
+        {
+          "description": "Repetir el último comando con sudo",
+          "code": "sudo !!"
+        },
+        {
+          "description": "Reusar el último argumento",
+          "code": "mkdir -p /opt/cmdvault/backups\ncd !$"
+        },
+        {
+          "description": "Corregir un error de tipeo",
+          "code": "sistemctl status nginx\n^sistemctl^systemctl"
+        }
+      ],
+      "tags": [
+        "bash",
+        "historial"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Controlar procesos de la terminal",
+      "command": "Ctrl+Z / bg / fg / jobs",
+      "section": "Atajos y shell",
+      "topic": "Trabajos",
+      "description": "Suspende un proceso, mándalo al fondo y retómalo; jobs lista los que tiene la shell.",
+      "examples": [
+        {
+          "description": "Pausar y mandar al fondo",
+          "code": "Ctrl+Z\nbg"
+        },
+        {
+          "description": "Ver y retomar",
+          "code": "jobs\nfg %1"
+        },
+        {
+          "description": "Lanzar directo en segundo plano y desligarlo de la sesión",
+          "code": "nohup ./backup.sh > backup.log 2>&1 &\ndisown"
+        }
+      ],
+      "tags": [
+        "bash",
+        "jobs",
+        "procesos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Para algo que debe sobrevivir a cerrar el SSH, tmux es más cómodo que nohup."
+    },
+    {
+      "title": "Redirecciones y tuberías",
+      "command": "comando > archivo 2>&1",
+      "section": "Atajos y shell",
+      "topic": "Redirección",
+      "description": "Controla a dónde van stdout (1) y stderr (2): archivos, otros comandos o /dev/null.",
+      "examples": [
+        {
+          "description": "Salida y errores al mismo log",
+          "code": "./deploy.sh > deploy.log 2>&1"
+        },
+        {
+          "description": "Ver y guardar a la vez",
+          "code": "pytest -q 2>&1 | tee test.log"
+        },
+        {
+          "description": "Descartar solo los errores",
+          "code": "find / -name '*.conf' 2>/dev/null"
+        }
+      ],
+      "tags": [
+        "bash",
+        "redireccion",
+        "pipe"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Sustitución de comandos y procesos",
+      "command": "$(comando) / <(comando)",
+      "section": "Atajos y shell",
+      "topic": "Expansión",
+      "description": "$(...) inserta la salida de un comando; <(...) la presenta como si fuera un archivo.",
+      "examples": [
+        {
+          "description": "Usar la salida en otra orden",
+          "code": "docker logs \"$(docker ps -q --filter name=backend)\""
+        },
+        {
+          "description": "Comparar la salida de dos comandos",
+          "code": "diff <(ssh vps1 'dpkg -l') <(ssh vps2 'dpkg -l')"
+        },
+        {
+          "description": "Fecha en el nombre de un archivo",
+          "code": "pg_dump mydb > \"backup_$(date +%F_%H%M).sql\""
+        }
+      ],
+      "tags": [
+        "bash",
+        "expansion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Expansión de llaves y comodines",
+      "command": "{a,b} / {1..10} / **",
+      "section": "Atajos y shell",
+      "topic": "Expansión",
+      "description": "Genera listas de palabras o rutas sin escribirlas una a una.",
+      "examples": [
+        {
+          "description": "Crear una estructura de carpetas",
+          "code": "mkdir -p infra/{terraform/{modules,envs/{dev,prod}},ansible/roles}"
+        },
+        {
+          "description": "Copia de respaldo rápida",
+          "code": "cp nginx.conf{,.bak}"
+        },
+        {
+          "description": "Glob recursivo en bash",
+          "code": "shopt -s globstar\nls **/*.tf"
+        }
+      ],
+      "tags": [
+        "bash",
+        "expansion",
+        "glob"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Moverse rápido entre directorios",
+      "command": "cd - / pushd / popd",
+      "section": "Atajos y shell",
+      "topic": "Navegación",
+      "description": "Vuelve al directorio anterior o mantiene una pila de directorios para ir y volver.",
+      "examples": [
+        {
+          "description": "Volver al directorio anterior",
+          "code": "cd -"
+        },
+        {
+          "description": "Pila de directorios",
+          "code": "pushd /etc/nginx\npushd /var/log\ndirs -v\npopd"
+        },
+        {
+          "description": "Saltar con zoxide (aprende tus rutas)",
+          "code": "z cmdvault"
+        }
+      ],
+      "tags": [
+        "bash",
+        "navegacion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Buscar texto con ripgrep",
+      "command": "rg <patrón>",
+      "section": "Búsqueda moderna",
+      "topic": "ripgrep",
+      "description": "grep moderno: recursivo por defecto, respeta .gitignore y es muy rápido.",
+      "examples": [
+        {
+          "description": "Buscar en el proyecto",
+          "code": "rg \"advisory_lock\""
+        },
+        {
+          "description": "Solo en archivos Python, con contexto",
+          "code": "rg -t py -C 2 \"def init_db\""
+        },
+        {
+          "description": "Listar solo los archivos que coinciden",
+          "code": "rg -l \"TODO|FIXME\""
+        }
+      ],
+      "tags": [
+        "ripgrep",
+        "busqueda"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Instalación: apt install ripgrep · dnf install ripgrep (EPEL) · winget install BurntSushi.ripgrep.MSVC"
+    },
+    {
+      "title": "Buscar archivos con fd",
+      "command": "fd <patrón>",
+      "section": "Búsqueda moderna",
+      "topic": "fd",
+      "description": "find simplificado: sintaxis corta, respeta .gitignore y colorea la salida.",
+      "examples": [
+        {
+          "description": "Buscar por nombre",
+          "code": "fd Dockerfile"
+        },
+        {
+          "description": "Por extensión",
+          "code": "fd -e tf infra/"
+        },
+        {
+          "description": "Ejecutar algo sobre cada resultado",
+          "code": "fd -e sh -x shellcheck {}"
+        }
+      ],
+      "tags": [
+        "fd",
+        "busqueda"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "En Ubuntu el binario se llama fdfind: alias fd=fdfind."
+    },
+    {
+      "title": "Selector interactivo con fzf",
+      "command": "comando | fzf",
+      "section": "Búsqueda moderna",
+      "topic": "fzf",
+      "description": "Filtra cualquier lista de forma difusa e interactiva; con sus atajos mejora Ctrl+R y el autocompletado.",
+      "examples": [
+        {
+          "description": "Abrir un archivo elegido con fzf",
+          "code": "vim \"$(fzf)\""
+        },
+        {
+          "description": "Cambiar de rama de git",
+          "code": "git switch \"$(git branch --format='%(refname:short)' | fzf)\""
+        },
+        {
+          "description": "Matar un proceso elegido",
+          "code": "ps aux | fzf | awk '{print $2}' | xargs kill"
+        }
+      ],
+      "tags": [
+        "fzf",
+        "productividad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Ver archivos con bat",
+      "command": "bat <archivo>",
+      "section": "Búsqueda moderna",
+      "topic": "Visualización",
+      "description": "cat con resaltado de sintaxis, números de línea e integración con git.",
+      "examples": [
+        {
+          "description": "Leer un archivo resaltado",
+          "code": "bat docker-compose.yml"
+        },
+        {
+          "description": "Un rango de líneas",
+          "code": "bat -r 40:60 backend/app/main.py"
+        },
+        {
+          "description": "Como paginador de man",
+          "code": "export MANPAGER=\"sh -c 'col -bx | bat -l man -p'\""
+        }
+      ],
+      "tags": [
+        "bat",
+        "visualizacion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "En Ubuntu el binario se llama batcat."
+    },
+    {
+      "title": "Diferencias legibles",
+      "command": "diff -u a b",
+      "section": "Búsqueda moderna",
+      "topic": "Visualización",
+      "description": "Compara archivos o carpetas en formato unificado, el mismo de git y los parches.",
+      "examples": [
+        {
+          "description": "Comparar dos configs",
+          "code": "diff -u nginx.conf.bak nginx.conf"
+        },
+        {
+          "description": "Comparar carpetas",
+          "code": "diff -rq dist-viejo/ dist-nuevo/"
+        },
+        {
+          "description": "Diff con colores",
+          "code": "diff --color=auto -u a.txt b.txt"
+        }
+      ],
+      "tags": [
+        "diff"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Repetir un comando cada N segundos",
+      "command": "watch -n <s> <comando>",
+      "section": "Búsqueda moderna",
+      "topic": "Monitoreo",
+      "description": "Refresca la salida de un comando en pantalla completa: ideal para seguir un despliegue.",
+      "examples": [
+        {
+          "description": "Seguir el estado de los contenedores",
+          "code": "watch -n 2 docker compose ps"
+        },
+        {
+          "description": "Resaltar lo que cambia",
+          "code": "watch -d -n 5 'kubectl get pods -A'"
+        }
+      ],
+      "tags": [
+        "watch",
+        "monitoreo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Filtrar JSON con jq",
+      "command": "jq '<filtro>'",
+      "section": "JSON y YAML",
+      "topic": "jq",
+      "description": "El procesador de JSON de la terminal: extraer campos, filtrar arreglos y transformar respuestas de APIs.",
+      "examples": [
+        {
+          "description": "Campo de una respuesta de API",
+          "code": "curl -s localhost:8000/api/v1/stats | jq .commands"
+        },
+        {
+          "description": "Filtrar un arreglo",
+          "code": "curl -s localhost:8000/api/v1/categories | jq -r '.[] | select(.total > 100) | .slug'"
+        },
+        {
+          "description": "Construir un objeto nuevo",
+          "code": "jq '{nombre: .name, total: .total}' categoria.json"
+        }
+      ],
+      "tags": [
+        "jq",
+        "json"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "jq: valores crudos y CSV",
+      "command": "jq -r",
+      "section": "JSON y YAML",
+      "topic": "jq",
+      "description": "-r quita las comillas para usar el resultado en la shell; @csv y @tsv generan tablas.",
+      "examples": [
+        {
+          "description": "Exportar a CSV",
+          "code": "curl -s localhost:8000/api/v1/categories | jq -r '.[] | [.slug, .total] | @csv' > categorias.csv"
+        },
+        {
+          "description": "Guardar un valor en una variable",
+          "code": "SID=$(claude -p --output-format json \"hola\" | jq -r .session_id)"
+        }
+      ],
+      "tags": [
+        "jq",
+        "json",
+        "csv"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "jq: construir JSON de forma segura",
+      "command": "jq -n --arg k v '{...}'",
+      "section": "JSON y YAML",
+      "topic": "jq",
+      "description": "Arma JSON desde la shell escapando bien los valores, en vez de concatenar strings con comillas.",
+      "examples": [
+        {
+          "description": "Cuerpo de una petición con variables",
+          "code": "jq -n --arg titulo \"$TITULO\" --arg cmd \"$CMD\" '{category:\"linux\", title:$titulo, command:$cmd}' \\\n  | curl -s -X POST -H 'content-type: application/json' -H \"X-API-Key: $API_KEY\" -d @- localhost:8000/api/v1/commands"
+        },
+        {
+          "description": "Meter un archivo como string",
+          "code": "jq -n --rawfile doc README.md '{texto: $doc}'"
+        }
+      ],
+      "tags": [
+        "jq",
+        "json",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Concatenar variables dentro de un JSON a mano rompe con comillas o saltos de línea, y abre la puerta a inyecciones."
+    },
+    {
+      "title": "Leer y editar YAML con yq",
+      "command": "yq '<filtro>' archivo.yml",
+      "section": "JSON y YAML",
+      "topic": "yq",
+      "description": "Lo mismo que jq pero para YAML: leer y modificar compose, manifiestos o group_vars sin romper el formato.",
+      "examples": [
+        {
+          "description": "Leer un valor",
+          "code": "yq '.services.db.image' docker-compose.yml"
+        },
+        {
+          "description": "Cambiar un valor en el archivo",
+          "code": "yq -i '.services.frontend.ports[0] = \"8090:8080\"' docker-compose.yml"
+        },
+        {
+          "description": "YAML a JSON",
+          "code": "yq -o=json docker-compose.yml | jq .services | jq 'keys'"
+        }
+      ],
+      "tags": [
+        "yq",
+        "yaml"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Hay dos yq distintos: el de Mike Farah (Go, sintaxis de estos ejemplos) y uno en Python. Revisa yq --version."
+    },
+    {
+      "title": "Validar y formatear JSON sin herramientas extra",
+      "command": "python -m json.tool",
+      "section": "JSON y YAML",
+      "topic": "Validación",
+      "description": "Python trae un formateador y validador de JSON: útil en servidores donde no hay jq.",
+      "examples": [
+        {
+          "description": "Formatear",
+          "code": "curl -s localhost:8000/healthz | python3 -m json.tool"
+        },
+        {
+          "description": "Validar un archivo",
+          "code": "python3 -m json.tool backend/app/seed/data/git.json > /dev/null && echo válido"
+        }
+      ],
+      "tags": [
+        "json",
+        "python"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Sesiones de tmux",
+      "command": "tmux new -s <nombre>",
+      "section": "tmux",
+      "topic": "Sesiones",
+      "description": "Una sesión de tmux sigue viva aunque se corte el SSH: imprescindible para trabajar en un VPS.",
+      "examples": [
+        {
+          "description": "Crear una sesión con nombre",
+          "code": "tmux new -s deploy"
+        },
+        {
+          "description": "Salir sin cerrarla",
+          "code": "Ctrl+B  d"
+        },
+        {
+          "description": "Volver a ella",
+          "code": "tmux ls\ntmux attach -t deploy"
+        }
+      ],
+      "tags": [
+        "tmux",
+        "sesiones",
+        "vps"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "El prefijo por defecto es Ctrl+B: se pulsa, se suelta y después la tecla del comando."
+    },
+    {
+      "title": "Ventanas y paneles de tmux",
+      "command": "Ctrl+B c / % / \"",
+      "section": "tmux",
+      "topic": "Paneles",
+      "description": "Varias terminales en una: ventanas como pestañas y paneles divididos en pantalla.",
+      "examples": [
+        {
+          "description": "Nueva ventana y moverse",
+          "code": "Ctrl+B c      (nueva)\nCtrl+B n / p  (siguiente / anterior)"
+        },
+        {
+          "description": "Dividir en vertical / horizontal",
+          "code": "Ctrl+B %\nCtrl+B \""
+        },
+        {
+          "description": "Moverse entre paneles y hacer zoom",
+          "code": "Ctrl+B ←↑→↓\nCtrl+B z"
+        }
+      ],
+      "tags": [
+        "tmux",
+        "paneles"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Copiar y desplazarse en tmux",
+      "command": "Ctrl+B [",
+      "section": "tmux",
+      "topic": "Modo copia",
+      "description": "Entra en modo copia para hacer scroll por la salida y copiar texto con el teclado.",
+      "examples": [
+        {
+          "description": "Entrar, buscar y salir",
+          "code": "Ctrl+B [\n/ error     (buscar)\nq          (salir)"
+        },
+        {
+          "description": "Activar el mouse para scroll",
+          "code": "echo 'set -g mouse on' >> ~/.tmux.conf\ntmux source-file ~/.tmux.conf"
+        }
+      ],
+      "tags": [
+        "tmux",
+        "copia"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Automatizar un layout de tmux",
+      "command": "tmux new -d -s <s> && tmux send-keys",
+      "section": "tmux",
+      "topic": "Scripting",
+      "description": "Levanta una sesión con varios paneles y comandos ya corriendo desde un script.",
+      "examples": [
+        {
+          "description": "Logs y estado del stack en paneles",
+          "code": "tmux new -d -s cmdvault\ntmux send-keys -t cmdvault 'docker compose logs -f backend' C-m\ntmux split-window -h -t cmdvault\ntmux send-keys -t cmdvault 'watch -n 2 docker compose ps' C-m\ntmux attach -t cmdvault"
+        },
+        {
+          "description": "Cerrar la sesión al terminar",
+          "code": "tmux kill-session -t cmdvault"
+        }
+      ],
+      "tags": [
+        "tmux",
+        "scripting"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Sobrevivir en Vim",
+      "command": "vim <archivo>",
+      "section": "Vim y nano",
+      "topic": "Básico",
+      "description": "Lo mínimo para editar una config en un servidor: insertar, guardar y salir.",
+      "examples": [
+        {
+          "description": "Editar y guardar",
+          "code": "vim /etc/ssh/sshd_config\ni         (insertar)\nEsc\n:wq       (guardar y salir)"
+        },
+        {
+          "description": "Salir sin guardar",
+          "code": "Esc\n:q!"
+        },
+        {
+          "description": "Abrir directo en una línea",
+          "code": "vim +42 backend/app/main.py"
+        }
+      ],
+      "tags": [
+        "vim",
+        "editor"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Edita configs del sistema con sudoedit archivo: abre una copia con tu usuario y la instala al guardar."
+    },
+    {
+      "title": "Moverse y editar rápido en Vim",
+      "command": "gg / G / dd / yy / p / u",
+      "section": "Vim y nano",
+      "topic": "Edición",
+      "description": "Comandos del modo normal para navegar y editar sin el mouse.",
+      "examples": [
+        {
+          "description": "Inicio y fin del archivo, ir a la línea 30",
+          "code": "gg\nG\n30G"
+        },
+        {
+          "description": "Borrar, copiar y pegar líneas",
+          "code": "dd    (borrar línea)\nyy    (copiar)\np     (pegar)"
+        },
+        {
+          "description": "Deshacer y rehacer",
+          "code": "u\nCtrl+R"
+        }
+      ],
+      "tags": [
+        "vim",
+        "edicion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Buscar y reemplazar en Vim",
+      "command": ":%s/viejo/nuevo/g",
+      "section": "Vim y nano",
+      "topic": "Búsqueda",
+      "description": "Busca con / y reemplaza en todo el archivo con :%s; el sufijo c pide confirmación en cada caso.",
+      "examples": [
+        {
+          "description": "Buscar una palabra",
+          "code": "/PermitRootLogin\nn   (siguiente)"
+        },
+        {
+          "description": "Reemplazar en todo el archivo con confirmación",
+          "code": ":%s/8080/8090/gc"
+        },
+        {
+          "description": "Ver números de línea",
+          "code": ":set number"
+        }
+      ],
+      "tags": [
+        "vim",
+        "busqueda"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Editar con nano",
+      "command": "nano <archivo>",
+      "section": "Vim y nano",
+      "topic": "Básico",
+      "description": "Editor simple con los atajos siempre visibles abajo: ^ significa Ctrl.",
+      "examples": [
+        {
+          "description": "Guardar y salir",
+          "code": "Ctrl+O  Enter   (guardar)\nCtrl+X          (salir)"
+        },
+        {
+          "description": "Buscar e ir a una línea",
+          "code": "Ctrl+W   (buscar)\nCtrl+_   (ir a línea)"
+        }
+      ],
+      "tags": [
+        "nano",
+        "editor"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Encabezado de script robusto",
+      "command": "set -euo pipefail",
+      "section": "Scripting robusto",
+      "topic": "Modo estricto",
+      "description": "Hace que el script falle ante cualquier error, variable no definida o fallo dentro de una tubería, en vez de seguir a ciegas.",
+      "examples": [
+        {
+          "description": "Plantilla base",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\ncd \"$(dirname \"$0\")/..\""
+        },
+        {
+          "description": "Mostrar cada comando al depurar",
+          "code": "bash -x scripts/verificar.sh"
+        }
+      ],
+      "tags": [
+        "bash",
+        "scripting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Con set -e, un grep que no encuentra nada (código 1) termina el script: usa || true donde no encontrar sea válido."
+    },
+    {
+      "title": "Limpieza garantizada con trap",
+      "command": "trap '<limpieza>' EXIT",
+      "section": "Scripting robusto",
+      "topic": "Señales",
+      "description": "Ejecuta una limpieza al salir del script, termine bien, falle o lo interrumpas con Ctrl+C.",
+      "examples": [
+        {
+          "description": "Bajar el stack de prueba aunque falle",
+          "code": "trap 'docker compose down -v --remove-orphans' EXIT\ndocker compose up -d --wait\n./scripts/smoke.sh"
+        },
+        {
+          "description": "Borrar un temporal",
+          "code": "TMP=$(mktemp -d)\ntrap 'rm -rf \"$TMP\"' EXIT"
+        }
+      ],
+      "tags": [
+        "bash",
+        "trap",
+        "scripting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Argumentos y valores por defecto",
+      "command": "${1:-valor}",
+      "section": "Scripting robusto",
+      "topic": "Variables",
+      "description": "Expansiones de parámetros para dar valores por defecto, exigir variables o recortar textos.",
+      "examples": [
+        {
+          "description": "Argumento con valor por defecto",
+          "code": "UI=\"${1:-http://localhost:8090}\""
+        },
+        {
+          "description": "Exigir una variable con mensaje claro",
+          "code": ": \"${API_KEY:?define API_KEY antes de correr esto}\""
+        },
+        {
+          "description": "Quitar extensión o ruta",
+          "code": "f=backup.sql.gz\necho \"${f%.gz}\"   # backup.sql\necho \"${PWD##*/}\"  # carpeta actual"
+        }
+      ],
+      "tags": [
+        "bash",
+        "variables"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Bucles y condicionales en una línea",
+      "command": "for x in ...; do ...; done",
+      "section": "Scripting robusto",
+      "topic": "Control de flujo",
+      "description": "Repetir una acción sobre una lista de servidores, archivos o servicios directo desde la terminal.",
+      "examples": [
+        {
+          "description": "Revisar varios endpoints",
+          "code": "for p in / /skills /c/linux; do curl -s -o /dev/null -w \"%{http_code} $p\\n\" \"localhost:8090$p\"; done"
+        },
+        {
+          "description": "Esperar a que algo responda",
+          "code": "until curl -fsS localhost:8000/healthz; do sleep 2; done"
+        },
+        {
+          "description": "Procesar un archivo línea a línea",
+          "code": "while IFS= read -r host; do ssh \"$host\" uptime; done < hosts.txt"
+        }
+      ],
+      "tags": [
+        "bash",
+        "bucles"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Paralelizar con xargs",
+      "command": "xargs -P <n>",
+      "section": "Scripting robusto",
+      "topic": "Paralelismo",
+      "description": "Convierte una lista en argumentos y ejecuta varias tareas a la vez.",
+      "examples": [
+        {
+          "description": "Descargar en paralelo",
+          "code": "cat urls.txt | xargs -n 1 -P 4 curl -sO"
+        },
+        {
+          "description": "Nombres con espacios de forma segura",
+          "code": "fd -e log -0 | xargs -0 gzip"
+        },
+        {
+          "description": "Revisar la salud de varios hosts",
+          "code": "cat hosts.txt | xargs -I{} -P 8 sh -c 'echo {}: $(ssh {} uptime)'"
+        }
+      ],
+      "tags": [
+        "xargs",
+        "paralelismo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Analizar scripts con ShellCheck",
+      "command": "shellcheck <script>",
+      "section": "Scripting robusto",
+      "topic": "Calidad",
+      "description": "Linter de bash que detecta comillas faltantes, errores de expansión y trampas típicas antes de que fallen en producción.",
+      "examples": [
+        {
+          "description": "Revisar un script",
+          "code": "shellcheck scripts/smoke.sh"
+        },
+        {
+          "description": "Todos los scripts del repo",
+          "code": "fd -e sh -x shellcheck {}"
+        },
+        {
+          "description": "Con Docker, sin instalar nada",
+          "code": "docker run --rm -v \"$PWD:/mnt\" koalaman/shellcheck:stable scripts/*.sh"
+        }
+      ],
+      "tags": [
+        "shellcheck",
+        "calidad",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Alias y funciones persistentes",
+      "command": "alias nombre='comando'",
+      "section": "Productividad",
+      "topic": "Alias",
+      "description": "Atajos propios guardados en ~/.bashrc (o ~/.zshrc) para los comandos que más repites.",
+      "examples": [
+        {
+          "description": "Alias de uso diario",
+          "code": "cat >> ~/.bashrc <<'EOF'\nalias dcu='docker compose up -d --build --wait'\nalias dcd='docker compose down'\nalias gs='git status -sb'\nEOF\nsource ~/.bashrc"
+        },
+        {
+          "description": "Función con argumentos",
+          "code": "mkcd() { mkdir -p \"$1\" && cd \"$1\"; }"
+        },
+        {
+          "description": "Ver qué es realmente un comando",
+          "code": "type dcu"
+        }
+      ],
+      "tags": [
+        "bash",
+        "alias",
+        "dotfiles"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Historial más útil",
+      "command": "HISTSIZE / HISTCONTROL",
+      "section": "Productividad",
+      "topic": "Historial",
+      "description": "Guarda más historial, sin duplicados, con fecha, y compartido entre terminales.",
+      "examples": [
+        {
+          "description": "Configuración recomendada",
+          "code": "cat >> ~/.bashrc <<'EOF'\nHISTSIZE=100000\nHISTFILESIZE=200000\nHISTCONTROL=ignoreboth:erasedups\nHISTTIMEFORMAT='%F %T '\nshopt -s histappend\nEOF"
+        },
+        {
+          "description": "No guardar un comando con secretos (espacio inicial)",
+          "code": " export API_KEY=...   # con ignoreboth no entra al historial"
+        }
+      ],
+      "tags": [
+        "bash",
+        "historial",
+        "dotfiles"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Prompt informativo",
+      "command": "PS1 / starship",
+      "section": "Productividad",
+      "topic": "Prompt",
+      "description": "Un prompt que muestra rama de git, código de salida y entorno ahorra comandos de verificación.",
+      "examples": [
+        {
+          "description": "Instalar starship",
+          "code": "curl -sS https://starship.rs/install.sh | sh\necho 'eval \"$(starship init bash)\"' >> ~/.bashrc"
+        },
+        {
+          "description": "Rama de git en el prompt de bash",
+          "code": "source /usr/share/git-core/contrib/completion/git-prompt.sh\nPS1='\\u@\\h \\w$(__git_ps1 \" (%s)\")\\$ '"
+        }
+      ],
+      "tags": [
+        "prompt",
+        "starship",
+        "dotfiles"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Ruta de git-prompt.sh: en Ubuntu /usr/lib/git-core/git-sh-prompt; en AlmaLinux /usr/share/git-core/contrib/completion/git-prompt.sh."
+    },
+    {
+      "title": "Versionar tus dotfiles",
+      "command": "git init ~/dotfiles",
+      "section": "Productividad",
+      "topic": "Dotfiles",
+      "description": "Guarda .bashrc, .tmux.conf, .vimrc y .gitconfig en un repo para tener la misma terminal en cada máquina y VPS.",
+      "examples": [
+        {
+          "description": "Mover y enlazar",
+          "code": "mkdir -p ~/dotfiles && mv ~/.tmux.conf ~/dotfiles/\nln -s ~/dotfiles/.tmux.conf ~/.tmux.conf"
+        },
+        {
+          "description": "Con GNU stow",
+          "code": "cd ~/dotfiles && stow bash tmux vim"
+        }
+      ],
+      "tags": [
+        "dotfiles",
+        "git"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Ayuda rápida de cualquier comando",
+      "command": "tldr <comando>",
+      "section": "Productividad",
+      "topic": "Documentación",
+      "description": "Ejemplos prácticos y resumidos; man es la referencia completa y --help la más rápida.",
+      "examples": [
+        {
+          "description": "Ejemplos de tar",
+          "code": "tldr tar"
+        },
+        {
+          "description": "Buscar en las páginas man",
+          "code": "man -k firewall"
+        },
+        {
+          "description": "Ayuda corta",
+          "code": "rsync --help | less"
+        }
+      ],
+      "tags": [
+        "documentacion",
+        "man"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Multiplicar terminales en Windows",
+      "command": "wt / wsl",
+      "section": "Productividad",
+      "topic": "Windows",
+      "description": "Windows Terminal con pestañas y paneles, y WSL para tener una shell Linux real en el Lenovo.",
+      "examples": [
+        {
+          "description": "Abrir Windows Terminal con dos paneles",
+          "code": "wt -p \"PowerShell\" ; split-pane -p \"Ubuntu\""
+        },
+        {
+          "description": "Entrar a WSL en el proyecto",
+          "code": "wsl -d Ubuntu --cd ~/dev"
+        },
+        {
+          "description": "Ejecutar un comando Linux desde PowerShell",
+          "code": "wsl -e bash -lc 'rg --version'"
+        }
+      ],
+      "tags": [
+        "windows",
+        "wsl",
+        "terminal"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Grabar y compartir una sesión de terminal",
+      "command": "script / asciinema",
+      "section": "Productividad",
+      "topic": "Registro",
+      "description": "Registra todo lo que pasó en la terminal: útil para documentar un incidente o una demo.",
+      "examples": [
+        {
+          "description": "Guardar la sesión en un archivo",
+          "code": "script -a incidente-$(date +%F).log\n# ... trabajo ...\nexit"
+        },
+        {
+          "description": "Grabar una demo reproducible",
+          "code": "asciinema rec demo.cast\nasciinema play demo.cast"
+        }
+      ],
+      "tags": [
+        "registro",
+        "incidentes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    }
+  ]
+}

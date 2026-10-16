@@ -1,0 +1,701 @@
+{
+  "category": {
+    "slug": "vps",
+    "name": "VPS y producción",
+    "icon": "dns",
+    "order": 15,
+    "description": "Operar un servidor en producción: hardening, SSH, despliegue, servicios, backups, monitoreo y mantenimiento."
+  },
+  "commands": [
+    {
+      "title": "Instalar Docker Engine y Compose en el VPS",
+      "command": "curl -fsSL https://get.docker.com | sudo sh",
+      "section": "Despliegue",
+      "topic": "Docker",
+      "description": "Script oficial que instala Docker Engine y el plugin Compose en Ubuntu y derivados de RHEL. Cómodo en un VPS nuevo, pero revisa el script antes de ejecutarlo.",
+      "examples": [
+        {
+          "description": "Revisarlo antes de ejecutar",
+          "code": "curl -fsSL https://get.docker.com -o get-docker.sh && less get-docker.sh && sudo sh get-docker.sh"
+        },
+        {
+          "description": "Arrancar y habilitar al inicio",
+          "code": "sudo systemctl enable --now docker"
+        },
+        {
+          "description": "Usar Docker sin sudo (cierra y abre sesión)",
+          "code": "sudo usermod -aG docker deploy"
+        },
+        {
+          "description": "Verificar",
+          "code": "docker version && docker compose version"
+        }
+      ],
+      "tags": [
+        "vps",
+        "docker",
+        "instalar",
+        "compose"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux 9 es preferible añadir el repositorio oficial (dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo) e instalar docker-ce docker-compose-plugin. Estar en el grupo docker equivale a tener root. Los puertos publicados saltan ufw/firewalld."
+    },
+    {
+      "title": "Despliegue con git pull y docker compose",
+      "command": "cd /opt/miapp && git pull --ff-only && docker compose pull && docker compose up -d --remove-orphans",
+      "section": "Despliegue",
+      "topic": "Docker",
+      "description": "Flujo básico de despliegue en un VPS: actualizar el código/archivo compose, descargar imágenes nuevas y recrear solo los contenedores que cambiaron.",
+      "examples": [
+        {
+          "description": "Reconstruir imágenes locales",
+          "code": "cd /opt/miapp && git pull --ff-only && docker compose up -d --build --remove-orphans"
+        },
+        {
+          "description": "Ver el estado tras desplegar",
+          "code": "docker compose ps"
+        },
+        {
+          "description": "Seguir los logs unos segundos",
+          "code": "docker compose logs -f --tail 50 api"
+        },
+        {
+          "description": "Esperar a que estén healthy",
+          "code": "docker compose up -d --wait --wait-timeout 120"
+        }
+      ],
+      "tags": [
+        "vps",
+        "despliegue",
+        "docker-compose",
+        "git-pull"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "--ff-only evita merges inesperados en el servidor. --remove-orphans quita contenedores de servicios eliminados del compose. Mantén los secretos en un .env fuera de git (chmod 600). Con Traefik, un servicio sin healthcheck puede recibir tráfico antes de estar listo."
+    },
+    {
+      "title": "Rollback por tag de imagen",
+      "command": "IMAGE_TAG=1.4.2 docker compose up -d",
+      "section": "Despliegue",
+      "topic": "Docker",
+      "description": "Si en el compose usas image: miapp:${IMAGE_TAG}, volver a la versión anterior consiste en levantar con el tag previo. Por eso conviene versionar las imágenes y no usar solo latest.",
+      "examples": [
+        {
+          "description": "Ver qué imagen corre cada contenedor",
+          "code": "docker ps --format 'table {{.Names}}\\t{{.Image}}\\t{{.Status}}'"
+        },
+        {
+          "description": "Listar versiones locales disponibles",
+          "code": "docker images miapp --format '{{.Tag}}  {{.CreatedSince}}'"
+        },
+        {
+          "description": "Fijar el tag en .env para que sea persistente",
+          "code": "echo 'IMAGE_TAG=1.4.2' >> .env && docker compose up -d"
+        },
+        {
+          "description": "Línea del compose.yaml",
+          "code": "image: registry.ejemplo.cl/miapp:${IMAGE_TAG:-latest}"
+        }
+      ],
+      "tags": [
+        "vps",
+        "rollback",
+        "docker",
+        "tag",
+        "despliegue"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "latest no permite volver atrás de forma fiable. Conserva las últimas 3-5 imágenes antes de ejecutar docker image prune. Las migraciones de base de datos NO se revierten con el tag: planifica migraciones compatibles hacia atrás."
+    },
+    {
+      "title": "Traefik + aplicación: etiquetas de un servicio",
+      "command": "labels:\n  - traefik.enable=true\n  - traefik.http.routers.miapp.rule=Host(`app.ejemplo.cl`)\n  - traefik.http.routers.miapp.entrypoints=websecure\n  - traefik.http.routers.miapp.tls.certresolver=letsencrypt\n  - traefik.http.services.miapp.loadbalancer.server.port=8000",
+      "section": "Despliegue",
+      "topic": "Docker",
+      "description": "Con Traefik delante, cada servicio se publica con etiquetas en su contenedor: dominio, entrada HTTPS, resolvedor de certificados y puerto interno. Es el esquema típico de un VPS con n8n y otras apps.",
+      "examples": [
+        {
+          "description": "Ejemplo para n8n",
+          "code": "labels:\n  - traefik.enable=true\n  - traefik.http.routers.n8n.rule=Host(`n8n.ejemplo.cl`)\n  - traefik.http.routers.n8n.entrypoints=websecure\n  - traefik.http.routers.n8n.tls.certresolver=letsencrypt\n  - traefik.http.services.n8n.loadbalancer.server.port=5678"
+        },
+        {
+          "description": "Ver los routers que Traefik detectó (API local)",
+          "code": "docker exec traefik wget -qO- http://localhost:8080/api/http/routers | head -c 600"
+        },
+        {
+          "description": "Logs de Traefik filtrando errores",
+          "code": "docker logs traefik --since 10m 2>&1 | grep -iE 'error|level=err'"
+        }
+      ],
+      "tags": [
+        "vps",
+        "traefik",
+        "docker",
+        "labels",
+        "n8n"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El contenedor debe compartir red Docker con Traefik (networks: - web). Un 404 'page not found' significa que ningún router coincide con el Host. Si el certificado no se emite, revisa que 80 y 443 lleguen a Traefik y los logs del certresolver."
+    },
+    {
+      "title": "Ejemplo de n8n con Docker Compose",
+      "command": "services:\n  n8n:\n    image: docker.n8n.io/n8nio/n8n\n    restart: unless-stopped\n    environment:\n      - N8N_HOST=n8n.ejemplo.cl\n      - N8N_PROTOCOL=https\n      - WEBHOOK_URL=https://n8n.ejemplo.cl/\n      - GENERIC_TIMEZONE=America/Santiago\n    volumes:\n      - n8n_data:/home/node/.n8n\nvolumes:\n  n8n_data:",
+      "section": "Despliegue",
+      "topic": "Docker",
+      "description": "Estructura base de n8n con volumen persistente. WEBHOOK_URL debe coincidir con el dominio público o los webhooks mostrarán URL equivocadas.",
+      "examples": [
+        {
+          "description": "Actualizar n8n",
+          "code": "docker compose pull n8n && docker compose up -d n8n"
+        },
+        {
+          "description": "Respaldar su volumen",
+          "code": "docker run --rm -v n8n_data:/datos -v $PWD:/backup alpine tar czf /backup/n8n_data_$(date +%F).tgz -C /datos ."
+        },
+        {
+          "description": "Ver logs",
+          "code": "docker compose logs -f --tail 100 n8n"
+        }
+      ],
+      "tags": [
+        "vps",
+        "n8n",
+        "docker-compose",
+        "webhook"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "n8n guarda credenciales cifradas con N8N_ENCRYPTION_KEY: si la pierdes, no podrás descifrarlas al restaurar. Respalda la clave junto al volumen. Con SQLite el volumen es la base; para cargas serias usa PostgreSQL."
+    },
+    {
+      "title": "Publicar un build estático con rsync",
+      "command": "rsync -avz --delete ./dist/ deploy@203.0.113.10:/var/www/ejemplo.cl/html/",
+      "section": "Despliegue",
+      "topic": "Transferencia",
+      "description": "Sincroniza la carpeta compilada con el servidor, transfiriendo solo diferencias. --delete elimina en destino lo que ya no existe en origen.",
+      "examples": [
+        {
+          "description": "Simulación previa",
+          "code": "rsync -avzn --delete ./dist/ deploy@203.0.113.10:/var/www/ejemplo.cl/html/"
+        },
+        {
+          "description": "Con puerto SSH distinto",
+          "code": "rsync -avz -e 'ssh -p 2222' ./dist/ deploy@203.0.113.10:/var/www/ejemplo.cl/html/"
+        },
+        {
+          "description": "Excluir archivos",
+          "code": "rsync -avz --delete --exclude '.git' --exclude '.env' ./ deploy@vps:/opt/miapp/"
+        },
+        {
+          "description": "Con alias de ~/.ssh/config y progreso",
+          "code": "rsync -avz --progress ./dist/ vps:/var/www/ejemplo.cl/html/"
+        }
+      ],
+      "tags": [
+        "vps",
+        "rsync",
+        "despliegue",
+        "estatico",
+        "sync"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "La barra final en el origen importa: ./dist/ copia el CONTENIDO; ./dist copia la carpeta. Usa -n (dry-run) antes de --delete. Un destino mal escrito con --delete puede borrar mucho: revisa la ruta."
+    },
+    {
+      "title": "Copiar archivos con scp",
+      "command": "scp ./build.tar.gz deploy@203.0.113.10:/tmp/",
+      "section": "Despliegue",
+      "topic": "Transferencia",
+      "description": "Copia archivos por SSH. Para carpetas se usa -r. rsync es mejor para sincronizaciones repetidas.",
+      "examples": [
+        {
+          "description": "Descargar un archivo del servidor",
+          "code": "scp deploy@203.0.113.10:/var/backups/db.dump ./"
+        },
+        {
+          "description": "Carpeta completa",
+          "code": "scp -r ./config deploy@203.0.113.10:/opt/miapp/"
+        },
+        {
+          "description": "Con puerto distinto (mayúscula P)",
+          "code": "scp -P 2222 ./archivo deploy@203.0.113.10:/tmp/"
+        }
+      ],
+      "tags": [
+        "vps",
+        "scp",
+        "copiar",
+        "archivos",
+        "ssh"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "En scp el puerto es -P (mayúscula); en ssh es -p. Los modos y la propiedad pueden no conservarse: para eso, rsync -a."
+    },
+    {
+      "title": "tmux: sesiones que sobreviven a la desconexión",
+      "command": "tmux new -s deploy",
+      "section": "Despliegue",
+      "topic": "Sesiones",
+      "description": "tmux mantiene procesos corriendo aunque se corte tu conexión SSH. Reconectas y sigues donde estabas.",
+      "examples": [
+        {
+          "description": "Desconectarse sin cerrar (dentro de tmux)",
+          "code": "Ctrl+b luego d"
+        },
+        {
+          "description": "Volver a la sesión",
+          "code": "tmux attach -t deploy"
+        },
+        {
+          "description": "Listar sesiones",
+          "code": "tmux ls"
+        },
+        {
+          "description": "Dividir panel (vertical / horizontal)",
+          "code": "Ctrl+b luego %   |   Ctrl+b luego \""
+        }
+      ],
+      "tags": [
+        "vps",
+        "tmux",
+        "sesiones",
+        "ssh"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Usa tmux para operaciones largas (migraciones, restauraciones, actualizaciones de sistema): si se corta la conexión SSH, no se interrumpen. Alternativas: screen o nohup."
+    },
+    {
+      "title": "Despliegue con deploy key de solo lectura",
+      "command": "ssh-keygen -t ed25519 -f ~/.ssh/deploy_miapp -C \"deploy-miapp\" -N \"\"",
+      "section": "Despliegue",
+      "topic": "Git",
+      "description": "Una clave dedicada del repositorio (deploy key en GitHub) permite al servidor hacer git pull sin usar tu clave personal ni credenciales de usuario.",
+      "examples": [
+        {
+          "description": "Configurar el alias en ~/.ssh/config",
+          "code": "Host github-miapp\n    HostName github.com\n    User git\n    IdentityFile ~/.ssh/deploy_miapp\n    IdentitiesOnly yes"
+        },
+        {
+          "description": "Clonar con el alias",
+          "code": "git clone git@github-miapp:usuario/miapp.git /opt/miapp"
+        },
+        {
+          "description": "Probar la conexión",
+          "code": "ssh -T git@github-miapp"
+        }
+      ],
+      "tags": [
+        "vps",
+        "git",
+        "deploy-key",
+        "github",
+        "despliegue"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En GitHub añade la clave pública en Settings > Deploy keys (solo lectura salvo que necesites escribir). Una clave sin passphrase queda en disco: protege el archivo con chmod 600 y limita el acceso al usuario deploy."
+    },
+    {
+      "title": "Script de despliegue idempotente",
+      "command": "#!/usr/bin/env bash\nset -euo pipefail\ncd /opt/miapp\ngit fetch --all --prune\ngit reset --hard origin/main\ndocker compose pull\ndocker compose up -d --remove-orphans --wait\ndocker image prune -f",
+      "section": "Despliegue",
+      "topic": "Despliegue",
+      "description": "Script mínimo que lleva el servidor al estado del repositorio, actualiza contenedores y limpia imágenes huérfanas. Se puede lanzar a mano, desde CI o con un webhook.",
+      "examples": [
+        {
+          "description": "Ejecutarlo por SSH desde GitHub Actions o desde tu máquina",
+          "code": "ssh vps '/opt/miapp/deploy.sh'"
+        },
+        {
+          "description": "Registrar la salida",
+          "code": "ssh vps '/opt/miapp/deploy.sh' 2>&1 | tee -a deploy.log"
+        },
+        {
+          "description": "Verificar tras el despliegue",
+          "code": "curl -fsS https://app.ejemplo.cl/salud && echo OK"
+        }
+      ],
+      "tags": [
+        "vps",
+        "despliegue",
+        "script",
+        "bash",
+        "ci"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "git reset --hard descarta cambios locales en el servidor (por diseño): no edites archivos en producción a mano. set -euo pipefail aborta ante el primer error para no dejar un despliegue a medias."
+    },
+    {
+      "title": "Crear un servicio systemd para una aplicación",
+      "command": "sudo nano /etc/systemd/system/miapp.service",
+      "section": "Servicios y procesos",
+      "topic": "systemd",
+      "description": "Una unidad systemd hace que tu app arranque con el servidor, se reinicie si falla y registre en journald. Alternativa ligera a Docker para apps Python/Node.",
+      "examples": [
+        {
+          "description": "Contenido de la unidad",
+          "code": "[Unit]\nDescription=Mi aplicación\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nUser=deploy\nGroup=deploy\nWorkingDirectory=/opt/miapp\nEnvironmentFile=/etc/miapp/miapp.env\nExecStart=/opt/miapp/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000\nRestart=on-failure\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target"
+        },
+        {
+          "description": "Cargar, habilitar y arrancar",
+          "code": "sudo systemctl daemon-reload && sudo systemctl enable --now miapp"
+        },
+        {
+          "description": "Ver estado",
+          "code": "systemctl status miapp --no-pager"
+        },
+        {
+          "description": "Proteger el archivo de variables",
+          "code": "sudo install -m 600 -o deploy -g deploy /dev/null /etc/miapp/miapp.env"
+        }
+      ],
+      "tags": [
+        "vps",
+        "systemd",
+        "unit",
+        "servicio",
+        "restart",
+        "enablenow"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Después de crear o modificar una unidad hay que ejecutar daemon-reload. ExecStart requiere rutas absolutas. Restart=on-failure reinicia ante errores pero no ante un systemctl stop. Endurece con NoNewPrivileges=true, ProtectSystem=full y PrivateTmp=true."
+    },
+    {
+      "title": "Ver logs de un servicio con journalctl",
+      "command": "journalctl -u miapp -f",
+      "section": "Servicios y procesos",
+      "topic": "systemd",
+      "description": "journalctl lee los logs de systemd. -u filtra por unidad y -f sigue la salida en vivo.",
+      "examples": [
+        {
+          "description": "Desde hace una hora",
+          "code": "journalctl -u miapp --since '1 hour ago'"
+        },
+        {
+          "description": "Un rango de tiempo",
+          "code": "journalctl -u miapp --since '2026-10-16 09:00' --until '2026-10-16 10:00'"
+        },
+        {
+          "description": "Solo errores del último arranque",
+          "code": "journalctl -u miapp -b -p err"
+        },
+        {
+          "description": "Sin paginador y últimas 200 líneas",
+          "code": "journalctl -u miapp -n 200 --no-pager"
+        }
+      ],
+      "tags": [
+        "vps",
+        "journalctl",
+        "logs",
+        "systemd"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Si no ves logs, tu usuario puede no pertenecer a los grupos systemd-journal o adm: usa sudo. Los logs persistentes requieren /var/log/journal (Storage=persistent en journald.conf)."
+    },
+    {
+      "title": "Gestionar servicios: status, restart, enable",
+      "command": "systemctl status miapp --no-pager",
+      "section": "Servicios y procesos",
+      "topic": "systemd",
+      "description": "Comandos de cada día para administrar unidades. Distingue entre arrancar ahora (start) y arrancar al iniciar (enable).",
+      "examples": [
+        {
+          "description": "Reiniciar",
+          "code": "sudo systemctl restart miapp"
+        },
+        {
+          "description": "Recargar configuración sin cortar (si la app lo soporta)",
+          "code": "sudo systemctl reload miapp"
+        },
+        {
+          "description": "Habilitar y arrancar en un paso",
+          "code": "sudo systemctl enable --now miapp"
+        },
+        {
+          "description": "Servicios fallidos",
+          "code": "systemctl --failed"
+        }
+      ],
+      "tags": [
+        "vps",
+        "systemctl",
+        "servicios",
+        "gestionar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Modificar una unidad sin editar el original",
+      "command": "sudo systemctl edit nginx",
+      "section": "Servicios y procesos",
+      "topic": "systemd",
+      "description": "Crea un archivo drop-in en /etc/systemd/system/nginx.service.d/override.conf, que sobrevive a las actualizaciones de paquetes.",
+      "examples": [
+        {
+          "description": "Ejemplo: reinicio automático",
+          "code": "[Service]\nRestart=on-failure\nRestartSec=5s"
+        },
+        {
+          "description": "Ver la unidad con sus overrides",
+          "code": "systemctl cat nginx"
+        },
+        {
+          "description": "Revertir el override",
+          "code": "sudo systemctl revert nginx"
+        }
+      ],
+      "tags": [
+        "vps",
+        "systemctl",
+        "edit",
+        "override",
+        "drop-in"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Tareas programadas con systemd timers",
+      "command": "systemctl list-timers --all",
+      "section": "Servicios y procesos",
+      "topic": "systemd",
+      "description": "Los timers de systemd son una alternativa moderna a cron, con logs en journald y recuperación de ejecuciones perdidas (Persistent=true).",
+      "examples": [
+        {
+          "description": "Unidad .timer",
+          "code": "[Unit]\nDescription=Backup diario\n\n[Timer]\nOnCalendar=*-*-* 03:00:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target"
+        },
+        {
+          "description": "Habilitar",
+          "code": "sudo systemctl enable --now backup.timer"
+        },
+        {
+          "description": "Ejecutar el servicio asociado ahora",
+          "code": "sudo systemctl start backup.service"
+        },
+        {
+          "description": "Validar una expresión de calendario",
+          "code": "systemd-analyze calendar '*-*-* 03:00:00'"
+        }
+      ],
+      "tags": [
+        "vps",
+        "systemd",
+        "timer",
+        "cron",
+        "programacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Cada .timer necesita su .service homónimo. Persistent=true ejecuta tareas perdidas si el servidor estuvo apagado a la hora prevista."
+    },
+    {
+      "title": "Ver y gestionar procesos",
+      "command": "ps aux --sort=-%mem | head -10",
+      "section": "Servicios y procesos",
+      "topic": "Procesos",
+      "description": "Lista los procesos que más memoria consumen. Equivalente con %cpu para CPU. Base del diagnóstico de lentitud.",
+      "examples": [
+        {
+          "description": "Por CPU",
+          "code": "ps aux --sort=-%cpu | head -10"
+        },
+        {
+          "description": "Árbol de procesos",
+          "code": "ps -ef --forest | less"
+        },
+        {
+          "description": "Terminar un proceso con gracia, y a la fuerza si no responde",
+          "code": "kill -TERM 1234; sleep 5; kill -KILL 1234"
+        },
+        {
+          "description": "Por nombre",
+          "code": "pgrep -a python && pkill -f 'uvicorn app.main'"
+        }
+      ],
+      "tags": [
+        "vps",
+        "ps",
+        "kill",
+        "procesos",
+        "memoria"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Usa primero SIGTERM (kill sin señal): permite que la app cierre archivos y conexiones. SIGKILL (-9) pierde datos no escritos. Para servicios gestionados por systemd usa systemctl stop, no kill, o systemd lo reiniciará."
+    },
+    {
+      "title": "Quién usa un puerto o un archivo: lsof",
+      "command": "sudo lsof -i :8000",
+      "section": "Servicios y procesos",
+      "topic": "Procesos",
+      "description": "Identifica el proceso que ocupa un puerto o mantiene abierto un archivo. Resuelve 'address already in use' y discos que no se liberan.",
+      "examples": [
+        {
+          "description": "Con ss",
+          "code": "sudo ss -tulpn | grep :8000"
+        },
+        {
+          "description": "Archivos eliminados que aún ocupan disco",
+          "code": "sudo lsof +L1"
+        },
+        {
+          "description": "Archivos abiertos por un proceso",
+          "code": "sudo lsof -p 1234 | head"
+        },
+        {
+          "description": "Matar lo que usa el puerto",
+          "code": "sudo fuser -k 8000/tcp"
+        }
+      ],
+      "tags": [
+        "vps",
+        "lsof",
+        "ss",
+        "puerto",
+        "fuser"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Un disco 'lleno' que df muestra pero du no explica suele ser un archivo grande borrado pero abierto (lsof +L1): reinicia el servicio que lo mantiene. fuser -k mata sin preguntar: confirma antes con lsof."
+    },
+    {
+      "title": "Ejecutar en segundo plano sin systemd: nohup y systemd-run",
+      "command": "nohup ./proceso_largo.sh > salida.log 2>&1 &",
+      "section": "Servicios y procesos",
+      "topic": "Procesos",
+      "description": "Lanza un proceso que sigue corriendo al cerrar la sesión. Para algo recurrente, una unidad systemd es mejor.",
+      "examples": [
+        {
+          "description": "Con systemd-run (se registra en journald)",
+          "code": "sudo systemd-run --unit=importacion --working-directory=/opt/miapp ./importar.sh"
+        },
+        {
+          "description": "Ver su estado y logs",
+          "code": "systemctl status importacion && journalctl -u importacion -f"
+        },
+        {
+          "description": "Proceso en tmux",
+          "code": "tmux new -d -s importacion './importar.sh'"
+        }
+      ],
+      "tags": [
+        "vps",
+        "nohup",
+        "systemd-run",
+        "segundo-plano"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Administrar contenedores en producción",
+      "command": "docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'",
+      "section": "Servicios y procesos",
+      "topic": "Docker",
+      "description": "Vista limpia de qué corre, su estado y puertos. Con docker stats ves el consumo de recursos en vivo.",
+      "examples": [
+        {
+          "description": "Consumo en vivo",
+          "code": "docker stats --no-stream"
+        },
+        {
+          "description": "Reiniciar un servicio",
+          "code": "docker compose restart api"
+        },
+        {
+          "description": "Ver por qué un contenedor se reinició",
+          "code": "docker inspect -f '{{.RestartCount}} {{.State.Status}} {{.State.OOMKilled}}' miapp-api-1"
+        },
+        {
+          "description": "Entrar a un contenedor",
+          "code": "docker compose exec api sh"
+        }
+      ],
+      "tags": [
+        "vps",
+        "docker",
+        "contenedores",
+        "docker-stats",
+        "produccion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "OOMKilled true significa que el contenedor excedió la memoria y fue muerto: sube el límite o la RAM. Usa restart: unless-stopped en producción para que los contenedores vuelvan tras un reinicio del servidor."
+    }
+  ]
+}

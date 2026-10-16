@@ -1,0 +1,1292 @@
+{
+  "category": {
+    "slug": "claude",
+    "name": "Claude",
+    "icon": "smart_toy",
+    "order": 16,
+    "description": "Claude desde la terminal: Claude Code (sesiones, modo -p, permisos, MCP, plugins, agentes), la API con curl, el CLI ant y el SDK de Python."
+  },
+  "commands": [
+    {
+      "title": "Iniciar Claude Code en el proyecto",
+      "command": "claude",
+      "section": "Claude Code: sesiones",
+      "topic": "Arranque",
+      "description": "Abre una sesión interactiva en el directorio actual. Claude Code lee el CLAUDE.md del proyecto y tus instrucciones globales de ~/.claude/CLAUDE.md antes de empezar.",
+      "examples": [
+        {
+          "description": "Entrar al repo y arrancar",
+          "code": "cd ~/dev/projects/CmdVault\nclaude"
+        },
+        {
+          "description": "Arrancar con una primera instrucción",
+          "code": "claude \"explícame la arquitectura de este repo\""
+        },
+        {
+          "description": "Ver la versión instalada",
+          "code": "claude --version"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "sesion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Arráncalo siempre desde la raíz del repo: el directorio de trabajo define qué CLAUDE.md, settings y memoria de proyecto carga."
+    },
+    {
+      "title": "Continuar la última conversación",
+      "command": "claude -c",
+      "section": "Claude Code: sesiones",
+      "topic": "Reanudar",
+      "description": "Reabre la conversación más reciente del directorio actual con todo su contexto.",
+      "examples": [
+        {
+          "description": "Volver a la sesión de ayer en el mismo repo",
+          "code": "claude -c"
+        },
+        {
+          "description": "Continuar en modo no interactivo",
+          "code": "claude -c -p \"revisa si quedaron errores de tipos\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "sesion",
+        "resume"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "syntax": "claude -c | --continue [-p \"consulta\"]"
+    },
+    {
+      "title": "Reanudar una sesión por ID o nombre",
+      "command": "claude -r \"<sesión>\" \"consulta\"",
+      "section": "Claude Code: sesiones",
+      "topic": "Reanudar",
+      "description": "Retoma una sesión concreta por su ID o por el nombre que le diste con -n. Sin argumento abre un selector interactivo.",
+      "examples": [
+        {
+          "description": "Elegir la sesión desde un selector",
+          "code": "claude -r"
+        },
+        {
+          "description": "Retomar por nombre y seguir",
+          "code": "claude -r \"migracion-auth\" \"termina el PR\""
+        },
+        {
+          "description": "Bifurcar en vez de reutilizar la misma sesión",
+          "code": "claude -r \"migracion-auth\" --fork-session"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "sesion",
+        "resume"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "--fork-session crea un ID nuevo a partir de la conversación: útil para probar un enfoque distinto sin ensuciar la original."
+    },
+    {
+      "title": "Nombrar una sesión",
+      "command": "claude -n \"nombre\"",
+      "section": "Claude Code: sesiones",
+      "topic": "Organización",
+      "description": "Asigna un nombre legible a la sesión, para encontrarla después con -r o en la lista de sesiones.",
+      "examples": [
+        {
+          "description": "Sesión con nombre de la tarea",
+          "code": "claude -n \"cmdvault-v1.0.1\""
+        },
+        {
+          "description": "Retomarla más tarde",
+          "code": "claude -r \"cmdvault-v1.0.1\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "sesion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Sesión en un git worktree aislado",
+      "command": "claude -w <nombre>",
+      "section": "Claude Code: sesiones",
+      "topic": "Worktrees",
+      "description": "Crea un git worktree nuevo y abre la sesión ahí: Claude trabaja en una copia aislada del repo sin tocar tu rama actual.",
+      "examples": [
+        {
+          "description": "Trabajo experimental en paralelo",
+          "code": "claude -w experimento-cache"
+        },
+        {
+          "description": "Worktree dentro de una sesión tmux",
+          "code": "claude -w refactor-ui --tmux"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "git",
+        "worktree"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Ideal para dejar a Claude en una tarea larga mientras sigues trabajando en main. Al terminar, revisa y mergea la rama del worktree."
+    },
+    {
+      "title": "Sesión en segundo plano",
+      "command": "claude --bg \"tarea\"",
+      "section": "Claude Code: sesiones",
+      "topic": "Background",
+      "description": "Lanza la sesión en segundo plano y devuelve el control de la terminal de inmediato; imprime el ID para seguirla.",
+      "examples": [
+        {
+          "description": "Dejar corriendo una tarea larga",
+          "code": "claude --bg \"actualiza las dependencias y corre los tests\""
+        },
+        {
+          "description": "Ver las sesiones en segundo plano",
+          "code": "claude agents"
+        },
+        {
+          "description": "Conectarse a una de ellas",
+          "code": "claude attach <id>"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "background",
+        "agentes"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Listar y monitorear sesiones en segundo plano",
+      "command": "claude agents",
+      "section": "Claude Code: sesiones",
+      "topic": "Background",
+      "description": "Abre la vista de agentes para monitorear y despachar sesiones paralelas; con --json las imprime para scripts.",
+      "examples": [
+        {
+          "description": "Vista interactiva",
+          "code": "claude agents"
+        },
+        {
+          "description": "Sesiones activas en JSON",
+          "code": "claude agents --json | jq '.[] | {id, name}'"
+        },
+        {
+          "description": "Logs recientes de una sesión",
+          "code": "claude logs <id>"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "background"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Actualizar Claude Code",
+      "command": "claude update",
+      "section": "Claude Code: sesiones",
+      "topic": "Mantenimiento",
+      "description": "Instala la última versión de inmediato, sin esperar la comprobación automática en segundo plano.",
+      "examples": [
+        {
+          "description": "Actualizar",
+          "code": "claude update"
+        },
+        {
+          "description": "Instalar el canal estable o una versión exacta",
+          "code": "claude install stable\nclaude install 2.1.295"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "update"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Diagnosticar la instalación",
+      "command": "claude doctor",
+      "section": "Claude Code: sesiones",
+      "topic": "Mantenimiento",
+      "description": "Revisa la salud de la instalación: versión, binario, configuración, conexión y problemas comunes.",
+      "examples": [
+        {
+          "description": "Chequeo completo",
+          "code": "claude doctor"
+        },
+        {
+          "description": "Estado de autenticación en JSON",
+          "code": "claude auth status"
+        },
+        {
+          "description": "Lo mismo, legible",
+          "code": "claude auth status --text"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "diagnostico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "claude auth status sale con código 0 si hay sesión y 1 si no: sirve para scripts."
+    },
+    {
+      "title": "Iniciar y cerrar sesión de cuenta",
+      "command": "claude auth login",
+      "section": "Claude Code: sesiones",
+      "topic": "Autenticación",
+      "description": "Inicia sesión con tu cuenta de Anthropic. --console usa facturación por API de la Console en vez de la suscripción.",
+      "examples": [
+        {
+          "description": "Login con la suscripción",
+          "code": "claude auth login"
+        },
+        {
+          "description": "Login con la Console (API)",
+          "code": "claude auth login --console"
+        },
+        {
+          "description": "Cerrar sesión",
+          "code": "claude auth logout"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "auth"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Token de larga duración para CI",
+      "command": "claude setup-token",
+      "section": "Claude Code: sesiones",
+      "topic": "Autenticación",
+      "description": "Genera un token de autenticación de larga duración pensado para entornos sin navegador (CI, servidores).",
+      "examples": [
+        {
+          "description": "Generar el token",
+          "code": "claude setup-token"
+        },
+        {
+          "description": "Usarlo en CI como secreto, nunca en el repo",
+          "code": "# GitHub Actions: secrets.CLAUDE_CODE_OAUTH_TOKEN\n# Jenkins: credencial Secret text"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "auth",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Consulta no interactiva (print)",
+      "command": "claude -p \"consulta\"",
+      "section": "Claude Code: automatización",
+      "topic": "Modo -p",
+      "description": "Ejecuta una consulta, imprime la respuesta y sale. Es la base para usar Claude en scripts, hooks de git y pipelines.",
+      "examples": [
+        {
+          "description": "Pregunta puntual",
+          "code": "claude -p \"¿qué hace scripts/verificar.sh?\""
+        },
+        {
+          "description": "Revisar el diff antes de commitear",
+          "code": "git diff --staged | claude -p \"revisa este diff: bugs y riesgos\""
+        },
+        {
+          "description": "Explicar un log",
+          "code": "tail -200 /var/log/nginx/error.log | claude -p \"¿por qué da 502?\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "print",
+        "scripting"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "syntax": "claude -p [flags] \"consulta\""
+    },
+    {
+      "title": "Salida JSON para scripts",
+      "command": "claude -p --output-format json \"consulta\"",
+      "section": "Claude Code: automatización",
+      "topic": "Formatos de salida",
+      "description": "Devuelve un único objeto JSON con el resultado, el ID de sesión y metadatos; se combina con jq.",
+      "examples": [
+        {
+          "description": "Extraer solo el texto",
+          "code": "claude -p --output-format json \"resume el README\" | jq -r '.result'"
+        },
+        {
+          "description": "Guardar el ID de sesión para continuar",
+          "code": "SID=$(claude -p --output-format json \"analiza los tests\" | jq -r '.session_id')\nclaude -p --resume \"$SID\" \"ahora propón mejoras\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "json",
+        "jq"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Formatos válidos de --output-format: text (por defecto), json y stream-json. Solo funcionan con -p."
+    },
+    {
+      "title": "Streaming en tiempo real (stream-json)",
+      "command": "claude -p --output-format stream-json --verbose \"consulta\"",
+      "section": "Claude Code: automatización",
+      "topic": "Formatos de salida",
+      "description": "Emite eventos JSON línea a línea a medida que ocurren: útil para mostrar progreso o procesar herramientas en vivo.",
+      "examples": [
+        {
+          "description": "Ver eventos mientras trabaja",
+          "code": "claude -p --output-format stream-json --verbose \"corre los tests\" | jq -c ."
+        },
+        {
+          "description": "Incluir fragmentos parciales de mensajes",
+          "code": "claude -p --output-format stream-json --verbose --include-partial-messages \"explica el módulo\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "streaming"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Salida estructurada con JSON Schema",
+      "command": "claude -p --json-schema '<schema>' \"consulta\"",
+      "section": "Claude Code: automatización",
+      "topic": "Formatos de salida",
+      "description": "Obliga a que la respuesta cumpla un JSON Schema: ideal para que otro script consuma el resultado sin parsear prosa.",
+      "examples": [
+        {
+          "description": "Extraer pendientes como lista estructurada",
+          "code": "claude -p --output-format json --json-schema '{\"type\":\"object\",\"properties\":{\"tareas\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"tareas\"]}' \"lista los TODO del repo\" | jq '.structured_output'"
+        },
+        {
+          "description": "Clasificar un log",
+          "code": "claude -p --json-schema \"$(cat schema-incidente.json)\" < incidente.log"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "json-schema"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Limitar turnos y presupuesto en automatización",
+      "command": "claude -p --max-budget-usd <monto> \"consulta\"",
+      "section": "Claude Code: automatización",
+      "topic": "Control de costo",
+      "description": "Pone un techo en dólares a lo que puede gastar una ejecución no interactiva: imprescindible en CI.",
+      "examples": [
+        {
+          "description": "Revisión de PR con tope de gasto",
+          "code": "claude -p --max-budget-usd 0.50 \"revisa los cambios de esta rama\""
+        },
+        {
+          "description": "Esfuerzo bajo para tareas simples",
+          "code": "claude -p --effort low \"genera el mensaje de commit para el diff\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "costos",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "DevOps"
+      ],
+      "notes": "--effort acepta low, medium, high, xhigh y max. Para tareas mecánicas, low ahorra tokens sin perder calidad."
+    },
+    {
+      "title": "Elegir modelo por sesión",
+      "command": "claude --model <modelo>",
+      "section": "Claude Code: automatización",
+      "topic": "Modelos",
+      "description": "Fija el modelo de la sesión con un alias (fable, opus, sonnet) o el ID completo. --fallback-model define a qué modelo caer si el principal está saturado.",
+      "examples": [
+        {
+          "description": "Usar Opus",
+          "code": "claude --model opus"
+        },
+        {
+          "description": "ID exacto en un script",
+          "code": "claude -p --model claude-sonnet-5-5 \"resume el changelog\""
+        },
+        {
+          "description": "Modelo de respaldo",
+          "code": "claude --model opus --fallback-model sonnet"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "modelos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "IDs actuales: claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5 y claude-fable-5-1 (el más capaz, más caro)."
+    },
+    {
+      "title": "Modo mínimo para scripts rápidos (--bare)",
+      "command": "claude --bare -p \"consulta\"",
+      "section": "Claude Code: automatización",
+      "topic": "Rendimiento",
+      "description": "Omite el descubrimiento de hooks, skills, plugins, MCP, memoria y CLAUDE.md: arranca más rápido y de forma reproducible en scripts.",
+      "examples": [
+        {
+          "description": "Consulta reproducible en CI",
+          "code": "claude --bare -p \"valida que el CHANGELOG tenga la versión 1.0.1\""
+        },
+        {
+          "description": "Con instrucciones explícitas en vez de CLAUDE.md",
+          "code": "claude --bare --append-system-prompt-file reglas.txt -p \"revisa el diff\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "ci",
+        "rendimiento"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "DevOps"
+      ],
+      "notes": "En --bare la autenticación es solo ANTHROPIC_API_KEY o apiKeyHelper: no lee OAuth ni el llavero."
+    },
+    {
+      "title": "Añadir instrucciones al system prompt",
+      "command": "claude --append-system-prompt \"texto\"",
+      "section": "Claude Code: automatización",
+      "topic": "Prompts",
+      "description": "Agrega texto al final del system prompt por defecto, sin reemplazarlo. La variante -file lo lee de un archivo.",
+      "examples": [
+        {
+          "description": "Regla puntual",
+          "code": "claude --append-system-prompt \"Responde siempre en español de Chile\""
+        },
+        {
+          "description": "Reglas largas desde archivo",
+          "code": "claude --append-system-prompt-file ./reglas-review.md -p \"revisa src/\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "prompt"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "--system-prompt reemplaza todo el prompt por defecto: casi siempre conviene --append-system-prompt."
+    },
+    {
+      "title": "Pasar contenido por tubería",
+      "command": "cat archivo | claude -p \"consulta\"",
+      "section": "Claude Code: automatización",
+      "topic": "Tuberías",
+      "description": "Claude lee stdin como contexto: encaja con cualquier comando de terminal.",
+      "examples": [
+        {
+          "description": "Explicar la salida de un comando",
+          "code": "docker compose logs backend --tail=100 | claude -p \"¿por qué no arranca?\""
+        },
+        {
+          "description": "Generar mensaje de commit convencional",
+          "code": "git diff --staged | claude -p \"escribe un mensaje Conventional Commits en español\""
+        },
+        {
+          "description": "Resumir un CSV",
+          "code": "head -50 ventas.csv | claude -p \"describe las columnas y anomalías\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "pipe",
+        "unix"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Claude Code en GitHub Actions",
+      "command": "claude -p --permission-mode dontAsk --allowedTools \"Read\" \"consulta\"",
+      "section": "Claude Code: automatización",
+      "topic": "CI",
+      "description": "Patrón para CI: modo no interactivo, permisos explícitos y solo las herramientas necesarias.",
+      "examples": [
+        {
+          "description": "Paso de workflow (fragmento)",
+          "code": "- run: npm install -g @anthropic-ai/claude-code\n- run: claude -p --max-budget-usd 1 --allowedTools \"Read\" \"Bash(git diff *)\" \"revisa el PR\"\n  env:\n    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}"
+        },
+        {
+          "description": "Lo mismo en un Jenkinsfile",
+          "code": "withCredentials([string(credentialsId: 'anthropic-key', variable: 'ANTHROPIC_API_KEY')]) {\n  sh 'claude -p --bare --max-budget-usd 1 \"revisa el diff\"'\n}"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "ci",
+        "github-actions",
+        "jenkins"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Modo de permisos de la sesión",
+      "command": "claude --permission-mode <modo>",
+      "section": "Claude Code: permisos y configuración",
+      "topic": "Permisos",
+      "description": "Define cuánto puede hacer Claude sin preguntar. Modos: manual, acceptEdits, plan, auto, dontAsk y bypassPermissions. Shift+Tab los alterna dentro de la sesión.",
+      "examples": [
+        {
+          "description": "Planificar sin tocar archivos",
+          "code": "claude --permission-mode plan"
+        },
+        {
+          "description": "Aceptar ediciones de archivos automáticamente",
+          "code": "claude --permission-mode acceptEdits"
+        },
+        {
+          "description": "Empezar en plan y poder pasar a bypass después",
+          "code": "claude --permission-mode plan --allow-dangerously-skip-permissions"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "permisos",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "SRE"
+      ],
+      "notes": "bypassPermissions / --dangerously-skip-permissions solo en sandboxes sin acceso a Internet ni a credenciales: nunca en tu máquina de trabajo."
+    },
+    {
+      "title": "Permitir herramientas sin preguntar",
+      "command": "claude --allowedTools \"Bash(git log *)\" \"Read\"",
+      "section": "Claude Code: permisos y configuración",
+      "topic": "Permisos",
+      "description": "Lista de herramientas (con patrones) que se ejecutan sin pedir confirmación. --disallowedTools hace lo contrario.",
+      "examples": [
+        {
+          "description": "Solo lectura de git y archivos",
+          "code": "claude --allowedTools \"Bash(git log *)\" \"Bash(git diff *)\" \"Read\""
+        },
+        {
+          "description": "Prohibir comandos peligrosos",
+          "code": "claude --disallowedTools \"Bash(rm *)\" \"Bash(git push *)\""
+        },
+        {
+          "description": "Restringir qué herramientas existen",
+          "code": "claude --tools \"Read\" \"Grep\" \"Glob\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "permisos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "SRE"
+      ],
+      "notes": "--allowedTools quita la pregunta; --tools limita qué herramientas están disponibles. No son lo mismo."
+    },
+    {
+      "title": "Dar acceso a directorios extra",
+      "command": "claude --add-dir <ruta...>",
+      "section": "Claude Code: permisos y configuración",
+      "topic": "Directorios",
+      "description": "Permite leer y editar en carpetas fuera del directorio de trabajo, por ejemplo un repo hermano o el vault.",
+      "examples": [
+        {
+          "description": "Trabajar en dos repos a la vez",
+          "code": "claude --add-dir ../all_in_django"
+        },
+        {
+          "description": "Incluir el vault de Obsidian",
+          "code": "claude --add-dir /c/dev/learning_center"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "permisos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Para hacerlo permanente: permissions.additionalDirectories en settings.json."
+    },
+    {
+      "title": "Settings por archivo o JSON",
+      "command": "claude --settings <archivo-o-json>",
+      "section": "Claude Code: permisos y configuración",
+      "topic": "Configuración",
+      "description": "Carga una configuración adicional para la sesión. --setting-sources elige qué capas leer (user, project, local).",
+      "examples": [
+        {
+          "description": "Settings de CI versionados",
+          "code": "claude --settings .claude/ci-settings.json -p \"revisa\""
+        },
+        {
+          "description": "Solo settings del proyecto, sin los personales",
+          "code": "claude --setting-sources project"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "settings"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Jerarquía: ~/.claude/settings.json (usuario) < .claude/settings.json (proyecto, versionado) < .claude/settings.local.json (personal, no versionado)."
+    },
+    {
+      "title": "Modo seguro sin personalizaciones",
+      "command": "claude --safe-mode",
+      "section": "Claude Code: permisos y configuración",
+      "topic": "Diagnóstico",
+      "description": "Arranca con todas las personalizaciones desactivadas: sirve para aislar si un problema viene de un hook, plugin o skill.",
+      "examples": [
+        {
+          "description": "Descartar que un hook rompa la sesión",
+          "code": "claude --safe-mode"
+        },
+        {
+          "description": "Depurar con log a archivo",
+          "code": "claude --debug \"hooks,api\" --debug-file /tmp/claude-debug.log"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "diagnostico"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Eliminar todo el estado local de un proyecto",
+      "command": "claude purge [ruta]",
+      "section": "Claude Code: permisos y configuración",
+      "topic": "Mantenimiento",
+      "description": "Borra el estado que Claude Code guarda para un proyecto (sesiones, historial). Es irreversible.",
+      "examples": [
+        {
+          "description": "Ver la ayuda antes de borrar",
+          "code": "claude purge --help"
+        },
+        {
+          "description": "Purgar el estado de un proyecto concreto",
+          "code": "claude purge ~/dev/projects/experimento-viejo"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "mantenimiento"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "No afecta tus archivos de código, solo el estado de Claude Code. Aun así: revisa la ruta dos veces."
+    },
+    {
+      "title": "Agregar un servidor MCP HTTP",
+      "command": "claude mcp add --transport http <nombre> <url>",
+      "section": "Claude Code: MCP, plugins y agentes",
+      "topic": "MCP",
+      "description": "Registra un servidor MCP remoto. -s define el alcance: local (por defecto), project (versionado en .mcp.json) o user.",
+      "examples": [
+        {
+          "description": "Servidor HTTP del proyecto",
+          "code": "claude mcp add --transport http -s project sentry https://mcp.sentry.dev/mcp"
+        },
+        {
+          "description": "Con cabecera de autenticación",
+          "code": "claude mcp add --transport http mi-api https://mcp.ejemplo.cl/mcp -H \"Authorization: Bearer $MCP_TOKEN\""
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "mcp"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Alcance project escribe .mcp.json en el repo: compártelo, pero sin tokens dentro (usa variables de entorno)."
+    },
+    {
+      "title": "Agregar un servidor MCP stdio",
+      "command": "claude mcp add <nombre> -- <comando> [args]",
+      "section": "Claude Code: MCP, plugins y agentes",
+      "topic": "MCP",
+      "description": "Registra un servidor MCP local que corre como proceso. Todo lo que va después de -- es el comando del servidor.",
+      "examples": [
+        {
+          "description": "Servidor npx con variable de entorno",
+          "code": "claude mcp add github -e GITHUB_TOKEN=$GITHUB_TOKEN -- npx -y @modelcontextprotocol/server-github"
+        },
+        {
+          "description": "Servidor Python propio",
+          "code": "claude mcp add cmdvault -- python -m cmdvault_mcp"
+        },
+        {
+          "description": "Desde JSON",
+          "code": "claude mcp add-json context7 '{\"type\":\"http\",\"url\":\"https://mcp.context7.com/mcp\"}'"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "mcp"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Listar, inspeccionar y quitar servidores MCP",
+      "command": "claude mcp list",
+      "section": "Claude Code: MCP, plugins y agentes",
+      "topic": "MCP",
+      "description": "Muestra los servidores MCP configurados y su estado; get da el detalle de uno y remove lo elimina.",
+      "examples": [
+        {
+          "description": "Listar",
+          "code": "claude mcp list"
+        },
+        {
+          "description": "Detalle de uno",
+          "code": "claude mcp get github"
+        },
+        {
+          "description": "Quitarlo",
+          "code": "claude mcp remove github"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "mcp"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Autenticar un servidor MCP por OAuth",
+      "command": "claude mcp login <nombre>",
+      "section": "Claude Code: MCP, plugins y agentes",
+      "topic": "MCP",
+      "description": "Inicia el flujo OAuth de un servidor MCP HTTP/SSE. --no-browser imprime el enlace para máquinas remotas.",
+      "examples": [
+        {
+          "description": "Login normal",
+          "code": "claude mcp login sentry"
+        },
+        {
+          "description": "En un VPS sin navegador",
+          "code": "claude mcp login sentry --no-browser"
+        },
+        {
+          "description": "Borrar las credenciales guardadas",
+          "code": "claude mcp logout sentry"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "mcp",
+        "oauth"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Cargar MCP solo desde archivos",
+      "command": "claude --mcp-config <archivo.json> --strict-mcp-config",
+      "section": "Claude Code: MCP, plugins y agentes",
+      "topic": "MCP",
+      "description": "Usa únicamente los servidores MCP del archivo indicado e ignora el resto de la configuración: reproducible en CI.",
+      "examples": [
+        {
+          "description": "Sesión con un set de MCP controlado",
+          "code": "claude --mcp-config mcp-ci.json --strict-mcp-config -p \"consulta\""
+        },
+        {
+          "description": "Exponer Claude Code como servidor MCP",
+          "code": "claude mcp serve"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "mcp",
+        "ci"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Gestionar plugins",
+      "command": "claude plugin list",
+      "section": "Claude Code: MCP, plugins y agentes",
+      "topic": "Plugins",
+      "description": "Instala, habilita y deshabilita plugins (comandos, agentes, hooks y MCP empaquetados) desde marketplaces.",
+      "examples": [
+        {
+          "description": "Ver los instalados",
+          "code": "claude plugin list"
+        },
+        {
+          "description": "Instalar uno",
+          "code": "claude plugin install <plugin>"
+        },
+        {
+          "description": "Desactivarlo sin desinstalar",
+          "code": "claude plugin disable <plugin>"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "plugins"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Crear un plugin propio",
+      "command": "claude plugin init <nombre>",
+      "section": "Claude Code: MCP, plugins y agentes",
+      "topic": "Plugins",
+      "description": "Genera el esqueleto de un plugin para empaquetar tus skills, comandos y hooks y reutilizarlos entre proyectos.",
+      "examples": [
+        {
+          "description": "Scaffold",
+          "code": "claude plugin init nico-standards"
+        },
+        {
+          "description": "Probarlo sin instalar",
+          "code": "claude --plugin-dir ./nico-standards"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "plugins"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Subagentes definidos en línea",
+      "command": "claude --agents '<json>'",
+      "section": "Claude Code: MCP, plugins y agentes",
+      "topic": "Subagentes",
+      "description": "Define subagentes para la sesión sin crear archivos: cada uno con su descripción y su prompt.",
+      "examples": [
+        {
+          "description": "Un revisor de código ad hoc",
+          "code": "claude --agents '{\"revisor\":{\"description\":\"Revisa código Python\",\"prompt\":\"Eres un revisor estricto de Python\"}}'"
+        },
+        {
+          "description": "Usar un agente guardado como principal",
+          "code": "claude --agent revisor-seguridad"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "subagentes"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Los subagentes permanentes van como archivos .md en .claude/agents/ (proyecto) o ~/.claude/agents/ (usuario)."
+    },
+    {
+      "title": "Revisión de código multiagente en la nube",
+      "command": "claude ultrareview [destino]",
+      "section": "Claude Code: MCP, plugins y agentes",
+      "topic": "Revisión",
+      "description": "Lanza una revisión profunda multiagente en la nube sobre la rama actual o un PR. Es de pago y la dispara el usuario.",
+      "examples": [
+        {
+          "description": "Revisar la rama actual",
+          "code": "claude ultrareview"
+        },
+        {
+          "description": "Revisar un PR de GitHub",
+          "code": "claude ultrareview 42"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "review"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Generar el CLAUDE.md del proyecto",
+      "command": "/init",
+      "section": "Claude Code: dentro de la sesión",
+      "topic": "Slash commands",
+      "description": "Analiza el repo y crea un CLAUDE.md inicial con estructura, comandos y convenciones; luego se edita a mano.",
+      "examples": [
+        {
+          "description": "En un repo nuevo",
+          "code": "/init"
+        },
+        {
+          "description": "Revisarlo y versionarlo (o ignorarlo, según el proyecto)",
+          "code": "!git status CLAUDE.md"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "slash",
+        "claude-md"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "En tus proyectos CLAUDE.md va en .gitignore: es guía interna, no documentación pública."
+    },
+    {
+      "title": "Limpiar o compactar el contexto",
+      "command": "/compact",
+      "section": "Claude Code: dentro de la sesión",
+      "topic": "Slash commands",
+      "description": "/compact resume la conversación para liberar contexto sin perder el hilo; /clear la reinicia de cero.",
+      "examples": [
+        {
+          "description": "Compactar indicando qué conservar",
+          "code": "/compact conserva las decisiones de arquitectura y los pendientes"
+        },
+        {
+          "description": "Empezar una tarea nueva sin arrastrar contexto",
+          "code": "/clear"
+        },
+        {
+          "description": "Ver cuánto contexto queda",
+          "code": "/context"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "slash",
+        "contexto"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Una tarea = una conversación. /clear entre tareas no relacionadas mejora la calidad y baja el costo."
+    },
+    {
+      "title": "Cambiar modelo y esfuerzo en caliente",
+      "command": "/model",
+      "section": "Claude Code: dentro de la sesión",
+      "topic": "Slash commands",
+      "description": "Abre el selector de modelo de la sesión actual sin reiniciarla.",
+      "examples": [
+        {
+          "description": "Cambiar de modelo",
+          "code": "/model"
+        },
+        {
+          "description": "Directo a uno",
+          "code": "/model sonnet"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "slash",
+        "modelos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Ejecutar un comando de shell desde la sesión",
+      "command": "!<comando>",
+      "section": "Claude Code: dentro de la sesión",
+      "topic": "Atajos",
+      "description": "Prefijar con ! ejecuta el comando en tu shell y deja la salida en el contexto, sin que Claude lo interprete como instrucción.",
+      "examples": [
+        {
+          "description": "Ver el estado de git",
+          "code": "!git status -sb"
+        },
+        {
+          "description": "Correr los tests y discutir el resultado",
+          "code": "!pytest -q"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "atajos",
+        "bash"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Mencionar archivos en el prompt",
+      "command": "@ruta/al/archivo",
+      "section": "Claude Code: dentro de la sesión",
+      "topic": "Atajos",
+      "description": "Escribe @ y autocompleta rutas para meter archivos o carpetas concretas en el contexto.",
+      "examples": [
+        {
+          "description": "Pedir cambios sobre un archivo",
+          "code": "revisa @backend/app/repository.py y busca consultas N+1"
+        },
+        {
+          "description": "Comparar dos archivos",
+          "code": "compara @Jenkinsfile con @.github/workflows/ci.yml"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "atajos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Gestionar permisos, hooks y memoria",
+      "command": "/permissions",
+      "section": "Claude Code: dentro de la sesión",
+      "topic": "Slash commands",
+      "description": "Desde la sesión: /permissions edita reglas, /hooks configura hooks, /memory abre los CLAUDE.md y /config los ajustes.",
+      "examples": [
+        {
+          "description": "Revisar qué está permitido",
+          "code": "/permissions"
+        },
+        {
+          "description": "Configurar un hook (p. ej. ruff tras editar)",
+          "code": "/hooks"
+        },
+        {
+          "description": "Editar la memoria del proyecto",
+          "code": "/memory"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "slash",
+        "permisos",
+        "hooks"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Ver servidores MCP y agentes desde la sesión",
+      "command": "/mcp",
+      "section": "Claude Code: dentro de la sesión",
+      "topic": "Slash commands",
+      "description": "/mcp muestra el estado de los servidores MCP y permite autenticarlos; /agents gestiona los subagentes.",
+      "examples": [
+        {
+          "description": "Estado de MCP",
+          "code": "/mcp"
+        },
+        {
+          "description": "Crear o editar subagentes",
+          "code": "/agents"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "slash",
+        "mcp"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Reanudar y retroceder dentro de la sesión",
+      "command": "/resume",
+      "section": "Claude Code: dentro de la sesión",
+      "topic": "Slash commands",
+      "description": "/resume elige otra conversación para continuar; /rewind vuelve a un punto anterior de la conversación actual.",
+      "examples": [
+        {
+          "description": "Cambiar a otra conversación",
+          "code": "/resume"
+        },
+        {
+          "description": "Deshacer los últimos pasos",
+          "code": "/rewind"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "slash",
+        "sesion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Atajos de teclado esenciales",
+      "command": "Shift+Tab",
+      "section": "Claude Code: dentro de la sesión",
+      "topic": "Atajos",
+      "description": "Shift+Tab alterna el modo de permisos (manual, aceptar ediciones, plan…); Esc interrumpe lo que Claude está haciendo.",
+      "examples": [
+        {
+          "description": "Pasar a modo plan antes de una tarea grande",
+          "code": "Shift+Tab  (hasta ver 'plan mode')"
+        },
+        {
+          "description": "Detener una acción en curso",
+          "code": "Esc"
+        }
+      ],
+      "tags": [
+        "claude-code",
+        "atajos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    }
+  ]
+}

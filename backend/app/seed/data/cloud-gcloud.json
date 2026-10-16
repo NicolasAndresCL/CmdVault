@@ -1,0 +1,611 @@
+{
+  "category": {
+    "slug": "cloud",
+    "name": "Cloud",
+    "icon": "cloud_queue",
+    "order": 13,
+    "description": "Otras nubes desde la terminal: Google Cloud, Azure, DigitalOcean, Cloudflare y Hetzner."
+  },
+  "commands": [
+    {
+      "title": "Inicializar gcloud",
+      "command": "gcloud init",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Configuración",
+      "description": "Asistente interactivo que autentica, elige el proyecto y la región/zona por defecto. Es el primer comando tras instalar el Google Cloud CLI.",
+      "examples": [
+        {
+          "description": "Ver la configuración activa",
+          "code": "gcloud config list"
+        },
+        {
+          "description": "Información completa del entorno",
+          "code": "gcloud info"
+        },
+        {
+          "description": "Actualizar componentes del SDK",
+          "code": "gcloud components update"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "init",
+        "configuracion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "gcloud components update solo funciona con la instalación del SDK propia de Google; si instalaste por apt o dnf, actualiza con el gestor de paquetes. Ejecuta gcloud config list antes de operar para confirmar proyecto y cuenta."
+    },
+    {
+      "title": "Autenticarse: auth login y application-default",
+      "command": "gcloud auth login",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Autenticación",
+      "description": "Inicia sesión para que el CLI actúe como tú. Las librerías y herramientas (Terraform, SDK de Python) usan otras credenciales: las Application Default Credentials.",
+      "examples": [
+        {
+          "description": "Credenciales para SDKs y Terraform",
+          "code": "gcloud auth application-default login"
+        },
+        {
+          "description": "En un servidor sin navegador",
+          "code": "gcloud auth login --no-browser"
+        },
+        {
+          "description": "Listar cuentas",
+          "code": "gcloud auth list"
+        },
+        {
+          "description": "Cerrar sesión",
+          "code": "gcloud auth revoke"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "auth",
+        "login",
+        "adc",
+        "credenciales"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Son dos juegos de credenciales distintos: gcloud auth login NO sirve para Terraform ni para el código Python; para eso necesitas application-default login. En producción usa cuentas de servicio con Workload Identity en lugar de claves JSON."
+    },
+    {
+      "title": "Configuraciones nombradas",
+      "command": "gcloud config configurations create trabajo",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Configuración",
+      "description": "Las configuraciones agrupan cuenta, proyecto y región. Permiten cambiar de contexto rápido entre proyectos o clientes.",
+      "examples": [
+        {
+          "description": "Activar una configuración",
+          "code": "gcloud config configurations activate trabajo"
+        },
+        {
+          "description": "Listar",
+          "code": "gcloud config configurations list"
+        },
+        {
+          "description": "Fijar proyecto y región en la configuración activa",
+          "code": "gcloud config set project mi-proyecto-123 && gcloud config set compute/region southamerica-west1"
+        },
+        {
+          "description": "Usar otra configuración solo para un comando",
+          "code": "gcloud compute instances list --configuration=personal"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "configuraciones",
+        "proyecto",
+        "contexto"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "southamerica-west1 es Santiago de Chile. Equivale a los contextos de kubectl: revisa SIEMPRE el proyecto activo antes de borrar o crear recursos."
+    },
+    {
+      "title": "Proyectos y APIs",
+      "command": "gcloud projects list",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Configuración",
+      "description": "Muestra los proyectos accesibles. Los servicios (APIs) deben habilitarse por proyecto antes de usarlos.",
+      "examples": [
+        {
+          "description": "Habilitar APIs necesarias",
+          "code": "gcloud services enable run.googleapis.com compute.googleapis.com artifactregistry.googleapis.com"
+        },
+        {
+          "description": "Ver las APIs habilitadas",
+          "code": "gcloud services list --enabled"
+        },
+        {
+          "description": "Crear un proyecto",
+          "code": "gcloud projects create mi-proyecto-123 --name=\"Mi Proyecto\""
+        },
+        {
+          "description": "Cambiar el proyecto activo",
+          "code": "gcloud config set project mi-proyecto-123"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "proyectos",
+        "apis",
+        "services"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El error 'API has not been used in project... or it is disabled' se resuelve con gcloud services enable. Un proyecto nuevo necesita una cuenta de facturación vinculada para la mayoría de servicios."
+    },
+    {
+      "title": "Listar y crear VM",
+      "command": "gcloud compute instances list",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Compute Engine",
+      "description": "Compute Engine ofrece máquinas virtuales. list muestra las del proyecto en todas las zonas.",
+      "examples": [
+        {
+          "description": "Crear una VM Ubuntu",
+          "code": "gcloud compute instances create web-01 --zone=southamerica-west1-a --machine-type=e2-small --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud --boot-disk-size=20GB"
+        },
+        {
+          "description": "Con etiquetas de red para el firewall",
+          "code": "gcloud compute instances create web-01 --zone=southamerica-west1-a --machine-type=e2-small --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud --tags=http-server,https-server"
+        },
+        {
+          "description": "Filtrar por estado",
+          "code": "gcloud compute instances list --filter=\"status=RUNNING\" --format=\"table(name,zone.basename(),networkInterfaces[0].accessConfigs[0].natIP)\""
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "compute",
+        "vm",
+        "instances"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Las etiquetas de red (--tags) conectan la VM con reglas de firewall. Verifica los nombres de familias de imagen con gcloud compute images list --filter=\"family~ubuntu-2404\"."
+    },
+    {
+      "title": "Conectar por SSH y copiar archivos",
+      "command": "gcloud compute ssh web-01 --zone=southamerica-west1-a",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Compute Engine",
+      "description": "Conecta a la VM gestionando automáticamente las claves SSH (o IAP si no tiene IP pública).",
+      "examples": [
+        {
+          "description": "A través de IAP, sin IP pública",
+          "code": "gcloud compute ssh web-01 --zone=southamerica-west1-a --tunnel-through-iap"
+        },
+        {
+          "description": "Ejecutar un comando remoto",
+          "code": "gcloud compute ssh web-01 --zone=southamerica-west1-a --command=\"sudo systemctl status nginx\""
+        },
+        {
+          "description": "Copiar un archivo a la VM",
+          "code": "gcloud compute scp ./build.tar.gz web-01:~ --zone=southamerica-west1-a"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "compute",
+        "ssh",
+        "scp",
+        "iap"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "La primera vez crea ~/.ssh/google_compute_engine. IAP requiere regla de firewall que permita el rango 35.235.240.0/20 al puerto 22 y el rol IAP-secured Tunnel User."
+    },
+    {
+      "title": "Detener, iniciar y eliminar VM",
+      "command": "gcloud compute instances stop web-01 --zone=southamerica-west1-a",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Compute Engine",
+      "description": "Control del ciclo de vida. Una VM detenida no cobra cómputo pero sí disco e IP estática.",
+      "examples": [
+        {
+          "description": "Iniciar",
+          "code": "gcloud compute instances start web-01 --zone=southamerica-west1-a"
+        },
+        {
+          "description": "Eliminar",
+          "code": "gcloud compute instances delete web-01 --zone=southamerica-west1-a"
+        },
+        {
+          "description": "Reservar IP estática",
+          "code": "gcloud compute addresses create web-ip --region=southamerica-west1"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "compute",
+        "stop",
+        "delete",
+        "ip"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Reglas de firewall de la VPC",
+      "command": "gcloud compute firewall-rules create permitir-web --allow=tcp:80,tcp:443 --target-tags=http-server --direction=INGRESS",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Compute Engine",
+      "description": "Crea reglas de red que permiten tráfico a las VM con la etiqueta indicada. Por defecto todo ingreso externo está denegado.",
+      "examples": [
+        {
+          "description": "Listar reglas",
+          "code": "gcloud compute firewall-rules list --format=\"table(name,direction,sourceRanges.list(),allowed[].map().firewall_rule().list())\""
+        },
+        {
+          "description": "Restringir SSH a tu IP",
+          "code": "gcloud compute firewall-rules create ssh-mi-ip --allow=tcp:22 --source-ranges=203.0.113.10/32"
+        },
+        {
+          "description": "Eliminar una regla",
+          "code": "gcloud compute firewall-rules delete permitir-web"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "firewall",
+        "red",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Desplegar desde código fuente con Cloud Run",
+      "command": "gcloud run deploy mi-api --source . --region=southamerica-west1 --allow-unauthenticated",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Cloud Run",
+      "description": "Construye la imagen (con Buildpacks o Dockerfile), la sube a Artifact Registry y la despliega como servicio serverless con HTTPS automático.",
+      "examples": [
+        {
+          "description": "Desde una imagen existente",
+          "code": "gcloud run deploy mi-api --image=southamerica-west1-docker.pkg.dev/mi-proyecto-123/repo/mi-api:1.0.0 --region=southamerica-west1"
+        },
+        {
+          "description": "Variables de entorno y secretos",
+          "code": "gcloud run deploy mi-api --source . --region=southamerica-west1 --set-env-vars=ENTORNO=prod --set-secrets=DB_PASSWORD=db-password:latest"
+        },
+        {
+          "description": "Ver servicios y su URL",
+          "code": "gcloud run services list --region=southamerica-west1"
+        },
+        {
+          "description": "Eliminar",
+          "code": "gcloud run services delete mi-api --region=southamerica-west1"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "cloud-run",
+        "serverless",
+        "deploy",
+        "source"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "--allow-unauthenticated hace el servicio PÚBLICO: omítelo para APIs privadas. La app debe escuchar en el puerto de la variable PORT (8080 por defecto). Con --source necesitas tener habilitadas las APIs de Cloud Build y Artifact Registry."
+    },
+    {
+      "title": "Logs y revisiones en Cloud Run",
+      "command": "gcloud run services describe mi-api --region=southamerica-west1",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Cloud Run",
+      "description": "Muestra la URL, la revisión activa y la configuración del servicio.",
+      "examples": [
+        {
+          "description": "Leer logs del servicio",
+          "code": "gcloud logging read \"resource.type=cloud_run_revision AND resource.labels.service_name=mi-api\" --limit=50 --format=\"value(textPayload)\""
+        },
+        {
+          "description": "Listar revisiones",
+          "code": "gcloud run revisions list --service=mi-api --region=southamerica-west1"
+        },
+        {
+          "description": "Mover todo el tráfico a una revisión (rollback)",
+          "code": "gcloud run services update-traffic mi-api --region=southamerica-west1 --to-revisions=mi-api-00005-abc=100"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "cloud-run",
+        "logs",
+        "revisiones",
+        "rollback"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Credenciales de GKE para kubectl",
+      "command": "gcloud container clusters get-credentials mi-cluster --region=southamerica-west1",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Kubernetes",
+      "description": "Añade el clúster GKE a tu kubeconfig. Necesita el plugin gke-gcloud-auth-plugin instalado.",
+      "examples": [
+        {
+          "description": "Instalar el plugin de autenticación",
+          "code": "gcloud components install gke-gcloud-auth-plugin"
+        },
+        {
+          "description": "Listar clústeres",
+          "code": "gcloud container clusters list"
+        },
+        {
+          "description": "Verificar",
+          "code": "kubectl config current-context && kubectl get nodes"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "gke",
+        "kubernetes",
+        "kubeconfig"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Sin gke-gcloud-auth-plugin kubectl falla con un error de autenticación. En clústeres zonales usa --zone en vez de --region."
+    },
+    {
+      "title": "Cloud Storage con gcloud storage",
+      "command": "gcloud storage cp backup.tar.gz gs://mi-bucket/backups/",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Almacenamiento",
+      "description": "gcloud storage es la CLI moderna y rápida para Cloud Storage (reemplaza a gsutil). Sube, descarga, lista y sincroniza.",
+      "examples": [
+        {
+          "description": "Listar",
+          "code": "gcloud storage ls gs://mi-bucket/"
+        },
+        {
+          "description": "Sincronizar una carpeta",
+          "code": "gcloud storage rsync ./dist gs://mi-bucket/sitio --recursive --delete-unmatched-destination-objects"
+        },
+        {
+          "description": "Crear un bucket",
+          "code": "gcloud storage buckets create gs://mi-bucket-2026 --location=southamerica-west1"
+        },
+        {
+          "description": "Descargar",
+          "code": "gcloud storage cp gs://mi-bucket/backups/backup.tar.gz ."
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "storage",
+        "gs",
+        "bucket",
+        "rsync"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "rsync con la opción de borrado elimina en destino lo que no está en origen: pruébalo con --dry-run antes. gsutil sigue existiendo pero Google recomienda gcloud storage."
+    },
+    {
+      "title": "Cloud SQL: instancias y backups",
+      "command": "gcloud sql instances list",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Bases de datos",
+      "description": "Cloud SQL ofrece MySQL, PostgreSQL y SQL Server gestionados.",
+      "examples": [
+        {
+          "description": "Crear una instancia PostgreSQL",
+          "code": "gcloud sql instances create tienda-pg --database-version=POSTGRES_17 --region=southamerica-west1 --tier=db-custom-1-3840"
+        },
+        {
+          "description": "Crear backup bajo demanda",
+          "code": "gcloud sql backups create --instance=tienda-pg"
+        },
+        {
+          "description": "Conectar con psql vía proxy gestionado",
+          "code": "gcloud sql connect tienda-pg --user=postgres"
+        },
+        {
+          "description": "Crear una base de datos",
+          "code": "gcloud sql databases create tienda --instance=tienda-pg"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "cloud-sql",
+        "postgres",
+        "mysql"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "gcloud sql connect abre temporalmente tu IP en la instancia. Para aplicaciones usa el Cloud SQL Auth Proxy o conectores. Confirma los valores de --database-version y --tier con gcloud sql tiers list."
+    },
+    {
+      "title": "Artifact Registry para imágenes Docker",
+      "command": "gcloud artifacts repositories create repo --repository-format=docker --location=southamerica-west1",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Contenedores",
+      "description": "Artifact Registry reemplaza a Container Registry. Guarda imágenes Docker y paquetes.",
+      "examples": [
+        {
+          "description": "Configurar Docker para autenticarse",
+          "code": "gcloud auth configure-docker southamerica-west1-docker.pkg.dev"
+        },
+        {
+          "description": "Subir una imagen",
+          "code": "docker tag mi-api:1.0.0 southamerica-west1-docker.pkg.dev/mi-proyecto-123/repo/mi-api:1.0.0 && docker push southamerica-west1-docker.pkg.dev/mi-proyecto-123/repo/mi-api:1.0.0"
+        },
+        {
+          "description": "Listar imágenes",
+          "code": "gcloud artifacts docker images list southamerica-west1-docker.pkg.dev/mi-proyecto-123/repo"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "artifact-registry",
+        "docker",
+        "imagenes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Cuentas de servicio",
+      "command": "gcloud iam service-accounts create ci-deploy --display-name=\"CI deploy\"",
+      "section": "Google Cloud (gcloud)",
+      "topic": "IAM",
+      "description": "Identidades para aplicaciones y pipelines. Dales solo los roles necesarios.",
+      "examples": [
+        {
+          "description": "Asignar un rol en el proyecto",
+          "code": "gcloud projects add-iam-policy-binding mi-proyecto-123 --member=serviceAccount:ci-deploy@mi-proyecto-123.iam.gserviceaccount.com --role=roles/run.developer"
+        },
+        {
+          "description": "Listar",
+          "code": "gcloud iam service-accounts list"
+        },
+        {
+          "description": "Ver quién tiene qué en el proyecto",
+          "code": "gcloud projects get-iam-policy mi-proyecto-123 --format=json"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "iam",
+        "service-account",
+        "roles"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Evita descargar claves JSON (gcloud iam service-accounts keys create): son credenciales de larga vida que se filtran. Prefiere Workload Identity Federation para GitHub Actions."
+    },
+    {
+      "title": "Secret Manager",
+      "command": "gcloud secrets create db-password --replication-policy=automatic --data-file=-",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Secretos",
+      "description": "Almacena secretos versionados. Con --data-file=- lee el valor desde stdin sin dejarlo en el historial.",
+      "examples": [
+        {
+          "description": "Crear leyendo del teclado o una tubería",
+          "code": "printf '%s' \"$DB_PASSWORD\" | gcloud secrets create db-password --replication-policy=automatic --data-file=-"
+        },
+        {
+          "description": "Leer la última versión",
+          "code": "gcloud secrets versions access latest --secret=db-password"
+        },
+        {
+          "description": "Añadir una versión nueva",
+          "code": "printf '%s' \"$NUEVA\" | gcloud secrets versions add db-password --data-file=-"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "secret-manager",
+        "secretos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Leer logs con gcloud logging",
+      "command": "gcloud logging read \"severity>=ERROR\" --limit=20 --freshness=1h",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Logs",
+      "description": "Consulta Cloud Logging desde la terminal con el lenguaje de filtros de Google.",
+      "examples": [
+        {
+          "description": "De una VM concreta",
+          "code": "gcloud logging read \"resource.type=gce_instance AND resource.labels.instance_id=1234567890\" --limit=50"
+        },
+        {
+          "description": "Salida JSON",
+          "code": "gcloud logging read \"severity>=ERROR\" --limit=5 --format=json"
+        },
+        {
+          "description": "Seguir en vivo (si el componente está instalado)",
+          "code": "gcloud alpha logging tail \"severity>=ERROR\""
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "logging",
+        "logs",
+        "filtros"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "--freshness limita a lo reciente y acelera. Los logs tienen costos de ingesta y retención: filtra qué se exporta."
+    }
+  ]
+}

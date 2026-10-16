@@ -1,0 +1,650 @@
+{
+  "category": {
+    "slug": "aws",
+    "name": "AWS",
+    "icon": "cloud_circle",
+    "order": 12,
+    "description": "AWS CLI v2: identidad, EC2, S3, redes, bases de datos, contenedores, serverless, monitoreo y costos."
+  },
+  "commands": [
+    {
+      "title": "Listar buckets y objetos",
+      "command": "aws s3 ls",
+      "section": "Almacenamiento (S3)",
+      "topic": "Objetos",
+      "description": "Sin argumentos lista tus buckets; con una ruta s3:// lista su contenido. Los comandos de alto nivel (aws s3) simplifican el uso respecto a s3api.",
+      "syntax": "aws s3 ls [s3://BUCKET[/PREFIJO]]",
+      "examples": [
+        {
+          "description": "Contenido de un bucket, recursivo y legible",
+          "code": "aws s3 ls s3://mi-bucket --recursive --human-readable --summarize"
+        },
+        {
+          "description": "Un prefijo (carpeta)",
+          "code": "aws s3 ls s3://mi-bucket/backups/"
+        },
+        {
+          "description": "Solo nombres de archivos de un prefijo",
+          "code": "aws s3 ls s3://mi-bucket/logs/ | awk '{print $4}'"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "ls",
+        "listar",
+        "bucket"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "S3 no tiene carpetas reales: son prefijos en la clave. Poner / al final del prefijo evita coincidir con otros nombres parecidos."
+    },
+    {
+      "title": "Copiar archivos con aws s3 cp",
+      "command": "aws s3 cp backup.tar.gz s3://mi-bucket/backups/",
+      "section": "Almacenamiento (S3)",
+      "topic": "Objetos",
+      "description": "Sube, descarga o copia entre buckets. Con --recursive copia directorios completos.",
+      "examples": [
+        {
+          "description": "Descargar",
+          "code": "aws s3 cp s3://mi-bucket/backups/backup.tar.gz ."
+        },
+        {
+          "description": "Subir una carpeta",
+          "code": "aws s3 cp ./dist s3://mi-bucket/sitio/ --recursive"
+        },
+        {
+          "description": "Con clase de almacenamiento económica",
+          "code": "aws s3 cp backup.tar.gz s3://mi-bucket/backups/ --storage-class STANDARD_IA"
+        },
+        {
+          "description": "Stream desde stdin (por ejemplo un dump)",
+          "code": "pg_dump -Fc tienda | aws s3 cp - s3://mi-bucket/db/tienda_$(date +%F).dump"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "cp",
+        "subir",
+        "descargar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Usa - como origen para leer stdin y como destino para escribir a stdout. Para subidas de un solo archivo muy grandes el CLI usa multipart automáticamente. --dryrun muestra qué haría sin ejecutar."
+    },
+    {
+      "title": "Sincronizar con aws s3 sync",
+      "command": "aws s3 sync ./dist s3://mi-bucket/sitio/ --delete",
+      "section": "Almacenamiento (S3)",
+      "topic": "Objetos",
+      "description": "Compara origen y destino y copia solo lo que cambió. Con --delete elimina en destino lo que ya no existe en origen. Ideal para publicar sitios estáticos.",
+      "examples": [
+        {
+          "description": "Simulación previa",
+          "code": "aws s3 sync ./dist s3://mi-bucket/sitio/ --delete --dryrun"
+        },
+        {
+          "description": "Excluir archivos",
+          "code": "aws s3 sync . s3://mi-bucket/proyecto/ --exclude \".git/*\" --exclude \"node_modules/*\""
+        },
+        {
+          "description": "Descargar a local",
+          "code": "aws s3 sync s3://mi-bucket/backups/ ./backups/"
+        },
+        {
+          "description": "Cabecera de caché para estáticos",
+          "code": "aws s3 sync ./dist s3://mi-bucket/ --cache-control \"public,max-age=31536000,immutable\" --exclude \"index.html\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "sync",
+        "sitio-estatico",
+        "delete"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "SIEMPRE pasa --dryrun antes de usar --delete: un origen vacío borra todo el destino. sync compara tamaño y fecha, no contenido; añade --size-only o --exact-timestamps si te da falsos positivos. Excluye .git y secretos (.env)."
+    },
+    {
+      "title": "Borrar objetos y buckets",
+      "command": "aws s3 rm s3://mi-bucket/tmp/ --recursive",
+      "section": "Almacenamiento (S3)",
+      "topic": "Objetos",
+      "description": "rm elimina objetos; rb elimina un bucket (debe estar vacío o usar --force). Operaciones destructivas: revisa con --dryrun.",
+      "examples": [
+        {
+          "description": "Simulación",
+          "code": "aws s3 rm s3://mi-bucket/tmp/ --recursive --dryrun"
+        },
+        {
+          "description": "Crear un bucket",
+          "code": "aws s3 mb s3://mi-bucket-2026 --region sa-east-1"
+        },
+        {
+          "description": "Eliminar un bucket vaciándolo",
+          "code": "aws s3 rb s3://mi-bucket-2026 --force"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "rm",
+        "rb",
+        "mb",
+        "borrar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Los nombres de bucket son únicos a nivel global. Con versionado activo, rm solo pone un marcador de borrado y los datos siguen cobrando; hay que borrar las versiones con s3api. rb --force no elimina versiones antiguas."
+    },
+    {
+      "title": "URL prefirmada con presign",
+      "command": "aws s3 presign s3://mi-bucket/informes/ventas.pdf --expires-in 3600",
+      "section": "Almacenamiento (S3)",
+      "topic": "Acceso",
+      "description": "Genera una URL temporal que permite descargar un objeto privado sin credenciales. Expira en el tiempo indicado (por defecto 3600 s).",
+      "examples": [
+        {
+          "description": "Para 7 días (máximo con credenciales IAM de usuario)",
+          "code": "aws s3 presign s3://mi-bucket/informes/ventas.pdf --expires-in 604800"
+        },
+        {
+          "description": "Usarla",
+          "code": "curl -o ventas.pdf \"<url-prefirmada>\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "presign",
+        "url-temporal"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "La URL hereda los permisos de quien la firma: si esas credenciales caducan antes (rol temporal, SSO) la URL deja de funcionar antes. Presign solo permite descargar (GET); para subir se usan POST/PUT prefirmados desde SDK."
+    },
+    {
+      "title": "Versionado del bucket",
+      "command": "aws s3api put-bucket-versioning --bucket mi-bucket --versioning-configuration Status=Enabled",
+      "section": "Almacenamiento (S3)",
+      "topic": "Configuración",
+      "description": "Conserva todas las versiones de cada objeto: protege de sobrescrituras y borrados accidentales.",
+      "examples": [
+        {
+          "description": "Estado actual",
+          "code": "aws s3api get-bucket-versioning --bucket mi-bucket"
+        },
+        {
+          "description": "Listar versiones",
+          "code": "aws s3api list-object-versions --bucket mi-bucket --prefix informes/"
+        },
+        {
+          "description": "Recuperar una versión antigua",
+          "code": "aws s3api get-object --bucket mi-bucket --key informes/ventas.pdf --version-id <id> ventas_antigua.pdf"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3api",
+        "versioning",
+        "proteccion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Una vez activado el versionado solo puede suspenderse, no desactivarse. Combínalo con reglas de ciclo de vida para expirar versiones antiguas y no pagar de más."
+    },
+    {
+      "title": "Bloquear acceso público del bucket",
+      "command": "aws s3api put-public-access-block --bucket mi-bucket --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true",
+      "section": "Almacenamiento (S3)",
+      "topic": "Seguridad",
+      "description": "Activa las cuatro protecciones que impiden que el bucket quede público por error. Debería ser el valor por defecto de cualquier bucket de datos.",
+      "examples": [
+        {
+          "description": "Ver la configuración",
+          "code": "aws s3api get-public-access-block --bucket mi-bucket"
+        },
+        {
+          "description": "A nivel de cuenta",
+          "code": "aws s3control put-public-access-block --account-id 123456789012 --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+        },
+        {
+          "description": "Cifrado por defecto con KMS gestionado",
+          "code": "aws s3api put-bucket-encryption --bucket mi-bucket --server-side-encryption-configuration '{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}'"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3api",
+        "seguridad",
+        "public-access-block",
+        "cifrado"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Los buckets nuevos ya vienen con el bloqueo activado; para un sitio estático que sirves directo desde S3 tendrías que relajarlo, pero lo recomendable es CloudFront con Origin Access Control y bucket privado."
+    },
+    {
+      "title": "Reglas de ciclo de vida",
+      "command": "aws s3api put-bucket-lifecycle-configuration --bucket mi-bucket --lifecycle-configuration file://lifecycle.json",
+      "section": "Almacenamiento (S3)",
+      "topic": "Configuración",
+      "description": "Automatiza el paso de objetos a clases más baratas o su expiración. Evita que logs y backups crezcan sin control.",
+      "examples": [
+        {
+          "description": "Ejemplo de lifecycle.json: expirar tras 30 días",
+          "code": "{\"Rules\":[{\"ID\":\"limpiar-logs\",\"Status\":\"Enabled\",\"Filter\":{\"Prefix\":\"logs/\"},\"Expiration\":{\"Days\":30}}]}"
+        },
+        {
+          "description": "Ver la configuración actual",
+          "code": "aws s3api get-bucket-lifecycle-configuration --bucket mi-bucket"
+        },
+        {
+          "description": "Pasar a Glacier tras 90 días",
+          "code": "{\"Rules\":[{\"ID\":\"archivar\",\"Status\":\"Enabled\",\"Filter\":{\"Prefix\":\"backups/\"},\"Transitions\":[{\"Days\":90,\"StorageClass\":\"GLACIER\"}]}]}"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3api",
+        "lifecycle",
+        "expiracion",
+        "costos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Este comando REEMPLAZA toda la configuración de ciclo de vida existente: descarga la actual, modifícala y vuelve a subirla. Los objetos en clases IA/Glacier tienen tamaños y tiempos mínimos de cobro."
+    },
+    {
+      "title": "Alojar un sitio estático en S3",
+      "command": "aws s3 website s3://mi-bucket/ --index-document index.html --error-document 404.html",
+      "section": "Almacenamiento (S3)",
+      "topic": "Sitio estático",
+      "description": "Habilita el endpoint de hosting estático de S3. Solo HTTP; para HTTPS y dominio propio se pone CloudFront delante.",
+      "examples": [
+        {
+          "description": "Subir el build",
+          "code": "aws s3 sync ./dist s3://mi-bucket/ --delete"
+        },
+        {
+          "description": "Probar el endpoint (la región varía)",
+          "code": "curl -I http://mi-bucket.s3-website-sa-east-1.amazonaws.com"
+        },
+        {
+          "description": "Política de lectura pública (solo si no usas CloudFront)",
+          "code": "aws s3api put-bucket-policy --bucket mi-bucket --policy file://policy-publica.json"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "website",
+        "hosting",
+        "estatico"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "El endpoint de website no soporta HTTPS. Patrón moderno: bucket privado + CloudFront con Origin Access Control + certificado de ACM (en us-east-1). Para SPA redirige 404 a index.html en CloudFront."
+    },
+    {
+      "title": "Invalidar caché de CloudFront",
+      "command": "aws cloudfront create-invalidation --distribution-id E1ABCDEFGHIJK --paths \"/*\"",
+      "section": "Almacenamiento (S3)",
+      "topic": "Sitio estático",
+      "description": "Fuerza a CloudFront a descartar copias en caché de los archivos indicados tras publicar una nueva versión del sitio.",
+      "examples": [
+        {
+          "description": "Solo algunos archivos",
+          "code": "aws cloudfront create-invalidation --distribution-id E1ABCDEFGHIJK --paths \"/index.html\" \"/assets/app.js\""
+        },
+        {
+          "description": "Ver el estado",
+          "code": "aws cloudfront list-invalidations --distribution-id E1ABCDEFGHIJK"
+        },
+        {
+          "description": "Listar distribuciones",
+          "code": "aws cloudfront list-distributions --query \"DistributionList.Items[].[Id,DomainName,Aliases.Items[0]]\" --output table"
+        }
+      ],
+      "tags": [
+        "aws",
+        "cloudfront",
+        "invalidacion",
+        "cache",
+        "cdn"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Las primeras 1000 rutas de invalidación por mes son gratis; después se cobran. Mejor práctica: nombres de archivo con hash en los assets (cache largo) y solo invalidar index.html."
+    },
+    {
+      "title": "Política de bucket y CORS",
+      "command": "aws s3api put-bucket-policy --bucket mi-bucket --policy file://policy.json",
+      "section": "Almacenamiento (S3)",
+      "topic": "Configuración",
+      "description": "Las políticas de bucket (JSON) controlan quién puede acceder. CORS permite que un frontend en otro dominio consuma el bucket.",
+      "examples": [
+        {
+          "description": "Ver la política",
+          "code": "aws s3api get-bucket-policy --bucket mi-bucket --query Policy --output text"
+        },
+        {
+          "description": "Configurar CORS",
+          "code": "aws s3api put-bucket-cors --bucket mi-bucket --cors-configuration file://cors.json"
+        },
+        {
+          "description": "Ver CORS",
+          "code": "aws s3api get-bucket-cors --bucket mi-bucket"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3api",
+        "bucket-policy",
+        "cors"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Tamaño de un bucket",
+      "command": "aws s3 ls s3://mi-bucket --recursive --summarize --human-readable | tail -2",
+      "section": "Almacenamiento (S3)",
+      "topic": "Objetos",
+      "description": "Resumen de cantidad de objetos y tamaño total. En buckets enormes es lento y cuesta peticiones; usa métricas de CloudWatch en esos casos.",
+      "examples": [
+        {
+          "description": "Con CloudWatch (sin listar)",
+          "code": "aws cloudwatch get-metric-statistics --namespace AWS/S3 --metric-name BucketSizeBytes --dimensions Name=BucketName,Value=mi-bucket Name=StorageType,Value=StandardStorage --start-time $(date -u -d '2 days ago' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 86400 --statistics Average"
+        },
+        {
+          "description": "Objetos más grandes",
+          "code": "aws s3api list-objects-v2 --bucket mi-bucket --query \"sort_by(Contents,&Size)[-5:].[Key,Size]\" --output table"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "tamaño",
+        "bucket",
+        "cloudwatch"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Explorar la red: VPC, subredes y rutas",
+      "command": "aws ec2 describe-vpcs --query \"Vpcs[].[VpcId,CidrBlock,IsDefault]\" --output table",
+      "section": "Redes y DNS",
+      "topic": "VPC",
+      "description": "Inspecciona la red existente antes de lanzar recursos. Cada cuenta tiene una VPC por defecto en cada región.",
+      "examples": [
+        {
+          "description": "Subredes de una VPC",
+          "code": "aws ec2 describe-subnets --filters \"Name=vpc-id,Values=vpc-0abc123\" --query \"Subnets[].[SubnetId,AvailabilityZone,CidrBlock]\" --output table"
+        },
+        {
+          "description": "Tablas de rutas",
+          "code": "aws ec2 describe-route-tables --filters \"Name=vpc-id,Values=vpc-0abc123\""
+        },
+        {
+          "description": "Zonas de disponibilidad",
+          "code": "aws ec2 describe-availability-zones --query \"AvailabilityZones[].ZoneName\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "vpc",
+        "subnets",
+        "red"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Crear una VPC básica",
+      "command": "aws ec2 create-vpc --cidr-block 10.0.0.0/16 --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=prod}]'",
+      "section": "Redes y DNS",
+      "topic": "VPC",
+      "description": "Crea la red privada virtual. Después necesitas subredes, internet gateway y rutas. Para algo reproducible usa Terraform o CloudFormation.",
+      "examples": [
+        {
+          "description": "Subred pública",
+          "code": "aws ec2 create-subnet --vpc-id vpc-0abc123 --cidr-block 10.0.1.0/24 --availability-zone sa-east-1a"
+        },
+        {
+          "description": "Internet gateway",
+          "code": "aws ec2 create-internet-gateway --query InternetGateway.InternetGatewayId --output text"
+        },
+        {
+          "description": "Adjuntarlo a la VPC",
+          "code": "aws ec2 attach-internet-gateway --internet-gateway-id igw-0abc123 --vpc-id vpc-0abc123"
+        }
+      ],
+      "tags": [
+        "aws",
+        "vpc",
+        "crear",
+        "subnet",
+        "internet-gateway"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Hacer estos pasos a mano es propenso a errores (tablas de rutas, asociaciones, DNS). Para infraestructura real usa IaC; esto sirve para entender qué crea cada pieza. Un NAT gateway cobra por hora y por GB."
+    },
+    {
+      "title": "Listar zonas y registros de Route 53",
+      "command": "aws route53 list-hosted-zones --query \"HostedZones[].[Id,Name]\" --output table",
+      "section": "Redes y DNS",
+      "topic": "Route 53",
+      "description": "Muestra las zonas DNS administradas en Route 53 y sus registros.",
+      "examples": [
+        {
+          "description": "Registros de una zona",
+          "code": "aws route53 list-resource-record-sets --hosted-zone-id Z0123456789ABC --query \"ResourceRecordSets[].[Name,Type]\" --output table"
+        },
+        {
+          "description": "Solo el tipo A",
+          "code": "aws route53 list-resource-record-sets --hosted-zone-id Z0123456789ABC --query \"ResourceRecordSets[?Type=='A']\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "route53",
+        "dns",
+        "zonas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Route 53 es un servicio global: no necesita --region. El ID de zona va sin el prefijo /hostedzone/ en los comandos."
+    },
+    {
+      "title": "Crear o actualizar un registro DNS",
+      "command": "aws route53 change-resource-record-sets --hosted-zone-id Z0123456789ABC --change-batch file://cambio.json",
+      "section": "Redes y DNS",
+      "topic": "Route 53",
+      "description": "Todas las altas y cambios de DNS se hacen enviando un lote de cambios en JSON con UPSERT, CREATE o DELETE.",
+      "examples": [
+        {
+          "description": "Contenido de cambio.json (registro A)",
+          "code": "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"app.ejemplo.cl\",\"Type\":\"A\",\"TTL\":300,\"ResourceRecords\":[{\"Value\":\"203.0.113.10\"}]}}]}"
+        },
+        {
+          "description": "Esperar a que se propague en Route 53",
+          "code": "aws route53 wait resource-record-sets-changed --id <id-del-cambio>"
+        },
+        {
+          "description": "Verificar con dig",
+          "code": "dig +short app.ejemplo.cl @8.8.8.8"
+        }
+      ],
+      "tags": [
+        "aws",
+        "route53",
+        "dns",
+        "upsert",
+        "registro"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "UPSERT crea o actualiza sin fallar. Baja el TTL con antelación antes de una migración. Para un dominio en Cloudflare o registrar externo, solo Route 53 como DNS si delegas los NS."
+    },
+    {
+      "title": "Revisar la salud con health checks",
+      "command": "aws route53 list-health-checks --query \"HealthChecks[].[Id,HealthCheckConfig.FullyQualifiedDomainName]\" --output table",
+      "section": "Redes y DNS",
+      "topic": "Route 53",
+      "description": "Los health checks de Route 53 monitorean endpoints y habilitan failover DNS.",
+      "examples": [
+        {
+          "description": "Estado de un chequeo",
+          "code": "aws route53 get-health-check-status --health-check-id <id>"
+        },
+        {
+          "description": "Crear un chequeo HTTPS",
+          "code": "aws route53 create-health-check --caller-reference chequeo-$(date +%s) --health-check-config Type=HTTPS,FullyQualifiedDomainName=app.ejemplo.cl,Port=443,ResourcePath=/health"
+        }
+      ],
+      "tags": [
+        "aws",
+        "route53",
+        "health-check",
+        "failover"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Solicitar certificados con ACM",
+      "command": "aws acm request-certificate --domain-name app.ejemplo.cl --validation-method DNS --region us-east-1",
+      "section": "Redes y DNS",
+      "topic": "Certificados",
+      "description": "AWS Certificate Manager emite certificados TLS gratuitos para CloudFront, ALB y API Gateway. Para CloudFront deben estar en us-east-1.",
+      "examples": [
+        {
+          "description": "Listar certificados",
+          "code": "aws acm list-certificates --region us-east-1 --query \"CertificateSummaryList[].[DomainName,Status,CertificateArn]\" --output table"
+        },
+        {
+          "description": "Obtener el registro CNAME de validación",
+          "code": "aws acm describe-certificate --certificate-arn <arn> --region us-east-1 --query \"Certificate.DomainValidationOptions[].ResourceRecord\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "acm",
+        "certificado",
+        "tls",
+        "dns"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "ACM no entrega la clave privada: los certificados solo sirven en servicios AWS. Para un VPS usa Let's Encrypt (certbot)."
+    },
+    {
+      "title": "Balanceadores de carga: listar y revisar targets",
+      "command": "aws elbv2 describe-load-balancers --query \"LoadBalancers[].[LoadBalancerName,DNSName,Type]\" --output table",
+      "section": "Redes y DNS",
+      "topic": "Balanceadores",
+      "description": "Lista los Application/Network Load Balancers y sus targets. La salud de los targets es la primera pista ante errores 502/503.",
+      "examples": [
+        {
+          "description": "Grupos de destino",
+          "code": "aws elbv2 describe-target-groups --query \"TargetGroups[].[TargetGroupName,TargetGroupArn]\""
+        },
+        {
+          "description": "Salud de los destinos",
+          "code": "aws elbv2 describe-target-health --target-group-arn <arn> --query \"TargetHealthDescriptions[].[Target.Id,TargetHealth.State]\" --output table"
+        }
+      ],
+      "tags": [
+        "aws",
+        "elbv2",
+        "alb",
+        "nlb",
+        "balanceador",
+        "salud"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ]
+    }
+  ]
+}

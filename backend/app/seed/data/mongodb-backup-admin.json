@@ -1,0 +1,656 @@
+{
+  "category": {
+    "slug": "mongodb",
+    "name": "MongoDB",
+    "icon": "data_object",
+    "order": 11,
+    "description": "MongoDB con mongosh: CRUD, índices, agregaciones, seguridad, backups y réplicas."
+  },
+  "commands": [
+    {
+      "title": "Backup con mongodump",
+      "command": "mongodump --uri=\"mongodb://admin:<contraseña>@localhost:27017/?authSource=admin\" --db=tienda --gzip --archive=tienda_$(date +%F).gz",
+      "section": "Backup y herramientas",
+      "topic": "mongodump",
+      "description": "Genera una copia lógica de la base. --archive escribe un único archivo y --gzip lo comprime. Es la herramienta base de respaldo para instalaciones pequeñas y medianas.",
+      "syntax": "mongodump --uri=URI [--db BASE] [--gzip] [--archive=ARCHIVO]",
+      "examples": [
+        {
+          "description": "Todas las bases",
+          "code": "mongodump --uri=\"$MONGO_URI\" --gzip --archive=full_$(date +%F).gz"
+        },
+        {
+          "description": "Solo ciertas colecciones",
+          "code": "mongodump --uri=\"$MONGO_URI\" --db=tienda --collection=ventas --gzip --archive=ventas.gz"
+        },
+        {
+          "description": "Filtrar con consulta",
+          "code": "mongodump --uri=\"$MONGO_URI\" --db=tienda --collection=ventas --query='{\"estado\":\"pagado\"}' --out=./dump"
+        },
+        {
+          "description": "Con oplog para consistencia en replica set",
+          "code": "mongodump --uri=\"$MONGO_URI\" --oplog --gzip --archive=full_oplog.gz"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "mongodump",
+        "backup",
+        "gzip",
+        "archive"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "mongodump e mongorestore son parte de las 'Database Tools', un paquete aparte de mongod (mongodb-database-tools). Para consistencia punto en el tiempo en replica sets usa --oplog. Para bases grandes conviene snapshots del volumen o Percona Backup for MongoDB. Pasar la contraseña en la URI la deja en el historial: usa --uri desde una variable de entorno."
+    },
+    {
+      "title": "Restaurar con mongorestore",
+      "command": "mongorestore --uri=\"$MONGO_URI\" --gzip --archive=tienda_2026-10-16.gz",
+      "section": "Backup y herramientas",
+      "topic": "mongodump",
+      "description": "Carga un volcado generado por mongodump. Por defecto no sobreescribe documentos existentes con el mismo _id (los duplicados dan error).",
+      "examples": [
+        {
+          "description": "Borrar colecciones antes de restaurar",
+          "code": "mongorestore --uri=\"$MONGO_URI\" --gzip --archive=tienda.gz --drop"
+        },
+        {
+          "description": "Solo un namespace (base.colección)",
+          "code": "mongorestore --uri=\"$MONGO_URI\" --gzip --archive=full.gz --nsInclude='tienda.ventas'"
+        },
+        {
+          "description": "Restaurar en otra base",
+          "code": "mongorestore --uri=\"$MONGO_URI\" --gzip --archive=tienda.gz --nsFrom='tienda.*' --nsTo='tienda_copia.*'"
+        },
+        {
+          "description": "Reaplicar el oplog para un punto consistente",
+          "code": "mongorestore --uri=\"$MONGO_URI\" --gzip --archive=full_oplog.gz --oplogReplay"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "mongorestore",
+        "restaurar",
+        "nsinclude"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "--drop elimina cada colección antes de restaurarla: en producción ejecuta primero en una base de prueba. mongorestore NO restaura usuarios del admin salvo que los incluya el volcado completo (--db=admin)."
+    },
+    {
+      "title": "Backups programados de MongoDB",
+      "command": "0 2 * * * /usr/local/bin/backup-mongo.sh",
+      "section": "Backup y herramientas",
+      "topic": "mongodump",
+      "description": "Script de cron que genera un archivo con fecha y elimina los antiguos. Imprescindible en un VPS donde la base corre sin servicio gestionado.",
+      "examples": [
+        {
+          "description": "Contenido del script",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\nDEST=/var/backups/mongo\nmkdir -p \"$DEST\"\nmongodump --uri=\"$MONGO_URI\" --gzip --archive=\"$DEST/full_$(date +%F_%H%M).gz\"\nfind \"$DEST\" -name 'full_*.gz' -mtime +7 -delete"
+        },
+        {
+          "description": "Desde un contenedor Docker",
+          "code": "docker exec mongo sh -c 'mongodump --username \"$MONGO_INITDB_ROOT_USERNAME\" --password \"$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --gzip --archive' > mongo_$(date +%F).gz"
+        },
+        {
+          "description": "Restaurar en el contenedor",
+          "code": "docker exec -i mongo sh -c 'mongorestore --username \"$MONGO_INITDB_ROOT_USERNAME\" --password \"$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --gzip --archive' < mongo_2026-10-16.gz"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "backup",
+        "cron",
+        "rotacion",
+        "docker"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si --archive no lleva nombre, escribe en stdout (útil con docker exec y redirección; no uses -t). Verifica periódicamente restaurando en otra instancia. Copia el backup fuera del VPS."
+    },
+    {
+      "title": "Exportar con mongoexport",
+      "command": "mongoexport --uri=\"$MONGO_URI\" --collection=usuarios --out=usuarios.json",
+      "section": "Backup y herramientas",
+      "topic": "Importar y exportar",
+      "description": "Exporta una colección a JSON (un documento por línea) o CSV. Sirve para análisis o intercambio, no como backup completo (pierde tipos y índices).",
+      "examples": [
+        {
+          "description": "CSV con campos elegidos",
+          "code": "mongoexport --uri=\"$MONGO_URI\" --collection=usuarios --type=csv --fields=nombre,email,ciudad --out=usuarios.csv"
+        },
+        {
+          "description": "Con filtro",
+          "code": "mongoexport --uri=\"$MONGO_URI\" --collection=ventas --query='{\"estado\":\"pagado\"}' --out=pagadas.json"
+        },
+        {
+          "description": "Como array JSON",
+          "code": "mongoexport --uri=\"$MONGO_URI\" --collection=usuarios --jsonArray --out=usuarios_array.json"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "mongoexport",
+        "json",
+        "csv"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Los tipos extendidos (Date, ObjectId) se exportan en formato Extended JSON. Para backups usa mongodump, que conserva tipos exactos."
+    },
+    {
+      "title": "Importar con mongoimport",
+      "command": "mongoimport --uri=\"$MONGO_URI\" --collection=productos --file=productos.json --jsonArray",
+      "section": "Backup y herramientas",
+      "topic": "Importar y exportar",
+      "description": "Carga JSON (por línea o array) o CSV en una colección. Los modos de importación controlan qué ocurre con duplicados.",
+      "examples": [
+        {
+          "description": "CSV con cabecera",
+          "code": "mongoimport --uri=\"$MONGO_URI\" --collection=clientes --type=csv --headerline --file=clientes.csv"
+        },
+        {
+          "description": "Hacer upsert por un campo",
+          "code": "mongoimport --uri=\"$MONGO_URI\" --collection=clientes --file=clientes.json --mode=upsert --upsertFields=email"
+        },
+        {
+          "description": "Vaciar la colección antes",
+          "code": "mongoimport --uri=\"$MONGO_URI\" --collection=productos --file=productos.json --drop"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "mongoimport",
+        "csv",
+        "json",
+        "importar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Con CSV todos los valores entran como texto salvo que uses --columnsHaveTypes o conviertas después. --drop elimina la colección existente primero."
+    },
+    {
+      "title": "mongostat y mongotop",
+      "command": "mongostat --uri=\"$MONGO_URI\" 2",
+      "section": "Backup y herramientas",
+      "topic": "Herramientas",
+      "description": "mongostat muestra contadores de operaciones por segundo (inserts, queries, conexiones, memoria). mongotop muestra qué colecciones consumen más tiempo de lectura/escritura.",
+      "examples": [
+        {
+          "description": "Tiempo por colección",
+          "code": "mongotop --uri=\"$MONGO_URI\" 5"
+        },
+        {
+          "description": "Ver 5 muestras y salir",
+          "code": "mongostat --uri=\"$MONGO_URI\" -n 5 2"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "mongostat",
+        "mongotop",
+        "monitoreo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Atlas CLI: autenticar y listar clústeres",
+      "command": "atlas auth login",
+      "section": "Backup y herramientas",
+      "topic": "Herramientas",
+      "description": "El Atlas CLI administra MongoDB Atlas desde la terminal. auth login abre el navegador para autorizar el acceso.",
+      "examples": [
+        {
+          "description": "Listar clústeres del proyecto",
+          "code": "atlas clusters list"
+        },
+        {
+          "description": "Listar proyectos",
+          "code": "atlas projects list"
+        },
+        {
+          "description": "Permitir una IP en la lista de acceso",
+          "code": "atlas accessLists create 203.0.113.10 --type ipAddress --comment \"VPS\""
+        },
+        {
+          "description": "Cadena de conexión de un clúster",
+          "code": "atlas clusters connectionStrings describe Cluster0"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "atlas",
+        "cli",
+        "cloud"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Hay que seleccionar el proyecto (atlas config init o --projectId). Verifica los subcomandos con 'atlas --help': el CLI evoluciona con frecuencia."
+    },
+    {
+      "title": "Instalar MongoDB 8 en Ubuntu y AlmaLinux",
+      "command": "sudo apt-get install -y mongodb-org",
+      "section": "Backup y herramientas",
+      "topic": "Herramientas",
+      "description": "Instalación desde el repositorio oficial de MongoDB. Los paquetes de las distribuciones suelen estar desactualizados o no existir.",
+      "examples": [
+        {
+          "description": "Habilitar e iniciar en systemd",
+          "code": "sudo systemctl enable --now mongod"
+        },
+        {
+          "description": "AlmaLinux: instalar tras agregar el repo /etc/yum.repos.d/mongodb-org-8.0.repo",
+          "code": "sudo dnf install -y mongodb-org"
+        },
+        {
+          "description": "Ver el log",
+          "code": "sudo tail -f /var/log/mongodb/mongod.log"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "instalar",
+        "ubuntu",
+        "almalinux",
+        "mongod"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Necesitas añadir antes el repositorio oficial de la versión 8.0 (clave GPG y archivo .list o .repo). Datos en /var/lib/mongodb, configuración en /etc/mongod.conf. Si usas SELinux en AlmaLinux y cambias dbPath, ajusta contextos con semanage fcontext."
+    },
+    {
+      "title": "Tamaño y estadísticas de base y colecciones",
+      "command": "db.stats(1024*1024)",
+      "section": "Administración y producción",
+      "topic": "Estadísticas",
+      "description": "db.stats() resume tamaño de datos, almacenamiento e índices (aquí en MB). Para una colección usa db.coleccion.stats() o $collStats.",
+      "examples": [
+        {
+          "description": "Estadísticas de una colección",
+          "code": "db.ventas.stats(1024*1024)"
+        },
+        {
+          "description": "Con el pipeline moderno",
+          "code": "db.ventas.aggregate([{ $collStats: { storageStats: {} } }])"
+        },
+        {
+          "description": "Cantidad de documentos y tamaño promedio",
+          "code": "db.ventas.aggregate([{ $collStats: { storageStats: {} } }, { $project: { count: \"$storageStats.count\", avgObjSize: \"$storageStats.avgObjSize\" } }])"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "stats",
+        "collstats",
+        "tamaño"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "db.coleccion.stats() sigue funcionando pero se prefiere $collStats. En WiredTiger, storageSize puede ser menor que size gracias a la compresión."
+    },
+    {
+      "title": "Ver y cancelar operaciones con currentOp y killOp",
+      "command": "db.currentOp({ active: true, secs_running: { $gt: 5 } })",
+      "section": "Administración y producción",
+      "topic": "Operaciones",
+      "description": "Muestra las operaciones en curso. Útil para encontrar consultas que llevan demasiado tiempo y cancelarlas.",
+      "examples": [
+        {
+          "description": "Cancelar una operación",
+          "code": "db.killOp(12345)"
+        },
+        {
+          "description": "Limitar el tiempo de una consulta desde el inicio",
+          "code": "db.ventas.find({ estado: \"x\" }).maxTimeMS(5000)"
+        },
+        {
+          "description": "Operaciones esperando locks",
+          "code": "db.currentOp({ waitingForLock: true })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "currentop",
+        "killop",
+        "operaciones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "No mates operaciones de mantenimiento internas (replicación, index build) salvo que sepas lo que haces. maxTimeMS evita que una consulta mal escrita ahogue el servidor."
+    },
+    {
+      "title": "Profiler de consultas lentas",
+      "command": "db.setProfilingLevel(1, { slowms: 100 })",
+      "section": "Administración y producción",
+      "topic": "Operaciones",
+      "description": "El profiler registra operaciones lentas en la colección system.profile de cada base. Nivel 1: solo las lentas; nivel 2: todas.",
+      "examples": [
+        {
+          "description": "Ver las últimas lentas",
+          "code": "db.system.profile.find().sort({ ts: -1 }).limit(5).pretty()"
+        },
+        {
+          "description": "Estado del profiler",
+          "code": "db.getProfilingStatus()"
+        },
+        {
+          "description": "Desactivar",
+          "code": "db.setProfilingLevel(0)"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "profiler",
+        "slowms",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "El nivel 2 (todo) en producción degrada el rendimiento. system.profile es una colección limitada (capped) de 1 MB por defecto. También hay un log de operaciones lentas en mongod.log."
+    },
+    {
+      "title": "Compactar y revisar integridad",
+      "command": "db.runCommand({ compact: \"logs\" })",
+      "section": "Administración y producción",
+      "topic": "Operaciones",
+      "description": "compact reorganiza una colección para liberar espacio en WiredTiger. validate verifica su integridad.",
+      "examples": [
+        {
+          "description": "Validación completa",
+          "code": "db.ventas.validate({ full: true })"
+        },
+        {
+          "description": "Reconstruir índices de una colección",
+          "code": "db.ventas.reIndex()"
+        },
+        {
+          "description": "Cambiar un parámetro en caliente",
+          "code": "db.adminCommand({ setParameter: 1, logLevel: 1 })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "compact",
+        "validate",
+        "integridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "compact bloquea la colección según la versión; haz el mantenimiento en ventana de baja actividad. reIndex() solo está permitido en instancias standalone. La opción habitual para recuperar espacio es resincronizar un nodo secundario."
+    },
+    {
+      "title": "Iniciar un replica set",
+      "command": "rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo1:27017\" }, { _id: 1, host: \"mongo2:27017\" }, { _id: 2, host: \"mongo3:27017\" }] })",
+      "section": "Administración y producción",
+      "topic": "Replica Set",
+      "description": "Convierte instancias en un replica set con alta disponibilidad. Necesitas al menos 3 miembros (o 2 + un árbitro) para elegir primario.",
+      "syntax": "rs.initiate(config)",
+      "examples": [
+        {
+          "description": "Estado del replica set",
+          "code": "rs.status()"
+        },
+        {
+          "description": "Configuración actual",
+          "code": "rs.conf()"
+        },
+        {
+          "description": "Resumen compacto",
+          "code": "rs.status().members.map(m => ({ nombre: m.name, estado: m.stateStr }))"
+        },
+        {
+          "description": "Agregar un miembro",
+          "code": "rs.add(\"mongo4:27017\")"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "replica-set",
+        "rs",
+        "initiate",
+        "status"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "mongod debe arrancar con replication.replSetName: rs0. Para usar transacciones y change streams necesitas un replica set (incluso de un solo nodo en desarrollo). En producción con autenticación, los nodos requieren keyFile o certificados x.509 para autenticarse entre sí."
+    },
+    {
+      "title": "Cambiar primario y leer desde secundarios",
+      "command": "rs.stepDown(60)",
+      "section": "Administración y producción",
+      "topic": "Replica Set",
+      "description": "Fuerza al primario a renunciar durante 60 segundos para que otro nodo sea elegido. Útil antes de mantenimiento planificado.",
+      "examples": [
+        {
+          "description": "Leer desde secundario en mongosh",
+          "code": "db.getMongo().setReadPref(\"secondaryPreferred\")"
+        },
+        {
+          "description": "Ver atraso de replicación",
+          "code": "rs.printSecondaryReplicationInfo()"
+        },
+        {
+          "description": "Quitar un nodo",
+          "code": "rs.remove(\"mongo4:27017\")"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "stepdown",
+        "replica",
+        "secundario",
+        "lag"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Leer de secundarios puede devolver datos desactualizados. Siempre hay un breve corte de escritura durante la elección de un nuevo primario; la app debe reintentar (retryWrites=true)."
+    },
+    {
+      "title": "Contenedor mongo:8 con usuario root",
+      "command": "docker run -d --name mongo -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=$MONGO_ROOT_PASSWORD -v mongo_data:/data/db -p 127.0.0.1:27017:27017 mongo:8",
+      "section": "Administración y producción",
+      "topic": "Docker",
+      "description": "Servidor MongoDB 8 con autenticación activada desde el inicio y datos persistentes en un volumen nombrado.",
+      "examples": [
+        {
+          "description": "Entrar con mongosh dentro del contenedor",
+          "code": "docker exec -it mongo mongosh -u admin -p --authenticationDatabase admin"
+        },
+        {
+          "description": "Ver logs",
+          "code": "docker logs -f mongo"
+        },
+        {
+          "description": "Healthcheck con ping",
+          "code": "docker exec mongo mongosh --quiet --eval \"db.adminCommand('ping').ok\" -u admin -p \"$MONGO_ROOT_PASSWORD\" --authenticationDatabase admin"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "docker",
+        "contenedor",
+        "mongo8"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "MONGO_INITDB_ROOT_* y los scripts de /docker-entrypoint-initdb.d solo se aplican con el volumen vacío. Publica el puerto solo en 127.0.0.1: la imagen escucha en 0.0.0.0 dentro del contenedor y un -p 27017:27017 la expone a Internet."
+    },
+    {
+      "title": "MongoDB en Docker Compose",
+      "command": "services:\n  mongo:\n    image: mongo:8\n    environment:\n      MONGO_INITDB_ROOT_USERNAME: admin\n      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}\n    volumes:\n      - mongo_data:/data/db\n    healthcheck:\n      test: [\"CMD\", \"mongosh\", \"--quiet\", \"--eval\", \"db.adminCommand('ping').ok\"]\n      interval: 10s\n      timeout: 5s\n      retries: 5\nvolumes:\n  mongo_data:",
+      "section": "Administración y producción",
+      "topic": "Docker",
+      "description": "Definición Compose básica con volumen y healthcheck. La app se conecta con la URI mongodb://admin:...@mongo:27017/?authSource=admin usando el nombre del servicio.",
+      "examples": [
+        {
+          "description": "Replica set de un solo nodo para desarrollo (command)",
+          "code": "command: [\"--replSet\", \"rs0\", \"--bind_ip_all\"]"
+        },
+        {
+          "description": "Iniciar el replica set de un nodo",
+          "code": "docker compose exec mongo mongosh --eval \"rs.initiate()\""
+        },
+        {
+          "description": "Conectar la app desde otro contenedor",
+          "code": "MONGO_URI=mongodb://admin:${MONGO_ROOT_PASSWORD}@mongo:27017/tienda?authSource=admin"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "docker",
+        "compose",
+        "healthcheck",
+        "replica"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Un replica set con autenticación necesita keyFile. Para desarrollo local con transacciones, el nodo único sin auth es suficiente. Nunca publiques el puerto en producción si solo lo usa otro contenedor de la misma red de Compose."
+    },
+    {
+      "title": "Cambiar nombre, copiar y crear colecciones especiales",
+      "command": "db.logs_viejo.renameCollection(\"logs_archivo\")",
+      "section": "Administración y producción",
+      "topic": "Operaciones",
+      "description": "Operaciones de mantenimiento sobre colecciones: renombrar, copiar con agregación, crear colecciones capped o de series temporales.",
+      "examples": [
+        {
+          "description": "Crear una colección de series temporales",
+          "code": "db.createCollection(\"metricas\", { timeseries: { timeField: \"ts\", metaField: \"host\", granularity: \"seconds\" } })"
+        },
+        {
+          "description": "Colección capped (tamaño fijo, estilo ring buffer)",
+          "code": "db.createCollection(\"eventos_recientes\", { capped: true, size: 104857600 })"
+        },
+        {
+          "description": "Copiar una colección",
+          "code": "db.ventas.aggregate([{ $match: {} }, { $out: \"ventas_copia\" }])"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "renamecollection",
+        "timeseries",
+        "capped"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Validación de esquema con $jsonSchema",
+      "command": "db.createCollection(\"usuarios\", { validator: { $jsonSchema: { bsonType: \"object\", required: [\"email\"], properties: { email: { bsonType: \"string\", pattern: \"^.+@.+$\" } } } } })",
+      "section": "Administración y producción",
+      "topic": "Operaciones",
+      "description": "Aunque MongoDB no exige esquema, puedes forzar reglas de validación en la colección. Previene datos basura sin perder flexibilidad.",
+      "examples": [
+        {
+          "description": "Añadir validación a una colección existente",
+          "code": "db.runCommand({ collMod: \"usuarios\", validator: { $jsonSchema: { required: [\"email\"] } }, validationLevel: \"moderate\" })"
+        },
+        {
+          "description": "Solo advertir en el log en vez de rechazar",
+          "code": "db.runCommand({ collMod: \"usuarios\", validationAction: \"warn\" })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "jsonschema",
+        "validacion",
+        "esquema"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "validationLevel 'moderate' no revalida documentos antiguos inválidos al actualizarlos. Empieza con validationAction 'warn' para detectar problemas antes de rechazar."
+    },
+    {
+      "title": "Transacciones con sesiones",
+      "command": "const s = db.getMongo().startSession(); s.startTransaction(); const c = s.getDatabase(\"tienda\").cuentas; c.updateOne({ _id: 1 }, { $inc: { saldo: -100 } }); c.updateOne({ _id: 2 }, { $inc: { saldo: 100 } }); s.commitTransaction(); s.endSession();",
+      "section": "Administración y producción",
+      "topic": "Operaciones",
+      "description": "Las transacciones multi-documento garantizan atomicidad entre varias operaciones. Requieren un replica set (o clúster shardeado).",
+      "examples": [
+        {
+          "description": "Abortar",
+          "code": "s.abortTransaction()"
+        },
+        {
+          "description": "Comprobar si el servidor soporta transacciones",
+          "code": "db.hello().setName"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "transacciones",
+        "sesiones",
+        "acid"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "En standalone fallan con 'Transaction numbers are only allowed on a replica set member'. Mantén las transacciones cortas (límite de 60 s por defecto); modela con documentos incrustados para evitarlas cuando sea posible."
+    }
+  ]
+}

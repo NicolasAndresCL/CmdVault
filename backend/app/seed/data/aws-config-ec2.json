@@ -1,0 +1,834 @@
+{
+  "category": {
+    "slug": "aws",
+    "name": "AWS",
+    "icon": "cloud_circle",
+    "order": 12,
+    "description": "AWS CLI v2: identidad, EC2, S3, redes, bases de datos, contenedores, serverless, monitoreo y costos."
+  },
+  "commands": [
+    {
+      "title": "Configurar credenciales con aws configure",
+      "command": "aws configure",
+      "section": "Configuración e identidad",
+      "topic": "Configuración",
+      "description": "Pide Access Key, Secret, región por defecto y formato de salida, y los guarda en ~/.aws/credentials y ~/.aws/config. Es el punto de partida del AWS CLI v2.",
+      "syntax": "aws configure [--profile NOMBRE]",
+      "examples": [
+        {
+          "description": "Crear un perfil con nombre",
+          "code": "aws configure --profile produccion"
+        },
+        {
+          "description": "Leer un valor",
+          "code": "aws configure get region --profile produccion"
+        },
+        {
+          "description": "Fijar un valor sin interactivo",
+          "code": "aws configure set region sa-east-1 --profile produccion"
+        },
+        {
+          "description": "Listar perfiles configurados",
+          "code": "aws configure list-profiles"
+        }
+      ],
+      "tags": [
+        "aws",
+        "configure",
+        "credenciales",
+        "perfil",
+        "region"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "No uses claves de larga duración del usuario root nunca; crea un usuario IAM o, mejor, usa IAM Identity Center (SSO). Las claves en ~/.aws/credentials están en texto plano. Región de Chile cercana: sa-east-1 (São Paulo); Santiago tiene Local Zone pero no región completa."
+    },
+    {
+      "title": "Perfiles con AWS_PROFILE y --profile",
+      "command": "export AWS_PROFILE=produccion",
+      "section": "Configuración e identidad",
+      "topic": "Configuración",
+      "description": "Selecciona qué perfil usan todos los comandos de la sesión. Evita ejecutar por error algo en la cuenta equivocada.",
+      "examples": [
+        {
+          "description": "Solo para un comando",
+          "code": "aws s3 ls --profile desarrollo"
+        },
+        {
+          "description": "Cambiar la región puntual",
+          "code": "aws ec2 describe-instances --region us-east-1"
+        },
+        {
+          "description": "Variables de entorno de región",
+          "code": "export AWS_DEFAULT_REGION=sa-east-1"
+        },
+        {
+          "description": "En PowerShell",
+          "code": "$env:AWS_PROFILE = \"produccion\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "profile",
+        "aws_profile",
+        "region",
+        "entorno"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Prioridad: opciones del comando, variables de entorno (AWS_ACCESS_KEY_ID...), luego perfil. Si defines claves por variables de entorno, ignoran el perfil: causa típica de 'usé la cuenta equivocada'. Muestra siempre aws sts get-caller-identity antes de operaciones destructivas."
+    },
+    {
+      "title": "Verificar identidad con sts get-caller-identity",
+      "command": "aws sts get-caller-identity",
+      "section": "Configuración e identidad",
+      "topic": "Identidad",
+      "description": "Devuelve el ID de cuenta, el ARN y el usuario o rol con el que estás operando. Es el 'whoami' de AWS y el primer comando ante cualquier duda.",
+      "examples": [
+        {
+          "description": "Solo el ID de cuenta",
+          "code": "aws sts get-caller-identity --query Account --output text"
+        },
+        {
+          "description": "Con un perfil",
+          "code": "aws sts get-caller-identity --profile produccion"
+        },
+        {
+          "description": "Asumir un rol",
+          "code": "aws sts assume-role --role-arn arn:aws:iam::123456789012:role/Admin --role-session-name nico"
+        }
+      ],
+      "tags": [
+        "aws",
+        "sts",
+        "identidad",
+        "whoami"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Si responde 'ExpiredToken' o 'InvalidClientTokenId' las credenciales caducaron o son incorrectas. assume-role devuelve credenciales temporales que debes exportar como AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY y AWS_SESSION_TOKEN."
+    },
+    {
+      "title": "Configurar AWS SSO (IAM Identity Center)",
+      "command": "aws configure sso",
+      "section": "Configuración e identidad",
+      "topic": "Identidad",
+      "description": "Asistente que crea un perfil con inicio de sesión único: sin claves de larga duración en disco. Es el método recomendado para personas.",
+      "examples": [
+        {
+          "description": "Iniciar sesión (abre el navegador)",
+          "code": "aws sso login --profile produccion"
+        },
+        {
+          "description": "Cerrar la sesión",
+          "code": "aws sso logout"
+        },
+        {
+          "description": "Verificar la sesión",
+          "code": "aws sts get-caller-identity --profile produccion"
+        }
+      ],
+      "tags": [
+        "aws",
+        "sso",
+        "identity-center",
+        "login"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El token SSO caduca (normalmente 8-12 horas): si ves 'Token has expired', vuelve a ejecutar aws sso login. Necesitas la URL del portal de acceso y la región de Identity Center."
+    },
+    {
+      "title": "Formato de salida y filtros con --query",
+      "command": "aws ec2 describe-instances --query \"Reservations[].Instances[].{id:InstanceId,estado:State.Name,tipo:InstanceType}\" --output table",
+      "section": "Configuración e identidad",
+      "topic": "Configuración",
+      "description": "--query aplica un filtro JMESPath en el cliente para extraer solo lo que necesitas. --output cambia el formato: json, text, table, yaml.",
+      "examples": [
+        {
+          "description": "Solo valores, útiles en scripts",
+          "code": "aws ec2 describe-instances --query \"Reservations[].Instances[].InstanceId\" --output text"
+        },
+        {
+          "description": "Filtrar por valor",
+          "code": "aws ec2 describe-instances --query \"Reservations[].Instances[?State.Name=='running'].PublicIpAddress\" --output text"
+        },
+        {
+          "description": "Salida en YAML",
+          "code": "aws sts get-caller-identity --output yaml"
+        },
+        {
+          "description": "Desactivar el paginador",
+          "code": "aws ec2 describe-instances --no-cli-pager"
+        }
+      ],
+      "tags": [
+        "aws",
+        "query",
+        "jmespath",
+        "output",
+        "formato"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "--query corre después de que el servidor responde; --filters (propio de EC2) filtra en el servidor y es más eficiente con muchos recursos. Para evitar el paginador (less) en scripts pon AWS_PAGER=\"\"."
+    },
+    {
+      "title": "Ayuda, versión y autocompletado",
+      "command": "aws --version",
+      "section": "Configuración e identidad",
+      "topic": "Configuración",
+      "description": "Comprueba que usas AWS CLI v2 y accede a la ayuda integrada de cada servicio y operación.",
+      "examples": [
+        {
+          "description": "Ayuda de un servicio",
+          "code": "aws ec2 help"
+        },
+        {
+          "description": "Ayuda de una operación",
+          "code": "aws ec2 run-instances help"
+        },
+        {
+          "description": "Esqueleto JSON de los parámetros",
+          "code": "aws ec2 run-instances --generate-cli-skeleton"
+        },
+        {
+          "description": "Autocompletado bash",
+          "code": "complete -C '/usr/local/bin/aws_completer' aws"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ayuda",
+        "version",
+        "autocompletado"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "La v1 (pip install awscli) está en mantenimiento; instala la v2 con el instalador oficial. --generate-cli-skeleton + --cli-input-json permite versionar parámetros complejos en un archivo."
+    },
+    {
+      "title": "Instalar o actualizar AWS CLI v2 en Linux",
+      "command": "curl \"https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip\" -o awscliv2.zip && unzip awscliv2.zip && sudo ./aws/install",
+      "section": "Configuración e identidad",
+      "topic": "Configuración",
+      "description": "Instalación oficial en x86_64. Para actualizar se vuelve a ejecutar con --update.",
+      "examples": [
+        {
+          "description": "Actualizar",
+          "code": "sudo ./aws/install --update"
+        },
+        {
+          "description": "Arquitectura ARM (Graviton)",
+          "code": "curl \"https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip\" -o awscliv2.zip"
+        },
+        {
+          "description": "Windows con winget",
+          "code": "winget install Amazon.AWSCLI"
+        }
+      ],
+      "tags": [
+        "aws",
+        "instalar",
+        "cli",
+        "linux",
+        "windows"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "No hay paquete 'awscli' confiable en apt para la v2; usa el instalador oficial. En AlmaLinux necesitas unzip (sudo dnf install -y unzip)."
+    },
+    {
+      "title": "Listar usuarios, roles y políticas de IAM",
+      "command": "aws iam list-users --query \"Users[].UserName\" --output table",
+      "section": "Configuración e identidad",
+      "topic": "Identidad",
+      "description": "Consultas de lectura sobre IAM para auditar quién tiene acceso. IAM es global (no depende de la región).",
+      "examples": [
+        {
+          "description": "Roles de la cuenta",
+          "code": "aws iam list-roles --query \"Roles[].RoleName\" --output text"
+        },
+        {
+          "description": "Políticas adjuntas a un usuario",
+          "code": "aws iam list-attached-user-policies --user-name nico"
+        },
+        {
+          "description": "Claves de acceso de un usuario y su último uso",
+          "code": "aws iam list-access-keys --user-name nico"
+        },
+        {
+          "description": "Informe de credenciales de toda la cuenta",
+          "code": "aws iam generate-credential-report && aws iam get-credential-report --query Content --output text | base64 -d"
+        }
+      ],
+      "tags": [
+        "aws",
+        "iam",
+        "usuarios",
+        "roles",
+        "auditoria"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Crear un rol y adjuntarle una política",
+      "command": "aws iam create-role --role-name app-ec2 --assume-role-policy-document file://trust.json",
+      "section": "Configuración e identidad",
+      "topic": "Identidad",
+      "description": "Un rol define quién puede asumirlo (trust policy) y, con políticas adjuntas, qué puede hacer. Las instancias EC2 usan un instance profile con ese rol en vez de claves.",
+      "examples": [
+        {
+          "description": "Adjuntar una política gestionada",
+          "code": "aws iam attach-role-policy --role-name app-ec2 --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+        },
+        {
+          "description": "Crear el instance profile y añadir el rol",
+          "code": "aws iam create-instance-profile --instance-profile-name app-ec2 && aws iam add-role-to-instance-profile --instance-profile-name app-ec2 --role-name app-ec2"
+        },
+        {
+          "description": "Contenido de trust.json para EC2",
+          "code": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+        }
+      ],
+      "tags": [
+        "aws",
+        "iam",
+        "role",
+        "attach-role-policy",
+        "instance-profile"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Aplica mínimo privilegio: AmazonS3ReadOnlyAccess da lectura a TODOS los buckets; crea una política propia limitada al bucket. Los roles de EC2 entregan credenciales temporales vía metadatos: no guardes claves en la instancia."
+    },
+    {
+      "title": "Rotar y eliminar claves de acceso",
+      "command": "aws iam create-access-key --user-name nico",
+      "section": "Configuración e identidad",
+      "topic": "Identidad",
+      "description": "Crea una nueva clave de acceso para un usuario IAM. La rotación segura es: crear la nueva, actualizar las aplicaciones, desactivar la antigua y borrarla.",
+      "examples": [
+        {
+          "description": "Desactivar una clave",
+          "code": "aws iam update-access-key --user-name nico --access-key-id AKIAXXXXXXXXXXXXXXXX --status Inactive"
+        },
+        {
+          "description": "Eliminarla",
+          "code": "aws iam delete-access-key --user-name nico --access-key-id AKIAXXXXXXXXXXXXXXXX"
+        },
+        {
+          "description": "Cuándo se usó por última vez",
+          "code": "aws iam get-access-key-last-used --access-key-id AKIAXXXXXXXXXXXXXXXX"
+        }
+      ],
+      "tags": [
+        "aws",
+        "iam",
+        "access-key",
+        "rotacion",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "La SecretAccessKey solo se muestra al crearla. Si una clave se filtra (por ejemplo en un repositorio) desactívala de inmediato y revisa CloudTrail. Nunca las incluyas en el código."
+    },
+    {
+      "title": "Listar instancias con filtros",
+      "command": "aws ec2 describe-instances --filters \"Name=instance-state-name,Values=running\" --query \"Reservations[].Instances[].[InstanceId,Tags[?Key=='Name']|[0].Value,PublicIpAddress]\" --output table",
+      "section": "Cómputo (EC2)",
+      "topic": "Instancias",
+      "description": "Lista instancias en ejecución con su nombre (tag Name) y IP pública. Los filtros se aplican en el servidor y las consultas JMESPath dan formato.",
+      "examples": [
+        {
+          "description": "Por tag",
+          "code": "aws ec2 describe-instances --filters \"Name=tag:Entorno,Values=prod\" --query \"Reservations[].Instances[].InstanceId\" --output text"
+        },
+        {
+          "description": "En todas las regiones",
+          "code": "for r in $(aws ec2 describe-regions --query \"Regions[].RegionName\" --output text); do echo \"== $r\"; aws ec2 describe-instances --region $r --query \"Reservations[].Instances[].InstanceId\" --output text; done"
+        },
+        {
+          "description": "Detalle de una instancia",
+          "code": "aws ec2 describe-instances --instance-ids i-0abc123def4567890"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "describe-instances",
+        "filtros",
+        "query"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "describe-instances solo mira la región configurada: si 'no aparece', revisa --region. Instancias detenidas no tienen IP pública (salvo Elastic IP)."
+    },
+    {
+      "title": "Buscar la AMI de Ubuntu más reciente",
+      "command": "aws ec2 describe-images --owners 099720109477 --filters \"Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*\" --query \"sort_by(Images,&CreationDate)[-1].[ImageId,Name]\" --output text",
+      "section": "Cómputo (EC2)",
+      "topic": "Instancias",
+      "description": "Canonical (owner 099720109477) publica las AMI oficiales de Ubuntu. Esta consulta ordena por fecha y devuelve la última.",
+      "examples": [
+        {
+          "description": "Usando el parámetro público de SSM (más estable)",
+          "code": "aws ssm get-parameter --name /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id --query Parameter.Value --output text"
+        },
+        {
+          "description": "AMI de Amazon Linux 2023 vía SSM",
+          "code": "aws ssm get-parameter --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 --query Parameter.Value --output text"
+        },
+        {
+          "description": "Detalles de una AMI",
+          "code": "aws ec2 describe-images --image-ids ami-0123456789abcdef0"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "ami",
+        "ubuntu",
+        "canonical"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Cada región tiene IDs de AMI distintos. Ubuntu 24.04 LTS (noble) es la base estable de 2026; verifica el patrón del nombre con describe-images antes de automatizar. Para AlmaLinux la cuenta oficial publicadora es 764336703387."
+    },
+    {
+      "title": "Lanzar una instancia con run-instances",
+      "command": "aws ec2 run-instances --image-id ami-0123456789abcdef0 --instance-type t3.micro --key-name mi-clave --security-group-ids sg-0abc123 --subnet-id subnet-0abc123 --count 1 --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=web-01}]'",
+      "section": "Cómputo (EC2)",
+      "topic": "Instancias",
+      "description": "Crea una o más instancias EC2. Es el comando base que usan Terraform y CloudFormation por debajo.",
+      "examples": [
+        {
+          "description": "Probar permisos sin crear nada",
+          "code": "aws ec2 run-instances --dry-run --image-id ami-0123456789abcdef0 --instance-type t3.micro"
+        },
+        {
+          "description": "Con script de inicio (user data)",
+          "code": "aws ec2 run-instances --image-id ami-0123456789abcdef0 --instance-type t3.micro --user-data file://init.sh --key-name mi-clave"
+        },
+        {
+          "description": "Con rol de instancia",
+          "code": "aws ec2 run-instances --image-id ami-0123456789abcdef0 --instance-type t3.micro --iam-instance-profile Name=app-ec2"
+        },
+        {
+          "description": "Forzar IMDSv2 (más seguro)",
+          "code": "aws ec2 run-instances --image-id ami-0123456789abcdef0 --instance-type t3.micro --metadata-options HttpTokens=required,HttpEndpoint=enabled"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "run-instances",
+        "lanzar"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "--dry-run valida permisos y parámetros: responde DryRunOperation si habría funcionado. Elegir t3/t4g (ARM Graviton, más barato) según tu AMI. Si no pones --subnet-id usa la VPC por defecto."
+    },
+    {
+      "title": "Iniciar, detener y terminar instancias",
+      "command": "aws ec2 stop-instances --instance-ids i-0abc123def4567890",
+      "section": "Cómputo (EC2)",
+      "topic": "Instancias",
+      "description": "Control del ciclo de vida. Detenida no cobra cómputo (sí disco EBS); terminada se destruye y no se recupera.",
+      "examples": [
+        {
+          "description": "Iniciar",
+          "code": "aws ec2 start-instances --instance-ids i-0abc123def4567890"
+        },
+        {
+          "description": "Reiniciar",
+          "code": "aws ec2 reboot-instances --instance-ids i-0abc123def4567890"
+        },
+        {
+          "description": "Esperar a que esté corriendo",
+          "code": "aws ec2 wait instance-running --instance-ids i-0abc123def4567890"
+        },
+        {
+          "description": "Terminar (irreversible)",
+          "code": "aws ec2 terminate-instances --instance-ids i-0abc123def4567890"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "start",
+        "stop",
+        "terminate"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Al detener y volver a iniciar la IP pública cambia, salvo que uses una Elastic IP. terminate elimina los volúmenes con DeleteOnTermination=true (el raíz, por defecto). Activa --disable-api-termination en instancias críticas (modify-instance-attribute)."
+    },
+    {
+      "title": "Cambiar tipo de instancia",
+      "command": "aws ec2 modify-instance-attribute --instance-id i-0abc123def4567890 --instance-type \"{\\\"Value\\\": \\\"t3.large\\\"}\"",
+      "section": "Cómputo (EC2)",
+      "topic": "Instancias",
+      "description": "Redimensiona una instancia (debe estar detenida). Útil para subir o bajar capacidad según la carga real.",
+      "examples": [
+        {
+          "description": "Detener, cambiar e iniciar",
+          "code": "aws ec2 stop-instances --instance-ids i-0abc123def4567890 && aws ec2 wait instance-stopped --instance-ids i-0abc123def4567890"
+        },
+        {
+          "description": "Ver el tipo actual",
+          "code": "aws ec2 describe-instances --instance-ids i-0abc123def4567890 --query \"Reservations[].Instances[].InstanceType\" --output text"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "resize",
+        "instance-type"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Grupos de seguridad: crear y autorizar reglas",
+      "command": "aws ec2 authorize-security-group-ingress --group-id sg-0abc123 --protocol tcp --port 443 --cidr 0.0.0.0/0",
+      "section": "Cómputo (EC2)",
+      "topic": "Seguridad",
+      "description": "Un grupo de seguridad es el firewall de la instancia (con estado). Se añade una regla por puerto de entrada; todo lo no autorizado está denegado.",
+      "examples": [
+        {
+          "description": "Crear el grupo",
+          "code": "aws ec2 create-security-group --group-name web-sg --description \"Web publico\" --vpc-id vpc-0abc123"
+        },
+        {
+          "description": "SSH solo desde tu IP",
+          "code": "aws ec2 authorize-security-group-ingress --group-id sg-0abc123 --protocol tcp --port 22 --cidr 203.0.113.10/32"
+        },
+        {
+          "description": "Quitar una regla",
+          "code": "aws ec2 revoke-security-group-ingress --group-id sg-0abc123 --protocol tcp --port 22 --cidr 0.0.0.0/0"
+        },
+        {
+          "description": "Ver reglas de un grupo",
+          "code": "aws ec2 describe-security-groups --group-ids sg-0abc123 --query \"SecurityGroups[].IpPermissions\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "security-group",
+        "firewall"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Nunca abras el 22 a 0.0.0.0/0: usa tu IP o mejor Session Manager (SSM) y cierra el puerto. Un cambio de IP doméstica obliga a actualizar la regla."
+    },
+    {
+      "title": "Pares de claves SSH",
+      "command": "aws ec2 create-key-pair --key-name mi-clave --key-type ed25519 --query KeyMaterial --output text > mi-clave.pem && chmod 400 mi-clave.pem",
+      "section": "Cómputo (EC2)",
+      "topic": "Seguridad",
+      "description": "Crea un par de claves en AWS y guarda la privada localmente. La privada se muestra una sola vez.",
+      "examples": [
+        {
+          "description": "Importar tu clave pública existente",
+          "code": "aws ec2 import-key-pair --key-name nico-laptop --public-key-material fileb://~/.ssh/id_ed25519.pub"
+        },
+        {
+          "description": "Listar",
+          "code": "aws ec2 describe-key-pairs --query \"KeyPairs[].KeyName\""
+        },
+        {
+          "description": "Conectar por SSH",
+          "code": "ssh -i mi-clave.pem ubuntu@<ip-publica>"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "key-pair",
+        "ssh"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El usuario por defecto depende de la AMI: ubuntu (Ubuntu), ec2-user (Amazon Linux), almalinux (AlmaLinux). Preferible importar tu clave pública que generar la privada en AWS."
+    },
+    {
+      "title": "Conectar sin SSH con SSM Session Manager",
+      "command": "aws ssm start-session --target i-0abc123def4567890",
+      "section": "Cómputo (EC2)",
+      "topic": "Seguridad",
+      "description": "Abre una shell en la instancia a través de AWS sin abrir el puerto 22 ni gestionar claves. Requiere el SSM Agent y el rol AmazonSSMManagedInstanceCore.",
+      "examples": [
+        {
+          "description": "Túnel a un puerto de la instancia",
+          "code": "aws ssm start-session --target i-0abc123def4567890 --document-name AWS-StartPortForwardingSession --parameters '{\"portNumber\":[\"5432\"],\"localPortNumber\":[\"5432\"]}'"
+        },
+        {
+          "description": "Ejecutar un comando en varias instancias",
+          "code": "aws ssm send-command --document-name AWS-RunShellScript --targets \"Key=tag:Entorno,Values=prod\" --parameters 'commands=[\"uptime\"]'"
+        },
+        {
+          "description": "Ver el resultado",
+          "code": "aws ssm get-command-invocation --command-id <id-comando> --instance-id i-0abc123def4567890"
+        },
+        {
+          "description": "Instancias gestionadas por SSM",
+          "code": "aws ssm describe-instance-information --query \"InstanceInformationList[].[InstanceId,PingStatus]\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "ssm",
+        "session-manager",
+        "send-command"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Necesitas instalar el plugin session-manager-plugin en tu máquina. La instancia debe tener salida a internet o VPC endpoints de SSM. Es la alternativa recomendada a abrir SSH."
+    },
+    {
+      "title": "Elastic IP: reservar y asociar",
+      "command": "aws ec2 allocate-address --domain vpc",
+      "section": "Cómputo (EC2)",
+      "topic": "Red",
+      "description": "Reserva una IP pública fija. Se asocia a una instancia para que no cambie al detenerla.",
+      "examples": [
+        {
+          "description": "Asociarla",
+          "code": "aws ec2 associate-address --instance-id i-0abc123def4567890 --allocation-id eipalloc-0abc123"
+        },
+        {
+          "description": "Liberarla",
+          "code": "aws ec2 release-address --allocation-id eipalloc-0abc123"
+        },
+        {
+          "description": "Listar las IP elásticas",
+          "code": "aws ec2 describe-addresses --query \"Addresses[].[PublicIp,InstanceId,AllocationId]\" --output table"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "elastic-ip",
+        "ip-fija"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Desde 2024 AWS cobra por TODAS las IPv4 públicas (también las asociadas). Una IP elástica sin asociar sigue costando: libérala si no la usas."
+    },
+    {
+      "title": "EBS: volúmenes y snapshots",
+      "command": "aws ec2 create-snapshot --volume-id vol-0abc123 --description \"pre-actualizacion\"",
+      "section": "Cómputo (EC2)",
+      "topic": "Volúmenes",
+      "description": "Los snapshots son copias incrementales de un volumen EBS almacenadas en S3. Base del backup y de la clonación de discos.",
+      "examples": [
+        {
+          "description": "Crear un volumen a partir de un snapshot",
+          "code": "aws ec2 create-volume --snapshot-id snap-0abc123 --availability-zone sa-east-1a --volume-type gp3"
+        },
+        {
+          "description": "Adjuntarlo",
+          "code": "aws ec2 attach-volume --volume-id vol-0abc456 --instance-id i-0abc123def4567890 --device /dev/sdf"
+        },
+        {
+          "description": "Ampliar el tamaño",
+          "code": "aws ec2 modify-volume --volume-id vol-0abc123 --size 100"
+        },
+        {
+          "description": "Listar snapshots propios",
+          "code": "aws ec2 describe-snapshots --owner-ids self --query \"Snapshots[].[SnapshotId,StartTime,VolumeSize]\" --output table"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ebs",
+        "snapshot",
+        "volumen",
+        "backup"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Tras ampliar el volumen debes ampliar la partición y el sistema de archivos dentro de la instancia (growpart + resize2fs o xfs_growfs). Los snapshots cuestan por GB: automatiza con Data Lifecycle Manager."
+    },
+    {
+      "title": "Crear una AMI desde una instancia",
+      "command": "aws ec2 create-image --instance-id i-0abc123def4567890 --name \"web-base-2026-10-16\" --no-reboot",
+      "section": "Cómputo (EC2)",
+      "topic": "Imágenes",
+      "description": "Genera una imagen reutilizable de una instancia configurada. --no-reboot evita el reinicio, a costa de menor consistencia del sistema de archivos.",
+      "examples": [
+        {
+          "description": "Listar las AMI propias",
+          "code": "aws ec2 describe-images --owners self --query \"Images[].[ImageId,Name]\" --output table"
+        },
+        {
+          "description": "Deregistrar una AMI",
+          "code": "aws ec2 deregister-image --image-id ami-0123456789abcdef0"
+        },
+        {
+          "description": "Copiarla a otra región",
+          "code": "aws ec2 copy-image --source-image-id ami-0123456789abcdef0 --source-region sa-east-1 --region us-east-1 --name web-base"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "ami",
+        "create-image"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Deregistrar la AMI no borra los snapshots asociados: elimínalos aparte para no seguir pagando. Para flotas reproducibles prefiere Packer o imágenes generadas por pipeline."
+    },
+    {
+      "title": "Probar permisos con --dry-run",
+      "command": "aws ec2 terminate-instances --instance-ids i-0abc123def4567890 --dry-run",
+      "section": "Cómputo (EC2)",
+      "topic": "Instancias",
+      "description": "La mayoría de operaciones de EC2 admiten --dry-run: verifica los permisos sin ejecutar la acción. Un buen reflejo antes de comandos destructivos.",
+      "examples": [
+        {
+          "description": "Detener en seco",
+          "code": "aws ec2 stop-instances --instance-ids i-0abc123def4567890 --dry-run"
+        },
+        {
+          "description": "Interpretar la respuesta",
+          "code": "# DryRunOperation = tienes permiso y se habría ejecutado\n# UnauthorizedOperation = no tienes permiso"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "dry-run",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El error 'DryRunOperation' es la respuesta CORRECTA cuando hay permisos. Solo EC2 y algunos servicios lo soportan; en S3 usa --dryrun (sin guion en medio) en cp/sync/rm."
+    },
+    {
+      "title": "Consola y datos de una instancia",
+      "command": "aws ec2 get-console-output --instance-id i-0abc123def4567890 --latest --output text",
+      "section": "Cómputo (EC2)",
+      "topic": "Instancias",
+      "description": "Recupera la salida de la consola serie, útil para diagnosticar instancias que no arrancan o no responden por SSH.",
+      "examples": [
+        {
+          "description": "Estado de verificaciones del sistema",
+          "code": "aws ec2 describe-instance-status --instance-ids i-0abc123def4567890"
+        },
+        {
+          "description": "Metadatos desde dentro de la instancia (IMDSv2)",
+          "code": "TOKEN=$(curl -sX PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 60'); curl -s -H \"X-aws-ec2-metadata-token: $TOKEN\" http://169.254.169.254/latest/meta-data/instance-id"
+        },
+        {
+          "description": "Reiniciar el sistema operativo cuando falla la verificación",
+          "code": "aws ec2 reboot-instances --instance-ids i-0abc123def4567890"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "consola",
+        "status",
+        "diagnostico",
+        "imds"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    }
+  ]
+}

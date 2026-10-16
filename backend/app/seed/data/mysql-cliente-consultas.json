@@ -1,0 +1,1008 @@
+{
+  "category": {
+    "slug": "mysql",
+    "name": "MySQL",
+    "icon": "table_chart",
+    "order": 9,
+    "description": "MySQL y MariaDB desde la terminal: cliente, consultas, usuarios, backups, rendimiento y operación en producción."
+  },
+  "commands": [
+    {
+      "title": "Conectar al servidor con mysql",
+      "command": "mysql -u root -p",
+      "section": "Cliente y conexión",
+      "topic": "Conexión",
+      "description": "Abre el cliente interactivo de MySQL o MariaDB pidiendo la contraseña por teclado. Es la forma segura de entrar sin dejar la clave en el historial.",
+      "syntax": "mysql [-h HOST] [-P PUERTO] -u USUARIO -p [BASE]",
+      "examples": [
+        {
+          "description": "Conectar a un host remoto y puerto explícito",
+          "code": "mysql -h db.ejemplo.cl -P 3306 -u app -p"
+        },
+        {
+          "description": "Entrar directo a una base de datos",
+          "code": "mysql -u app -p tienda"
+        },
+        {
+          "description": "Ejecutar una sentencia y salir",
+          "code": "mysql -u root -p -e \"SELECT VERSION();\""
+        }
+      ],
+      "tags": [
+        "mysql",
+        "cliente",
+        "conexion",
+        "login"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "No pegues la contraseña a -p (-p<clave>): queda en el historial y en ps. Con '-h localhost' el cliente usa el socket Unix, no TCP; para forzar TCP usa -h 127.0.0.1 o --protocol=TCP. MariaDB 11 también trae el cliente como 'mariadb' (el alias 'mysql' sigue existiendo)."
+    },
+    {
+      "title": "Forzar protocolo TCP o socket",
+      "command": "mysql --protocol=TCP -h 127.0.0.1 -P 3306 -u root -p",
+      "section": "Cliente y conexión",
+      "topic": "Conexión",
+      "description": "Elige explícitamente cómo se conecta el cliente: TCP o socket Unix. Resuelve el clásico caso en que 'localhost' no llega al contenedor.",
+      "examples": [
+        {
+          "description": "Usar el socket Unix indicando su ruta",
+          "code": "mysql --protocol=SOCKET -S /var/run/mysqld/mysqld.sock -u root -p"
+        },
+        {
+          "description": "Conectar al MySQL publicado por Docker en el puerto 3307",
+          "code": "mysql --protocol=TCP -h 127.0.0.1 -P 3307 -u root -p"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "protocolo",
+        "tcp",
+        "socket",
+        "docker"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con 'localhost' el cliente ignora el puerto y usa el socket: si el servidor corre en Docker con -p 3307:3306, '-h localhost -P 3307' falla o conecta a otro servidor. Usa 127.0.0.1. En AlmaLinux el socket suele estar en /var/lib/mysql/mysql.sock; en Ubuntu en /var/run/mysqld/mysqld.sock."
+    },
+    {
+      "title": "Archivo ~/.my.cnf para credenciales",
+      "command": "[client]\nuser=app\npassword=<contraseña>\nhost=127.0.0.1",
+      "section": "Cliente y conexión",
+      "topic": "Credenciales",
+      "description": "Archivo de opciones por usuario que el cliente lee al iniciar, para no escribir credenciales en cada comando. Debe tener permisos 600.",
+      "examples": [
+        {
+          "description": "Crear el archivo con permisos restringidos",
+          "code": "install -m 600 /dev/null ~/.my.cnf && nano ~/.my.cnf"
+        },
+        {
+          "description": "Usar un archivo de opciones alternativo (debe ir primero)",
+          "code": "mysql --defaults-extra-file=/root/.respaldo.cnf -e \"SHOW DATABASES;\""
+        },
+        {
+          "description": "Ver qué opciones efectivas lee el cliente",
+          "code": "mysql --print-defaults"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "my.cnf",
+        "credenciales",
+        "configuracion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "--defaults-extra-file y --defaults-file deben ser el PRIMER argumento del comando. El archivo lleva la clave en texto plano: chmod 600 y fuera de repos. Preferible a pasar -p<clave> en scripts de cron; aún mejor, mysql_config_editor."
+    },
+    {
+      "title": "Guardar login cifrado con mysql_config_editor",
+      "command": "mysql_config_editor set --login-path=prod --host=db.ejemplo.cl --user=app --password",
+      "section": "Cliente y conexión",
+      "topic": "Credenciales",
+      "description": "Almacena credenciales ofuscadas en ~/.mylogin.cnf bajo un nombre (login path) y luego se usan con --login-path. Pide la contraseña de forma interactiva.",
+      "examples": [
+        {
+          "description": "Conectar usando el login path",
+          "code": "mysql --login-path=prod"
+        },
+        {
+          "description": "Listar los login paths guardados (la clave sale oculta)",
+          "code": "mysql_config_editor print --all"
+        },
+        {
+          "description": "Eliminar un login path",
+          "code": "mysql_config_editor remove --login-path=prod"
+        }
+      ],
+      "tags": [
+        "mysql_config_editor",
+        "login-path",
+        "credenciales",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "~/.mylogin.cnf está ofuscado, no cifrado de verdad: sigue siendo mejor que texto plano pero protégelo con permisos. Funciona con mysql, mysqldump, mysqladmin. MariaDB no incluye mysql_config_editor; allí usa ~/.my.cnf."
+    },
+    {
+      "title": "Ejecutar un archivo SQL desde el cliente",
+      "command": "mysql -u root -p tienda < esquema.sql",
+      "section": "Cliente y conexión",
+      "topic": "Conexión",
+      "description": "Redirige un archivo .sql a la entrada del cliente para ejecutarlo completo. Es la base de migraciones manuales y de restauraciones simples.",
+      "examples": [
+        {
+          "description": "Desde dentro del cliente con source",
+          "code": "SOURCE /ruta/esquema.sql;"
+        },
+        {
+          "description": "Continuar aunque haya errores",
+          "code": "mysql -u root -p --force tienda < parche.sql"
+        },
+        {
+          "description": "Con charset explícito para no corromper tildes",
+          "code": "mysql -u root -p --default-character-set=utf8mb4 tienda < datos.sql"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "sql",
+        "importar",
+        "source"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Si el dump contiene ñ o tildes y el cliente usa otro charset, los datos quedan corruptos: fija --default-character-set=utf8mb4. En PowerShell el operador < no existe; usa Get-Content ... | mysql o corre el comando en Git Bash/CMD."
+    },
+    {
+      "title": "Salida en vertical y en formato batch",
+      "command": "mysql -u root -p -e \"SELECT * FROM usuarios LIMIT 2\\G\"",
+      "section": "Cliente y conexión",
+      "topic": "Salida",
+      "description": "Terminar la consulta con \\G muestra cada fila en vertical, ideal para tablas anchas. Otras opciones del cliente cambian el formato para scripts.",
+      "examples": [
+        {
+          "description": "Salida sin cabeceras ni bordes, apta para scripts",
+          "code": "mysql -u root -p -N -B -e \"SELECT id FROM usuarios\""
+        },
+        {
+          "description": "Salida por lotes con tabuladores a un archivo",
+          "code": "mysql -u root -p -B -e \"SELECT * FROM ventas\" tienda > ventas.tsv"
+        },
+        {
+          "description": "Usar less como paginador dentro del cliente",
+          "code": "pager less -S"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "formato",
+        "vertical",
+        "batch"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Con \\G no se pone punto y coma extra. -B (batch) escapa tabuladores y saltos de línea, por lo que no es un CSV real: para CSV usa SELECT ... INTO OUTFILE o un script."
+    },
+    {
+      "title": "Comandos internos del cliente mysql",
+      "command": "\\s",
+      "section": "Cliente y conexión",
+      "topic": "Cliente interactivo",
+      "description": "Atajos del cliente (no son SQL) para ver estado, cambiar de base, ejecutar comandos de shell o personalizar el prompt.",
+      "examples": [
+        {
+          "description": "Estado de la conexión: versión, charset, socket, uptime",
+          "code": "\\s"
+        },
+        {
+          "description": "Cambiar de base de datos",
+          "code": "USE tienda;"
+        },
+        {
+          "description": "Ejecutar un comando del sistema sin salir",
+          "code": "\\! ls -l /var/lib/mysql | head"
+        },
+        {
+          "description": "Cambiar el prompt para no confundir producción",
+          "code": "prompt (\\u@\\h) [\\d]> "
+        }
+      ],
+      "tags": [
+        "mysql",
+        "cliente",
+        "atajos",
+        "prompt"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Poner el prompt con host y base evita ejecutar un DELETE en el servidor equivocado. Puedes fijarlo de forma permanente con 'prompt=' en la sección [mysql] de ~/.my.cnf."
+    },
+    {
+      "title": "Activar safe updates en el cliente",
+      "command": "mysql --safe-updates -u root -p",
+      "section": "Cliente y conexión",
+      "topic": "Cliente interactivo",
+      "description": "Modo de seguridad que rechaza UPDATE y DELETE sin WHERE sobre clave, y limita SELECT sin LIMIT. Protege de borrados accidentales en producción.",
+      "examples": [
+        {
+          "description": "Equivalente con el nombre largo e irónico",
+          "code": "mysql --i-am-a-dummy -u root -p tienda"
+        },
+        {
+          "description": "Activarlo dentro de la sesión",
+          "code": "SET SQL_SAFE_UPDATES = 1;"
+        },
+        {
+          "description": "Desactivarlo puntualmente",
+          "code": "SET SQL_SAFE_UPDATES = 0;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "seguridad",
+        "update",
+        "delete"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Aunque ayuda, no sustituye a probar primero con SELECT y a usar una transacción: BEGIN; DELETE ...; revisa el conteo; ROLLBACK o COMMIT."
+    },
+    {
+      "title": "Conectar con TLS y validar certificado",
+      "command": "mysql -h db.ejemplo.cl -u app -p --ssl-mode=VERIFY_CA --ssl-ca=/etc/ssl/mysql/ca.pem",
+      "section": "Cliente y conexión",
+      "topic": "Conexión",
+      "description": "Fuerza una conexión cifrada y valida el certificado del servidor. Necesario cuando la base de datos es accesible fuera de la red privada.",
+      "examples": [
+        {
+          "description": "Solo exigir cifrado, sin validar certificado",
+          "code": "mysql -h db.ejemplo.cl -u app -p --ssl-mode=REQUIRED"
+        },
+        {
+          "description": "Comprobar si la sesión actual está cifrada",
+          "code": "SHOW STATUS LIKE 'Ssl_cipher';"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "tls",
+        "ssl",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "--ssl-mode es de MySQL; MariaDB usa --ssl y --ssl-verify-server-cert (y en versiones recientes también acepta --ssl-mode). En producción no expongas 3306 a Internet: túnel SSH o red privada."
+    },
+    {
+      "title": "Listar bases de datos",
+      "command": "SHOW DATABASES;",
+      "section": "Consultas y esquema",
+      "topic": "Exploración",
+      "description": "Muestra las bases de datos a las que tu usuario tiene acceso. Para filtrar por nombre se puede usar LIKE.",
+      "examples": [
+        {
+          "description": "Filtrar por patrón",
+          "code": "SHOW DATABASES LIKE 'tienda%';"
+        },
+        {
+          "description": "Versión equivalente desde information_schema",
+          "code": "SELECT schema_name FROM information_schema.schemata ORDER BY 1;"
+        },
+        {
+          "description": "Base actualmente seleccionada",
+          "code": "SELECT DATABASE();"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "show",
+        "databases"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ]
+    },
+    {
+      "title": "Listar tablas y su tipo",
+      "command": "SHOW FULL TABLES FROM tienda;",
+      "section": "Consultas y esquema",
+      "topic": "Exploración",
+      "description": "Lista tablas y vistas de una base; FULL añade la columna que distingue BASE TABLE de VIEW.",
+      "examples": [
+        {
+          "description": "Solo tablas que empiezan por 'ven'",
+          "code": "SHOW TABLES LIKE 'ven%';"
+        },
+        {
+          "description": "Filas y tamaño aproximado por tabla",
+          "code": "SELECT table_name, table_rows, ROUND((data_length+index_length)/1024/1024,1) AS mb FROM information_schema.tables WHERE table_schema='tienda' ORDER BY mb DESC;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "show",
+        "tables",
+        "information_schema"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "table_rows es una estimación en InnoDB; para un conteo exacto usa SELECT COUNT(*), que recorre un índice y puede ser lento en tablas grandes."
+    },
+    {
+      "title": "Describir columnas de una tabla",
+      "command": "DESCRIBE usuarios;",
+      "section": "Consultas y esquema",
+      "topic": "Exploración",
+      "description": "Muestra columnas, tipos, nulabilidad, claves y valores por defecto. DESC es un sinónimo.",
+      "examples": [
+        {
+          "description": "Versión extendida con collation y comentarios",
+          "code": "SHOW FULL COLUMNS FROM usuarios;"
+        },
+        {
+          "description": "Solo columnas que coinciden con un patrón",
+          "code": "SHOW COLUMNS FROM usuarios LIKE '%mail%';"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "describe",
+        "columnas",
+        "esquema"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ]
+    },
+    {
+      "title": "Ver el CREATE TABLE completo",
+      "command": "SHOW CREATE TABLE usuarios\\G",
+      "section": "Consultas y esquema",
+      "topic": "Exploración",
+      "description": "Devuelve la sentencia exacta que recrea la tabla, con índices, claves foráneas, motor y charset. Útil para auditar o copiar el esquema.",
+      "examples": [
+        {
+          "description": "Ver una vista",
+          "code": "SHOW CREATE VIEW v_ventas_mes\\G"
+        },
+        {
+          "description": "Ver una rutina almacenada",
+          "code": "SHOW CREATE PROCEDURE sp_cierre_dia\\G"
+        },
+        {
+          "description": "Ver los índices de la tabla",
+          "code": "SHOW INDEX FROM usuarios;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "show",
+        "create",
+        "esquema",
+        "ddl"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Revisa ENGINE, DEFAULT CHARSET y COLLATE: tablas viejas pueden seguir en latin1 o utf8mb3. Para nuevas usa utf8mb4 con utf8mb4_0900_ai_ci (MySQL 8+) o utf8mb4_unicode_ci (MariaDB)."
+    },
+    {
+      "title": "Crear base de datos con utf8mb4",
+      "command": "CREATE DATABASE tienda CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;",
+      "section": "Consultas y esquema",
+      "topic": "Exploración",
+      "description": "Crea una base con codificación completa de Unicode (incluye emojis). Define el charset desde el inicio para evitar migraciones dolorosas.",
+      "examples": [
+        {
+          "description": "Crear solo si no existe",
+          "code": "CREATE DATABASE IF NOT EXISTS tienda CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
+        },
+        {
+          "description": "Variante compatible con MariaDB",
+          "code": "CREATE DATABASE tienda CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+        },
+        {
+          "description": "Cambiar el charset por defecto de una base existente",
+          "code": "ALTER DATABASE tienda CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "create",
+        "database",
+        "utf8mb4",
+        "charset"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "utf8mb4_0900_ai_ci no existe en MariaDB. ALTER DATABASE solo cambia el valor por defecto de tablas futuras; las existentes se convierten con ALTER TABLE ... CONVERT TO CHARACTER SET."
+    },
+    {
+      "title": "Crear tabla con clave primaria e índice",
+      "command": "CREATE TABLE usuarios (\n  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,\n  email VARCHAR(255) NOT NULL UNIQUE,\n  creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB;",
+      "section": "Consultas y esquema",
+      "topic": "Esquema",
+      "description": "Define una tabla InnoDB con clave autoincremental, un correo único y marca de tiempo. InnoDB es el motor por defecto y el único recomendable para datos transaccionales.",
+      "examples": [
+        {
+          "description": "Tabla con clave foránea",
+          "code": "CREATE TABLE pedidos (\n  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,\n  usuario_id BIGINT UNSIGNED NOT NULL,\n  total DECIMAL(12,2) NOT NULL,\n  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE\n);"
+        },
+        {
+          "description": "Copiar solo la estructura de otra tabla",
+          "code": "CREATE TABLE usuarios_copia LIKE usuarios;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "create",
+        "table",
+        "innodb",
+        "pk"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "La clave foránea exige el mismo tipo en ambas columnas (BIGINT UNSIGNED contra BIGINT no coincide) o falla con el error 3780/1215. Usa DECIMAL para dinero, nunca FLOAT."
+    },
+    {
+      "title": "Modificar tabla con ALTER TABLE",
+      "command": "ALTER TABLE usuarios ADD COLUMN telefono VARCHAR(20) NULL AFTER email;",
+      "section": "Consultas y esquema",
+      "topic": "Esquema",
+      "description": "Añade, cambia o elimina columnas e índices. En MySQL 8 muchas operaciones son instantáneas o en línea si se indica el algoritmo.",
+      "examples": [
+        {
+          "description": "Añadir columna de forma instantánea (falla si no es posible)",
+          "code": "ALTER TABLE usuarios ADD COLUMN activo TINYINT(1) NOT NULL DEFAULT 1, ALGORITHM=INSTANT;"
+        },
+        {
+          "description": "Crear un índice sin bloquear escrituras",
+          "code": "ALTER TABLE ventas ADD INDEX idx_fecha (fecha), ALGORITHM=INPLACE, LOCK=NONE;"
+        },
+        {
+          "description": "Renombrar una columna",
+          "code": "ALTER TABLE usuarios RENAME COLUMN telefono TO celular;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "alter",
+        "table",
+        "online",
+        "instant"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Indicar ALGORITHM y LOCK hace que MySQL falle en vez de bloquear la tabla sin avisar: es la red de seguridad en producción. Cambios de tipo de columna suelen forzar COPY (reconstruye la tabla). Para tablas gigantes considera gh-ost o pt-online-schema-change."
+    },
+    {
+      "title": "Crear y borrar índices",
+      "command": "CREATE INDEX idx_email_creado ON usuarios (email, creado_en);",
+      "section": "Consultas y esquema",
+      "topic": "Índices",
+      "description": "Crea un índice compuesto. El orden de las columnas importa: la consulta debe filtrar por el prefijo izquierdo para aprovecharlo.",
+      "examples": [
+        {
+          "description": "Índice único",
+          "code": "CREATE UNIQUE INDEX uq_usuarios_email ON usuarios (email);"
+        },
+        {
+          "description": "Índice sobre prefijo de texto largo",
+          "code": "CREATE INDEX idx_url ON paginas (url(100));"
+        },
+        {
+          "description": "Eliminar un índice",
+          "code": "DROP INDEX idx_email_creado ON usuarios;"
+        },
+        {
+          "description": "Hacer un índice invisible para probar sin borrarlo (MySQL 8)",
+          "code": "ALTER TABLE usuarios ALTER INDEX idx_email_creado INVISIBLE;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "index",
+        "indices",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Los índices invisibles son de MySQL 8 (MariaDB usa IGNORED). Demasiados índices frenan INSERT/UPDATE: elimina los no usados (sys.schema_unused_indexes)."
+    },
+    {
+      "title": "SELECT con filtros, orden y paginación",
+      "command": "SELECT id, email FROM usuarios WHERE creado_en >= '2026-01-01' ORDER BY id DESC LIMIT 20 OFFSET 40;",
+      "section": "Consultas y esquema",
+      "topic": "Consultas",
+      "description": "Consulta básica con filtro, orden y paginación. OFFSET grande se vuelve lento porque descarta filas leídas.",
+      "examples": [
+        {
+          "description": "Paginación por clave (keyset), mucho más rápida",
+          "code": "SELECT id, email FROM usuarios WHERE id < 12345 ORDER BY id DESC LIMIT 20;"
+        },
+        {
+          "description": "Agrupar y contar",
+          "code": "SELECT DATE(creado_en) AS dia, COUNT(*) AS n FROM usuarios GROUP BY dia ORDER BY dia DESC LIMIT 7;"
+        },
+        {
+          "description": "Búsqueda por patrón",
+          "code": "SELECT * FROM usuarios WHERE email LIKE '%@ejemplo.cl' LIMIT 10;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "select",
+        "paginacion",
+        "where"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ]
+    },
+    {
+      "title": "INSERT, UPDATE y DELETE seguros",
+      "command": "INSERT INTO usuarios (email) VALUES ('ana@ejemplo.cl'), ('luis@ejemplo.cl');",
+      "section": "Consultas y esquema",
+      "topic": "Consultas",
+      "description": "Operaciones de escritura básicas. Antes de un UPDATE o DELETE masivo, comprueba el WHERE con un SELECT equivalente.",
+      "examples": [
+        {
+          "description": "UPDATE dentro de una transacción",
+          "code": "START TRANSACTION;\nUPDATE usuarios SET activo = 0 WHERE ultimo_login < '2025-01-01';\nSELECT ROW_COUNT();\nROLLBACK;"
+        },
+        {
+          "description": "Upsert por clave única",
+          "code": "INSERT INTO conteos (clave, n) VALUES ('visitas', 1) ON DUPLICATE KEY UPDATE n = n + 1;"
+        },
+        {
+          "description": "Borrar por lotes para no bloquear",
+          "code": "DELETE FROM logs WHERE creado_en < NOW() - INTERVAL 90 DAY LIMIT 10000;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "insert",
+        "update",
+        "delete",
+        "transaccion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Repite el DELETE ... LIMIT desde un script hasta que ROW_COUNT() sea 0: un borrado enorme de golpe genera locks largos y lag de réplica. El cliente arranca en autocommit; START TRANSACTION lo suspende hasta COMMIT/ROLLBACK."
+    },
+    {
+      "title": "Explicar el plan de una consulta",
+      "command": "EXPLAIN SELECT * FROM ventas WHERE cliente_id = 42 AND fecha >= '2026-09-01';",
+      "section": "Consultas y esquema",
+      "topic": "Rendimiento de consultas",
+      "description": "Muestra cómo el optimizador ejecutará la consulta: índice elegido, filas estimadas y tipo de acceso. Revisa que type no sea ALL en tablas grandes.",
+      "examples": [
+        {
+          "description": "Formato de árbol, más legible en MySQL 8",
+          "code": "EXPLAIN FORMAT=TREE SELECT * FROM ventas WHERE cliente_id = 42;"
+        },
+        {
+          "description": "Salida en JSON con costos",
+          "code": "EXPLAIN FORMAT=JSON SELECT * FROM ventas WHERE cliente_id = 42;"
+        },
+        {
+          "description": "Plan de una sentencia ya en ejecución",
+          "code": "EXPLAIN FOR CONNECTION 123;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "explain",
+        "plan",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "EXPLAIN no ejecuta la consulta; las filas son estimaciones. Busca type=ALL (escaneo completo), Extra con 'Using filesort' o 'Using temporary' y key=NULL. FORMAT=TREE es solo de MySQL."
+    },
+    {
+      "title": "EXPLAIN ANALYZE para medir tiempos reales",
+      "command": "EXPLAIN ANALYZE SELECT c.nombre, SUM(v.total) FROM ventas v JOIN clientes c ON c.id = v.cliente_id GROUP BY c.id;",
+      "section": "Consultas y esquema",
+      "topic": "Rendimiento de consultas",
+      "description": "Ejecuta la consulta de verdad y reporta tiempos y filas reales por cada paso del plan. Permite comparar estimación contra realidad.",
+      "examples": [
+        {
+          "description": "Con un filtro de fecha",
+          "code": "EXPLAIN ANALYZE SELECT COUNT(*) FROM ventas WHERE fecha >= CURDATE() - INTERVAL 30 DAY;"
+        },
+        {
+          "description": "Dentro de transacción para no dejar datos si es UPDATE/DELETE",
+          "code": "START TRANSACTION;\nEXPLAIN ANALYZE DELETE FROM sesiones WHERE expira < NOW();\nROLLBACK;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "explain",
+        "analyze",
+        "rendimiento"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Está en MySQL 8.0.18+. MariaDB tiene ANALYZE SELECT ... (sin la palabra EXPLAIN). Como ejecuta la sentencia, con UPDATE/DELETE realmente modifica datos: envuélvelo en una transacción y haz ROLLBACK."
+    },
+    {
+      "title": "Ver variables y estado del servidor",
+      "command": "SHOW VARIABLES LIKE 'max_connections';",
+      "section": "Consultas y esquema",
+      "topic": "Servidor",
+      "description": "Variables son la configuración (modificable con SET); STATUS son contadores desde el arranque. Ambos aceptan LIKE para filtrar.",
+      "examples": [
+        {
+          "description": "Estado de conexiones",
+          "code": "SHOW GLOBAL STATUS LIKE 'Threads_%';"
+        },
+        {
+          "description": "Tamaño del buffer pool de InnoDB",
+          "code": "SHOW VARIABLES LIKE 'innodb_buffer_pool_size';"
+        },
+        {
+          "description": "Cambiar una variable en caliente",
+          "code": "SET GLOBAL max_connections = 300;"
+        },
+        {
+          "description": "Persistir el cambio tras reinicios (MySQL 8)",
+          "code": "SET PERSIST max_connections = 300;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "variables",
+        "status",
+        "configuracion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "SET GLOBAL se pierde al reiniciar. En MySQL 8 SET PERSIST escribe mysqld-auto.cnf; en MariaDB edita el .cnf (no existe PERSIST)."
+    },
+    {
+      "title": "Ver procesos y consultas en curso",
+      "command": "SHOW FULL PROCESSLIST;",
+      "section": "Consultas y esquema",
+      "topic": "Servidor",
+      "description": "Lista las conexiones activas y la consulta que ejecuta cada una. Primera parada cuando el servidor está lento o hay bloqueos.",
+      "examples": [
+        {
+          "description": "Solo consultas que llevan más de 10 s",
+          "code": "SELECT id, user, time, state, LEFT(info,100) AS consulta FROM information_schema.processlist WHERE command <> 'Sleep' AND time > 10 ORDER BY time DESC;"
+        },
+        {
+          "description": "Terminar una conexión problemática",
+          "code": "KILL 12345;"
+        },
+        {
+          "description": "Cancelar solo la consulta, manteniendo la conexión",
+          "code": "KILL QUERY 12345;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "processlist",
+        "kill",
+        "lentitud"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Sin FULL el texto de la consulta se corta a 100 caracteres. Matar una transacción grande provoca un rollback largo que también bloquea: ten paciencia."
+    },
+    {
+      "title": "Detectar bloqueos y transacciones largas",
+      "command": "SELECT * FROM sys.innodb_lock_waits\\G",
+      "section": "Consultas y esquema",
+      "topic": "Servidor",
+      "description": "Vista del esquema sys que muestra quién espera a quién por un bloqueo de InnoDB. Imprescindible ante deadlocks o aplicaciones que se cuelgan.",
+      "examples": [
+        {
+          "description": "Transacciones abiertas desde hace más de 60 segundos",
+          "code": "SELECT trx_id, trx_started, trx_mysql_thread_id, trx_query FROM information_schema.innodb_trx WHERE trx_started < NOW() - INTERVAL 60 SECOND;"
+        },
+        {
+          "description": "Último deadlock detectado",
+          "code": "SHOW ENGINE INNODB STATUS\\G"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "locks",
+        "deadlock",
+        "innodb",
+        "sys"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "El esquema sys viene incluido en MySQL 5.7+ y MariaDB 10.6+ (con vistas algo distintas; innodb_lock_waits puede variar). En 'SHOW ENGINE INNODB STATUS' busca la sección LATEST DETECTED DEADLOCK."
+    },
+    {
+      "title": "Importar CSV con LOAD DATA",
+      "command": "LOAD DATA LOCAL INFILE '/tmp/clientes.csv' INTO TABLE clientes FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\\n' IGNORE 1 LINES (nombre, email, ciudad);",
+      "section": "Consultas y esquema",
+      "topic": "Importar y exportar",
+      "description": "Carga masiva y rápida de un CSV a una tabla. Es mucho más veloz que miles de INSERT individuales.",
+      "examples": [
+        {
+          "description": "Habilitar local_infile en el servidor",
+          "code": "SET GLOBAL local_infile = 1;"
+        },
+        {
+          "description": "Conectar el cliente permitiendo LOCAL",
+          "code": "mysql --local-infile=1 -u root -p tienda"
+        },
+        {
+          "description": "Cargar con transformación de una columna",
+          "code": "LOAD DATA LOCAL INFILE '/tmp/v.csv' INTO TABLE ventas FIELDS TERMINATED BY ',' IGNORE 1 LINES (id, @f, total) SET fecha = STR_TO_DATE(@f, '%d/%m/%Y');"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "load",
+        "data",
+        "csv",
+        "importar",
+        "local_infile"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Error 3948 / 'Loading local data is disabled': hay que activar local_infile tanto en servidor como en cliente. Por seguridad déjalo desactivado en producción y actívalo solo mientras importas. Para CSV con CRLF de Windows usa LINES TERMINATED BY '\\r\\n'."
+    },
+    {
+      "title": "Exportar resultado a CSV",
+      "command": "SELECT * FROM clientes INTO OUTFILE '/var/lib/mysql-files/clientes.csv' FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\\n';",
+      "section": "Consultas y esquema",
+      "topic": "Importar y exportar",
+      "description": "Exporta una consulta a un CSV. Lo escribe el servidor, no tu máquina, y solo dentro de la carpeta permitida por secure_file_priv.",
+      "examples": [
+        {
+          "description": "Ver la carpeta permitida para OUTFILE",
+          "code": "SHOW VARIABLES LIKE 'secure_file_priv';"
+        },
+        {
+          "description": "Desde el cliente a un TSV local con redirección",
+          "code": "mysql -u root -p -B -e \"SELECT * FROM clientes\" tienda > clientes.tsv"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "exportar",
+        "csv",
+        "outfile"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "INTO OUTFILE no sobreescribe archivos existentes y requiere el privilegio FILE. Para CSV robusto desde el cliente (comas y saltos de línea dentro de campos) usa un script Python con csv.writer."
+    },
+    {
+      "title": "Fecha y hora: funciones frecuentes",
+      "command": "SELECT NOW(), CURDATE(), DATE_SUB(NOW(), INTERVAL 7 DAY), DATE_FORMAT(NOW(), '%d-%m-%Y %H:%i');",
+      "section": "Consultas y esquema",
+      "topic": "Servidor",
+      "description": "Funciones de fecha de uso diario para filtros, reportes y limpieza. Cuidado con la zona horaria del servidor.",
+      "examples": [
+        {
+          "description": "Ver la zona horaria en uso",
+          "code": "SELECT @@global.time_zone, @@session.time_zone, NOW(), UTC_TIMESTAMP();"
+        },
+        {
+          "description": "Convertir entre zonas (requiere tablas de zona cargadas)",
+          "code": "SELECT CONVERT_TZ(NOW(), 'UTC', 'America/Santiago');"
+        },
+        {
+          "description": "Cargar tablas de zonas horarias del sistema",
+          "code": "mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root -p mysql"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "fechas",
+        "zona-horaria"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "CONVERT_TZ con nombres devuelve NULL si no cargaste las tablas con mysql_tzinfo_to_sql. TIMESTAMP se guarda en UTC y se convierte; DATETIME guarda el valor literal."
+    },
+    {
+      "title": "Tamaño de bases y tablas",
+      "command": "SELECT table_schema AS base, ROUND(SUM(data_length+index_length)/1024/1024/1024,2) AS gb FROM information_schema.tables GROUP BY table_schema ORDER BY gb DESC;",
+      "section": "Consultas y esquema",
+      "topic": "Servidor",
+      "description": "Calcula cuánto espacio ocupa cada base de datos usando el diccionario de datos. Sirve para planificar disco y backups.",
+      "examples": [
+        {
+          "description": "Las 10 tablas más grandes del servidor",
+          "code": "SELECT table_schema, table_name, ROUND((data_length+index_length)/1024/1024) AS mb FROM information_schema.tables ORDER BY (data_length+index_length) DESC LIMIT 10;"
+        },
+        {
+          "description": "Espacio fragmentado recuperable",
+          "code": "SELECT table_name, ROUND(data_free/1024/1024) AS libre_mb FROM information_schema.tables WHERE table_schema='tienda' AND data_free > 0 ORDER BY data_free DESC;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "tamaño",
+        "espacio",
+        "information_schema"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Vistas, rutinas y triggers",
+      "command": "CREATE VIEW v_ventas_mes AS SELECT DATE_FORMAT(fecha,'%Y-%m') AS mes, SUM(total) AS total FROM ventas GROUP BY mes;",
+      "section": "Consultas y esquema",
+      "topic": "Esquema",
+      "description": "Una vista guarda una consulta con nombre para reutilizarla. También se pueden listar procedimientos, funciones y triggers existentes.",
+      "examples": [
+        {
+          "description": "Listar procedimientos de una base",
+          "code": "SHOW PROCEDURE STATUS WHERE Db = 'tienda';"
+        },
+        {
+          "description": "Listar triggers",
+          "code": "SHOW TRIGGERS FROM tienda;"
+        },
+        {
+          "description": "Reemplazar una vista existente",
+          "code": "CREATE OR REPLACE VIEW v_ventas_mes AS SELECT YEAR(fecha) AS anio, SUM(total) AS total FROM ventas GROUP BY anio;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "vistas",
+        "procedimientos",
+        "triggers"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "mysqldump no incluye rutinas ni eventos si no pasas --routines y --events; los triggers sí van por defecto."
+    },
+    {
+      "title": "Auditar charset y collation de columnas",
+      "command": "SELECT table_name, column_name, character_set_name, collation_name FROM information_schema.columns WHERE table_schema='tienda' AND character_set_name IS NOT NULL;",
+      "section": "Consultas y esquema",
+      "topic": "Esquema",
+      "description": "Audita qué codificación usa cada columna de texto. Mezclas de charset provocan errores 'Illegal mix of collations' y joins sin índice.",
+      "examples": [
+        {
+          "description": "Convertir una tabla completa a utf8mb4",
+          "code": "ALTER TABLE clientes CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
+        },
+        {
+          "description": "Ver el charset de la conexión actual",
+          "code": "SHOW VARIABLES LIKE 'character_set%';"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "charset",
+        "collation",
+        "utf8mb4"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "CONVERT TO reconstruye la tabla y puede ser lento; hazlo con respaldo previo. Verifica que los índices sobre VARCHAR no superen el límite de 3072 bytes de InnoDB (utf8mb4 usa 4 bytes por carácter)."
+    }
+  ]
+}

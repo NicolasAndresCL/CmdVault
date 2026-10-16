@@ -1,0 +1,519 @@
+{
+  "category": {
+    "slug": "mongodb",
+    "name": "MongoDB",
+    "icon": "data_object",
+    "order": 11,
+    "description": "MongoDB con mongosh: CRUD, índices, agregaciones, seguridad, backups y réplicas."
+  },
+  "commands": [
+    {
+      "title": "Conectar con mongosh",
+      "command": "mongosh \"mongodb://localhost:27017/tienda\"",
+      "section": "mongosh y conexión",
+      "topic": "Conexión",
+      "description": "Abre la shell moderna de MongoDB con una cadena de conexión URI. mongosh reemplazó a la antigua shell 'mongo', retirada hace años.",
+      "syntax": "mongosh [URI] [opciones]",
+      "examples": [
+        {
+          "description": "Local sin parámetros",
+          "code": "mongosh"
+        },
+        {
+          "description": "Con usuario y base de autenticación",
+          "code": "mongosh \"mongodb://app:<contraseña>@db.ejemplo.cl:27017/tienda?authSource=admin\""
+        },
+        {
+          "description": "Pidiendo la contraseña por teclado",
+          "code": "mongosh \"mongodb://db.ejemplo.cl:27017/tienda\" -u app -p --authenticationDatabase admin"
+        },
+        {
+          "description": "Con TLS",
+          "code": "mongosh \"mongodb://db.ejemplo.cl:27017/tienda?tls=true\" --tlsCAFile /etc/ssl/mongo/ca.pem"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "mongosh",
+        "conexion",
+        "uri"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Si la contraseña contiene caracteres especiales (@ : / ?) debes codificarla en la URI (percent-encoding); usar -p sin valor evita el problema. Con authSource incorrecto el error es 'Authentication failed' aunque la clave sea correcta."
+    },
+    {
+      "title": "Conectar a Atlas con mongodb+srv",
+      "command": "mongosh \"mongodb+srv://cluster0.abcde.mongodb.net/tienda\" --username app",
+      "section": "mongosh y conexión",
+      "topic": "Conexión",
+      "description": "El esquema mongodb+srv resuelve los nodos del clúster mediante DNS SRV y activa TLS automáticamente. Es el formato que entrega MongoDB Atlas.",
+      "examples": [
+        {
+          "description": "Con authSource explícito",
+          "code": "mongosh \"mongodb+srv://cluster0.abcde.mongodb.net/tienda?authSource=admin&retryWrites=true\" -u app -p"
+        },
+        {
+          "description": "Probar la resolución DNS SRV",
+          "code": "dig +short SRV _mongodb._tcp.cluster0.abcde.mongodb.net"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "atlas",
+        "srv",
+        "conexion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Atlas bloquea cualquier IP que no esté en su 'IP Access List': si mongosh se cuelga o falla el handshake, añade tu IP (o la del VPS) en Atlas. En entornos sin DNS SRV usa la URI larga estándar."
+    },
+    {
+      "title": "Ejecutar JavaScript con --eval y --file",
+      "command": "mongosh \"$MONGO_URI\" --quiet --eval \"db.usuarios.countDocuments()\"",
+      "section": "mongosh y conexión",
+      "topic": "Conexión",
+      "description": "Ejecuta una expresión o un archivo y sale. Ideal para scripts, healthchecks y migraciones.",
+      "examples": [
+        {
+          "description": "Archivo de script",
+          "code": "mongosh \"$MONGO_URI\" --file migracion.js"
+        },
+        {
+          "description": "Salida JSON limpia para procesarla",
+          "code": "mongosh \"$MONGO_URI\" --quiet --json=relaxed --eval \"db.usuarios.find({}, {email:1}).limit(3).toArray()\""
+        },
+        {
+          "description": "Healthcheck simple",
+          "code": "mongosh --quiet --eval \"db.adminCommand('ping').ok\""
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "mongosh",
+        "eval",
+        "file",
+        "scripting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Usa --quiet para que no imprima el banner. Con --eval y valores devueltos tipo cursor añade .toArray(). En PowerShell cuida las comillas dobles anidadas: usa comillas simples por fuera."
+    },
+    {
+      "title": "Explorar bases y colecciones",
+      "command": "show dbs",
+      "section": "mongosh y conexión",
+      "topic": "Exploración",
+      "description": "Comandos propios de mongosh para navegar. Una base solo existe cuando contiene al menos una colección con datos.",
+      "examples": [
+        {
+          "description": "Cambiar (o crear en memoria) una base",
+          "code": "use tienda"
+        },
+        {
+          "description": "Colecciones de la base actual",
+          "code": "show collections"
+        },
+        {
+          "description": "Base actual",
+          "code": "db.getName()"
+        },
+        {
+          "description": "Lista programática con tamaños",
+          "code": "db.adminCommand({ listDatabases: 1 }).databases"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "mongosh",
+        "show",
+        "dbs",
+        "collections"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "'use nueva' no crea nada hasta que insertes un documento. En mongosh, 'show' solo funciona en modo interactivo; en scripts usa db.getCollectionNames() y db.adminCommand."
+    },
+    {
+      "title": "Versión y estado del servidor",
+      "command": "db.version()",
+      "section": "mongosh y conexión",
+      "topic": "Exploración",
+      "description": "Comprobaciones básicas de qué versión y modo corre el servidor.",
+      "examples": [
+        {
+          "description": "Estado del servidor (conexiones, memoria, operaciones)",
+          "code": "db.serverStatus().connections"
+        },
+        {
+          "description": "Comprobar si es nodo primario",
+          "code": "db.hello()"
+        },
+        {
+          "description": "Parámetros de arranque",
+          "code": "db.adminCommand({ getCmdLineOpts: 1 })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "version",
+        "serverstatus",
+        "hello"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "db.hello() reemplazó a db.isMaster() (obsoleto). En MongoDB 8.x conviene fijar featureCompatibilityVersion solo después de verificar que no habrá vuelta atrás."
+    },
+    {
+      "title": "Insertar documentos",
+      "command": "db.usuarios.insertOne({ nombre: \"Ana\", email: \"ana@ejemplo.cl\", creado: new Date() })",
+      "section": "CRUD y consultas",
+      "topic": "Insertar",
+      "description": "insertOne agrega un documento; insertMany varios. Si no pasas _id, MongoDB genera un ObjectId.",
+      "examples": [
+        {
+          "description": "Varios documentos",
+          "code": "db.usuarios.insertMany([{ nombre: \"Luis\" }, { nombre: \"Marta\" }])"
+        },
+        {
+          "description": "Sin detenerse ante duplicados",
+          "code": "db.usuarios.insertMany(docs, { ordered: false })"
+        },
+        {
+          "description": "Con _id propio",
+          "code": "db.config.insertOne({ _id: \"smtp\", host: \"mail.ejemplo.cl\" })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "insert",
+        "insertone",
+        "insertmany"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Con ordered:false los demás documentos se insertan aunque alguno falle por clave duplicada (E11000). Las colecciones se crean automáticamente en el primer insert."
+    },
+    {
+      "title": "Buscar documentos con find",
+      "command": "db.usuarios.find({ ciudad: \"Santiago\" })",
+      "section": "CRUD y consultas",
+      "topic": "Consultar",
+      "description": "find devuelve un cursor con los documentos que cumplen el filtro. En mongosh se muestran 20 por página; usa 'it' para continuar.",
+      "examples": [
+        {
+          "description": "Proyección: solo algunos campos",
+          "code": "db.usuarios.find({ activo: true }, { nombre: 1, email: 1, _id: 0 })"
+        },
+        {
+          "description": "Ordenar, saltar y limitar (paginación)",
+          "code": "db.usuarios.find().sort({ creado: -1 }).skip(40).limit(20)"
+        },
+        {
+          "description": "Un único documento",
+          "code": "db.usuarios.findOne({ email: \"ana@ejemplo.cl\" })"
+        },
+        {
+          "description": "Formato legible",
+          "code": "db.usuarios.find({ ciudad: \"Santiago\" }).limit(2).pretty()"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "find",
+        "proyeccion",
+        "sort",
+        "limit"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "skip() grande es lento porque recorre los documentos saltados; para paginar tablas enormes filtra por _id > último visto. En mongosh .pretty() es innecesario pero inofensivo."
+    },
+    {
+      "title": "Operadores de comparación y lógicos",
+      "command": "db.ventas.find({ total: { $gt: 10000, $lte: 50000 }, estado: { $in: [\"pagado\", \"enviado\"] } })",
+      "section": "CRUD y consultas",
+      "topic": "Consultar",
+      "description": "Los operadores empiezan con $ y se anidan en el filtro. Los más usados: $eq $ne $gt $gte $lt $lte $in $nin $and $or $not.",
+      "examples": [
+        {
+          "description": "OR entre condiciones",
+          "code": "db.ventas.find({ $or: [{ estado: \"pendiente\" }, { total: { $gt: 100000 } }] })"
+        },
+        {
+          "description": "Campo existente y no nulo",
+          "code": "db.usuarios.find({ telefono: { $exists: true, $ne: null } })"
+        },
+        {
+          "description": "Rango de fechas",
+          "code": "db.ventas.find({ fecha: { $gte: ISODate(\"2026-01-01\"), $lt: ISODate(\"2026-02-01\") } })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "operadores",
+        "query",
+        "gt",
+        "in",
+        "or"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Las condiciones sobre el mismo campo en un objeto se combinan con AND implícito. Los filtros $and implícitos con claves repetidas se sobrescriben: si necesitas dos condiciones del mismo operador usa $and explícito."
+    },
+    {
+      "title": "Expresiones regulares, arrays y subdocumentos",
+      "command": "db.usuarios.find({ email: { $regex: \"@ejemplo\\\\.cl$\", $options: \"i\" } })",
+      "section": "CRUD y consultas",
+      "topic": "Consultar",
+      "description": "Consultas sobre texto con $regex, sobre arrays con $elemMatch/$all/$size y sobre subdocumentos con notación de punto.",
+      "examples": [
+        {
+          "description": "Subdocumento con notación de punto",
+          "code": "db.usuarios.find({ \"direccion.ciudad\": \"Valparaíso\" })"
+        },
+        {
+          "description": "Elemento de array que cumple varias condiciones",
+          "code": "db.pedidos.find({ items: { $elemMatch: { sku: \"A1\", cantidad: { $gte: 2 } } } })"
+        },
+        {
+          "description": "Array que contiene todos los valores",
+          "code": "db.articulos.find({ tags: { $all: [\"docker\", \"linux\"] } })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "regex",
+        "elemmatch",
+        "arrays"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Un $regex sin ancla ^ no usa bien los índices. Para búsqueda de texto a escala usa un índice text o Atlas Search."
+    },
+    {
+      "title": "Contar y obtener valores distintos",
+      "command": "db.usuarios.countDocuments({ activo: true })",
+      "section": "CRUD y consultas",
+      "topic": "Consultar",
+      "description": "countDocuments cuenta con filtro de forma exacta; estimatedDocumentCount usa metadatos (instantáneo pero sin filtro). distinct lista valores únicos.",
+      "examples": [
+        {
+          "description": "Conteo rápido aproximado de toda la colección",
+          "code": "db.usuarios.estimatedDocumentCount()"
+        },
+        {
+          "description": "Valores distintos de un campo",
+          "code": "db.usuarios.distinct(\"ciudad\")"
+        },
+        {
+          "description": "Con filtro",
+          "code": "db.ventas.distinct(\"cliente_id\", { estado: \"pagado\" })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "count",
+        "distinct"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "db.coleccion.count() está obsoleto. distinct devuelve todo en un solo documento: si hay millones de valores supera el límite de 16 MB; usa $group en ese caso."
+    },
+    {
+      "title": "Actualizar con updateOne y updateMany",
+      "command": "db.usuarios.updateOne({ email: \"ana@ejemplo.cl\" }, { $set: { activo: false } })",
+      "section": "CRUD y consultas",
+      "topic": "Actualizar",
+      "description": "Modifica documentos con operadores de actualización: $set, $unset, $inc, $push, $pull, $addToSet, $rename, $currentDate.",
+      "examples": [
+        {
+          "description": "Incrementar un contador",
+          "code": "db.articulos.updateOne({ _id: id }, { $inc: { visitas: 1 } })"
+        },
+        {
+          "description": "Agregar a un array sin duplicados",
+          "code": "db.usuarios.updateOne({ _id: id }, { $addToSet: { roles: \"admin\" } })"
+        },
+        {
+          "description": "Actualizar muchos",
+          "code": "db.sesiones.updateMany({ expira: { $lt: new Date() } }, { $set: { activa: false } })"
+        },
+        {
+          "description": "Eliminar un campo",
+          "code": "db.usuarios.updateMany({}, { $unset: { campoViejo: \"\" } })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "update",
+        "updateone",
+        "set",
+        "inc",
+        "push"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Un update sin operadores ($set, etc.) lanza error en updateOne; solo replaceOne sustituye todo el documento. Siempre prueba el filtro con find() antes de updateMany."
+    },
+    {
+      "title": "Upsert, findOneAndUpdate y replaceOne",
+      "command": "db.contadores.updateOne({ _id: \"visitas\" }, { $inc: { n: 1 } }, { upsert: true })",
+      "section": "CRUD y consultas",
+      "topic": "Actualizar",
+      "description": "upsert:true crea el documento si no existe. findOneAndUpdate actualiza y devuelve el documento en una sola operación atómica.",
+      "examples": [
+        {
+          "description": "Devolver el documento ya actualizado",
+          "code": "db.trabajos.findOneAndUpdate({ estado: \"pendiente\" }, { $set: { estado: \"tomado\" } }, { sort: { creado: 1 }, returnDocument: \"after\" })"
+        },
+        {
+          "description": "Reemplazar el documento entero",
+          "code": "db.config.replaceOne({ _id: \"smtp\" }, { _id: \"smtp\", host: \"mail.ejemplo.cl\", puerto: 587 })"
+        },
+        {
+          "description": "Actualizar usando el valor actual con pipeline",
+          "code": "db.usuarios.updateOne({ _id: id }, [{ $set: { nombreCompleto: { $concat: [\"$nombre\", \" \", \"$apellido\"] } } }])"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "upsert",
+        "findoneandupdate",
+        "replaceone"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "findOneAndUpdate con sort permite usar la colección como cola de trabajos segura. Para que el upsert sea idempotente apóyalo en un índice único sobre los campos del filtro."
+    },
+    {
+      "title": "Eliminar documentos y colecciones",
+      "command": "db.sesiones.deleteMany({ expira: { $lt: new Date() } })",
+      "section": "CRUD y consultas",
+      "topic": "Borrar",
+      "description": "deleteOne y deleteMany borran por filtro. drop elimina una colección y dropDatabase la base completa.",
+      "examples": [
+        {
+          "description": "Un documento",
+          "code": "db.usuarios.deleteOne({ _id: ObjectId(\"65f1c0a1b2c3d4e5f6a7b8c9\") })"
+        },
+        {
+          "description": "Vaciar una colección conservando índices",
+          "code": "db.logs.deleteMany({})"
+        },
+        {
+          "description": "Borrar la colección completa (rápido)",
+          "code": "db.logs.drop()"
+        },
+        {
+          "description": "Borrar la base actual (¡irreversible!)",
+          "code": "db.dropDatabase()"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "delete",
+        "deletemany",
+        "drop"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "deleteMany({}) elimina documento a documento y puede ser lento; drop() es instantáneo pero borra también los índices. Para datos con caducidad usa un índice TTL en vez de borrados manuales."
+    },
+    {
+      "title": "Ver el plan de una consulta con explain",
+      "command": "db.ventas.find({ cliente_id: 42 }).explain(\"executionStats\")",
+      "section": "CRUD y consultas",
+      "topic": "Consultar",
+      "description": "Muestra si se usó un índice (IXSCAN) o se recorrió la colección (COLLSCAN) y cuántos documentos se examinaron frente a los devueltos.",
+      "examples": [
+        {
+          "description": "Solo el plan elegido",
+          "code": "db.ventas.find({ cliente_id: 42 }).explain()"
+        },
+        {
+          "description": "De una agregación",
+          "code": "db.ventas.explain(\"executionStats\").aggregate([{ $match: { estado: \"pagado\" } }])"
+        },
+        {
+          "description": "Forzar un índice para comparar",
+          "code": "db.ventas.find({ cliente_id: 42 }).hint({ cliente_id: 1, fecha: -1 }).explain(\"executionStats\")"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "explain",
+        "executionstats",
+        "indices"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Compara totalDocsExamined con nReturned: si examina miles para devolver pocos falta un índice. COLLSCAN en colecciones grandes es la alarma principal."
+    }
+  ]
+}

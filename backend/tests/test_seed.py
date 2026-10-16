@@ -78,7 +78,29 @@ def test_seed_real_es_valido():
     for p in archivos:
         SeedFile.model_validate(json.loads(p.read_text(encoding="utf-8")))
     bundles = load_seed()
-    assert {"linux", "python", "windows", "jenkins", "docker", "kubernetes", "terraform", "ansible"} <= set(bundles)
+    esperadas = {
+        "linux",
+        "python",
+        "windows",
+        "jenkins",
+        "docker",
+        "kubernetes",
+        "terraform",
+        "ansible",
+        "mysql",
+        "postgres",
+        "mongodb",
+        "aws",
+        "cloud",
+        "web",
+        "vps",
+        "claude",
+        "git",
+        "terminal",
+    }
+    assert esperadas <= set(bundles)
+    # Cada entorno con volumen real de biblioteca, no un par de comandos de muestra.
+    assert all(len(b.commands) >= 40 for b in bundles.values()), {k: len(b.commands) for k, b in bundles.items()}
 
 
 def test_skills_reales_cargan():

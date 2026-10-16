@@ -1,0 +1,487 @@
+{
+  "category": {
+    "slug": "web",
+    "name": "Servidores web",
+    "icon": "language",
+    "order": 14,
+    "description": "Publicar sitios y APIs: Nginx, Apache, Caddy, certificados TLS y pruebas HTTP desde la terminal."
+  },
+  "commands": [
+    {
+      "title": "Validar la configuración de Apache",
+      "command": "sudo apachectl configtest",
+      "section": "Apache",
+      "topic": "Control",
+      "description": "Comprueba la sintaxis de la configuración de Apache antes de aplicarla. Responde 'Syntax OK' si todo está bien.",
+      "syntax": "apachectl configtest",
+      "examples": [
+        {
+          "description": "En AlmaLinux (binario httpd)",
+          "code": "sudo httpd -t"
+        },
+        {
+          "description": "Listar los hosts virtuales cargados",
+          "code": "sudo apachectl -S"
+        },
+        {
+          "description": "Ver los módulos cargados",
+          "code": "sudo apachectl -M"
+        }
+      ],
+      "tags": [
+        "apache",
+        "configtest",
+        "apachectl",
+        "httpd"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "En Ubuntu el paquete y servicio se llaman apache2; en AlmaLinux httpd. apachectl -S es el mejor comando para entender qué VirtualHost atiende cada dominio y de qué archivo viene."
+    },
+    {
+      "title": "Controlar el servicio Apache",
+      "command": "sudo systemctl reload apache2",
+      "section": "Apache",
+      "topic": "Control",
+      "description": "Aplica cambios sin cortar conexiones. El nombre del servicio depende de la distribución.",
+      "examples": [
+        {
+          "description": "Ubuntu: estado",
+          "code": "sudo systemctl status apache2 --no-pager"
+        },
+        {
+          "description": "AlmaLinux: recargar",
+          "code": "sudo systemctl reload httpd"
+        },
+        {
+          "description": "AlmaLinux: habilitar al inicio",
+          "code": "sudo systemctl enable --now httpd"
+        },
+        {
+          "description": "Reinicio completo",
+          "code": "sudo systemctl restart apache2"
+        }
+      ],
+      "tags": [
+        "apache",
+        "systemctl",
+        "reload",
+        "ubuntu",
+        "almalinux"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Antes de recargar ejecuta configtest. En AlmaLinux la configuración principal está en /etc/httpd/conf/httpd.conf y los sitios en /etc/httpd/conf.d/*.conf; en Ubuntu en /etc/apache2/ con sites-available."
+    },
+    {
+      "title": "Activar sitios y módulos en Ubuntu",
+      "command": "sudo a2ensite ejemplo.cl.conf && sudo apachectl configtest && sudo systemctl reload apache2",
+      "section": "Apache",
+      "topic": "VirtualHost",
+      "description": "En Debian y Ubuntu hay herramientas que crean y borran los enlaces simbólicos de sites-enabled, mods-enabled y conf-enabled.",
+      "examples": [
+        {
+          "description": "Desactivar un sitio",
+          "code": "sudo a2dissite ejemplo.cl.conf"
+        },
+        {
+          "description": "Habilitar módulos para proxy y reescritura",
+          "code": "sudo a2enmod proxy proxy_http rewrite headers ssl"
+        },
+        {
+          "description": "Deshabilitar un módulo",
+          "code": "sudo a2dismod autoindex"
+        },
+        {
+          "description": "Desactivar el sitio por defecto",
+          "code": "sudo a2dissite 000-default.conf"
+        }
+      ],
+      "tags": [
+        "apache",
+        "a2ensite",
+        "a2enmod",
+        "ubuntu"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "a2enmod, a2ensite y similares NO existen en AlmaLinux: allí los módulos se cargan con LoadModule en /etc/httpd/conf.modules.d/ y los sitios se colocan en conf.d. Requieren reload para tener efecto."
+    },
+    {
+      "title": "VirtualHost básico",
+      "command": "<VirtualHost *:80>\n    ServerName ejemplo.cl\n    ServerAlias www.ejemplo.cl\n    DocumentRoot /var/www/ejemplo.cl/html\n\n    <Directory /var/www/ejemplo.cl/html>\n        Options -Indexes +FollowSymLinks\n        AllowOverride All\n        Require all granted\n    </Directory>\n\n    ErrorLog ${APACHE_LOG_DIR}/ejemplo.cl-error.log\n    CustomLog ${APACHE_LOG_DIR}/ejemplo.cl-access.log combined\n</VirtualHost>",
+      "section": "Apache",
+      "topic": "VirtualHost",
+      "description": "Define un sitio por nombre de dominio. En Ubuntu va en /etc/apache2/sites-available/; en AlmaLinux en /etc/httpd/conf.d/.",
+      "examples": [
+        {
+          "description": "AlmaLinux: logs con rutas propias",
+          "code": "ErrorLog /var/log/httpd/ejemplo.cl-error.log\nCustomLog /var/log/httpd/ejemplo.cl-access.log combined"
+        },
+        {
+          "description": "Qué VirtualHost responde a un dominio",
+          "code": "curl -I -H 'Host: ejemplo.cl' http://127.0.0.1"
+        },
+        {
+          "description": "Crear el directorio del sitio con permisos",
+          "code": "sudo mkdir -p /var/www/ejemplo.cl/html && sudo chown -R $USER:www-data /var/www/ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "apache",
+        "virtualhost",
+        "servername",
+        "documentroot"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "${APACHE_LOG_DIR} solo existe en Debian/Ubuntu. Con 'Require all granted' el directorio queda accesible: en Apache 2.4 reemplazó a Order/Allow. AllowOverride All habilita .htaccess (más lento: usa None si no lo necesitas)."
+    },
+    {
+      "title": "Reverse proxy con mod_proxy",
+      "command": "<VirtualHost *:80>\n    ServerName app.ejemplo.cl\n    ProxyPreserveHost On\n    ProxyPass / http://127.0.0.1:8000/\n    ProxyPassReverse / http://127.0.0.1:8000/\n    RequestHeader set X-Forwarded-Proto \"http\"\n</VirtualHost>",
+      "section": "Apache",
+      "topic": "Proxy",
+      "description": "Reenvía las peticiones a una app local. Requiere los módulos proxy y proxy_http (y headers para RequestHeader).",
+      "examples": [
+        {
+          "description": "Habilitar módulos en Ubuntu",
+          "code": "sudo a2enmod proxy proxy_http headers && sudo systemctl restart apache2"
+        },
+        {
+          "description": "WebSockets",
+          "code": "sudo a2enmod proxy_wstunnel\n# y en el VirtualHost:\nProxyPass /ws/ ws://127.0.0.1:8000/ws/"
+        },
+        {
+          "description": "AlmaLinux: permitir que Apache hable con la app (SELinux)",
+          "code": "sudo setsebool -P httpd_can_network_connect 1"
+        }
+      ],
+      "tags": [
+        "apache",
+        "mod_proxy",
+        "reverse-proxy"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "En AlmaLinux sin el booleano de SELinux el proxy devuelve 503. Cuida la barra final de ProxyPass: tiene que ser coherente en origen y destino."
+    },
+    {
+      "title": "Reglas con .htaccess y mod_rewrite",
+      "command": "RewriteEngine On\nRewriteCond %{HTTPS} off\nRewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]",
+      "section": "Apache",
+      "topic": ".htaccess",
+      "description": ".htaccess permite configuración por directorio sin tocar la configuración global: redirecciones, reescritura y control de acceso. Requiere AllowOverride.",
+      "examples": [
+        {
+          "description": "Front controller para una SPA o framework PHP",
+          "code": "RewriteEngine On\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteRule ^ index.html [L]"
+        },
+        {
+          "description": "Bloquear acceso a un archivo",
+          "code": "<Files \".env\">\n    Require all denied\n</Files>"
+        },
+        {
+          "description": "Cabeceras de caché para estáticos",
+          "code": "<IfModule mod_expires.c>\n    ExpiresActive On\n    ExpiresByType image/webp \"access plus 1 month\"\n</IfModule>"
+        }
+      ],
+      "tags": [
+        ".htaccess",
+        "apache",
+        "rewrite",
+        "redirecciones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Si .htaccess no hace nada, AllowOverride está en None o mod_rewrite no está habilitado (a2enmod rewrite). Es la forma habitual en hosting compartido tipo HostGator/cPanel, donde no controlas la configuración principal."
+    },
+    {
+      "title": "Logs y diagnóstico de Apache",
+      "command": "sudo tail -f /var/log/apache2/error.log",
+      "section": "Apache",
+      "topic": "Logs",
+      "description": "Los errores de Apache y de los módulos (PHP, proxy) van al log de errores. En AlmaLinux el directorio es /var/log/httpd/.",
+      "examples": [
+        {
+          "description": "AlmaLinux",
+          "code": "sudo tail -f /var/log/httpd/error_log"
+        },
+        {
+          "description": "Subir el nivel de detalle temporalmente",
+          "code": "LogLevel debug"
+        },
+        {
+          "description": "Páginas más visitadas",
+          "code": "awk '{print $7}' /var/log/apache2/access.log | sort | uniq -c | sort -rn | head"
+        }
+      ],
+      "tags": [
+        "apache",
+        "logs",
+        "error",
+        "diagnostico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Ocultar información y endurecer Apache",
+      "command": "ServerTokens Prod\nServerSignature Off\nTraceEnable Off",
+      "section": "Apache",
+      "topic": "Seguridad",
+      "description": "Evita revelar la versión de Apache y desactiva el método TRACE. Se coloca en la configuración global (security.conf en Ubuntu).",
+      "examples": [
+        {
+          "description": "Ubuntu: archivo",
+          "code": "sudo nano /etc/apache2/conf-available/security.conf"
+        },
+        {
+          "description": "Comprobar cabeceras",
+          "code": "curl -sI http://ejemplo.cl | grep -i server"
+        },
+        {
+          "description": "Impedir listados de directorios",
+          "code": "Options -Indexes"
+        }
+      ],
+      "tags": [
+        "apache",
+        "seguridad",
+        "servertokens",
+        "hardening"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Instalar y comprobar Caddy",
+      "command": "caddy version",
+      "section": "Caddy",
+      "topic": "Control",
+      "description": "Caddy es un servidor web moderno con HTTPS automático. Un archivo Caddyfile de pocas líneas reemplaza decenas de líneas de Nginx.",
+      "examples": [
+        {
+          "description": "Instalar en Ubuntu (repositorio oficial) una vez agregado",
+          "code": "sudo apt install -y caddy"
+        },
+        {
+          "description": "Ver el servicio",
+          "code": "sudo systemctl status caddy --no-pager"
+        },
+        {
+          "description": "Validar el Caddyfile",
+          "code": "caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile"
+        }
+      ],
+      "tags": [
+        "caddy",
+        "instalar",
+        "validar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Para que Caddy emita certificados solo necesita que el dominio apunte al servidor y que los puertos 80 y 443 estén libres. No lo ejecutes junto a Nginx/Apache/Traefik en los mismos puertos."
+    },
+    {
+      "title": "Reverse proxy con HTTPS automático",
+      "command": "ejemplo.cl {\n    reverse_proxy 127.0.0.1:8000\n}",
+      "section": "Caddy",
+      "topic": "Caddyfile",
+      "description": "Con solo esto Caddy obtiene un certificado de Let's Encrypt/ZeroSSL, renueva solo y redirige HTTP a HTTPS.",
+      "examples": [
+        {
+          "description": "Varios dominios",
+          "code": "app.ejemplo.cl {\n    reverse_proxy 127.0.0.1:8000\n}\n\napi.ejemplo.cl {\n    reverse_proxy 127.0.0.1:9000\n}"
+        },
+        {
+          "description": "WebSockets funcionan sin configuración extra",
+          "code": "chat.ejemplo.cl {\n    reverse_proxy 127.0.0.1:8080\n}"
+        },
+        {
+          "description": "Compresión y logs",
+          "code": "ejemplo.cl {\n    encode zstd gzip\n    log\n    reverse_proxy 127.0.0.1:8000\n}"
+        }
+      ],
+      "tags": [
+        "caddy",
+        "caddyfile",
+        "reverse_proxy",
+        "https"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "A diferencia de Nginx, Caddy gestiona los encabezados X-Forwarded-* y WebSockets sin configuración. Usa un dominio real: con IP o localhost genera certificados internos no confiables."
+    },
+    {
+      "title": "Sitio estático y SPA con Caddy",
+      "command": "ejemplo.cl {\n    root * /var/www/ejemplo.cl\n    encode gzip\n    try_files {path} /index.html\n    file_server\n}",
+      "section": "Caddy",
+      "topic": "Caddyfile",
+      "description": "Sirve archivos estáticos con soporte para aplicaciones de una sola página.",
+      "examples": [
+        {
+          "description": "Listado de directorio (descargas)",
+          "code": "archivos.ejemplo.cl {\n    root * /srv/archivos\n    file_server browse\n}"
+        },
+        {
+          "description": "Cabeceras de seguridad",
+          "code": "header {\n    X-Content-Type-Options nosniff\n    Strict-Transport-Security \"max-age=31536000\"\n}"
+        },
+        {
+          "description": "Redirección de www",
+          "code": "www.ejemplo.cl {\n    redir https://ejemplo.cl{uri} permanent\n}"
+        }
+      ],
+      "tags": [
+        "caddy",
+        "caddyfile",
+        "spa",
+        "file_server"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Recargar, formatear y adaptar el Caddyfile",
+      "command": "sudo caddy reload --config /etc/caddy/Caddyfile",
+      "section": "Caddy",
+      "topic": "Control",
+      "description": "Aplica la nueva configuración sin cortar conexiones. caddy fmt ordena el formato y caddy adapt lo convierte a JSON nativo.",
+      "examples": [
+        {
+          "description": "Formatear con sangría estándar",
+          "code": "sudo caddy fmt --overwrite /etc/caddy/Caddyfile"
+        },
+        {
+          "description": "Convertir a JSON",
+          "code": "caddy adapt --config /etc/caddy/Caddyfile --pretty"
+        },
+        {
+          "description": "Con systemd",
+          "code": "sudo systemctl reload caddy"
+        },
+        {
+          "description": "Ejecutar en primer plano para desarrollo",
+          "code": "caddy run --config ./Caddyfile"
+        }
+      ],
+      "tags": [
+        "caddy",
+        "reload",
+        "fmt",
+        "adapt",
+        "run"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "caddy run ocupa la terminal; caddy start lo lanza en segundo plano. En producción deja que systemd gestione el proceso. Los certificados se guardan en /var/lib/caddy."
+    },
+    {
+      "title": "Caddy sin archivos: file-server y reverse-proxy rápidos",
+      "command": "caddy reverse-proxy --from :8443 --to 127.0.0.1:8000",
+      "section": "Caddy",
+      "topic": "Control",
+      "description": "Subcomandos para uso inmediato sin escribir un Caddyfile. Muy útil para probar y compartir un servicio.",
+      "examples": [
+        {
+          "description": "Servir la carpeta actual en el puerto 8000",
+          "code": "caddy file-server --listen :8000 --browse"
+        },
+        {
+          "description": "Reverse proxy con dominio y HTTPS",
+          "code": "caddy reverse-proxy --from app.ejemplo.cl --to 127.0.0.1:8000"
+        },
+        {
+          "description": "Ver los módulos incluidos",
+          "code": "caddy list-modules"
+        }
+      ],
+      "tags": [
+        "caddy",
+        "file-server",
+        "reverse-proxy",
+        "rapido"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Logs y problemas con certificados en Caddy",
+      "command": "sudo journalctl -u caddy -f",
+      "section": "Caddy",
+      "topic": "Diagnóstico",
+      "description": "Caddy registra en journald la emisión de certificados y errores de ACME. Si un dominio no obtiene certificado, aquí se ve el motivo.",
+      "examples": [
+        {
+          "description": "Solo errores de certificados",
+          "code": "sudo journalctl -u caddy --no-pager | grep -iE 'acme|tls|certificate'"
+        },
+        {
+          "description": "Probar el certificado emitido",
+          "code": "openssl s_client -connect ejemplo.cl:443 -servername ejemplo.cl </dev/null 2>/dev/null | openssl x509 -noout -issuer -dates"
+        }
+      ],
+      "tags": [
+        "caddy",
+        "logs",
+        "acme",
+        "certificados",
+        "diagnostico"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Causas típicas: el DNS aún no apunta al servidor, el puerto 80/443 está bloqueado por firewall o ocupado por otro servicio, o se alcanzó el límite de emisiones de Let's Encrypt."
+    }
+  ]
+}

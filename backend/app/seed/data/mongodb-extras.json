@@ -1,0 +1,365 @@
+{
+  "category": {
+    "slug": "mongodb",
+    "name": "MongoDB",
+    "icon": "data_object",
+    "order": 11,
+    "description": "MongoDB con mongosh: CRUD, índices, agregaciones, seguridad, backups y réplicas."
+  },
+  "commands": [
+    {
+      "title": "Configurar mongosh: .mongoshrc.js y opciones",
+      "command": "mongosh --eval \"config.set('displayBatchSize', 50)\"",
+      "section": "mongosh y conexión",
+      "topic": "Shell",
+      "description": "mongosh guarda preferencias con config.set y ejecuta ~/.mongoshrc.js al iniciar. Ahí puedes dejar prompts, funciones y atajos.",
+      "examples": [
+        {
+          "description": "Ver la configuración actual",
+          "code": "config"
+        },
+        {
+          "description": "Cambiar el prompt para ver la base y el rol",
+          "code": "prompt = () => `${db.getName()}> `"
+        },
+        {
+          "description": "Cargar un script de utilidades dentro de la sesión",
+          "code": "load(\"/home/nico/scripts/utiles.js\")"
+        },
+        {
+          "description": "Cambiar de base sin 'use' (útil en scripts)",
+          "code": "const tienda = db.getSiblingDB(\"tienda\"); tienda.usuarios.countDocuments()"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "mongosh",
+        "configuracion",
+        "mongoshrc"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "db.getSiblingDB() es la forma correcta de cambiar de base en scripts (use solo funciona en modo interactivo). Los historiales de mongosh se guardan en ~/.mongodb/mongosh/mongosh_repl_history: ahí pueden quedar contraseñas escritas en claro."
+    },
+    {
+      "title": "Operaciones masivas con bulkWrite",
+      "command": "db.productos.bulkWrite([\n  { insertOne: { document: { sku: \"A1\", stock: 10 } } },\n  { updateOne: { filter: { sku: \"B2\" }, update: { $inc: { stock: -1 } } } },\n  { deleteOne: { filter: { sku: \"Z9\" } } }\n])",
+      "section": "CRUD y consultas",
+      "topic": "Insertar",
+      "description": "Agrupa muchas escrituras en una sola ida y vuelta al servidor. Mucho más eficiente que hacerlas una a una desde un script.",
+      "examples": [
+        {
+          "description": "Sin detenerse ante el primer error",
+          "code": "db.productos.bulkWrite(ops, { ordered: false })"
+        },
+        {
+          "description": "Upserts masivos",
+          "code": "db.productos.bulkWrite([{ updateOne: { filter: { sku: \"A1\" }, update: { $set: { stock: 5 } }, upsert: true } }])"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "bulkwrite",
+        "masivo",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Con ordered:true (por defecto) se detiene en el primer error; con false sigue y reporta todos los errores al final. Tamaño máximo de lote: 100.000 operaciones, el driver lo divide solo."
+    },
+    {
+      "title": "Operadores de array: $push, $pull, $pop y $each",
+      "command": "db.usuarios.updateOne({ _id: id }, { $push: { historial: { $each: [\"login\", \"cambio_clave\"], $slice: -50 } } })",
+      "section": "CRUD y consultas",
+      "topic": "Actualizar",
+      "description": "Actualizaciones específicas de arrays. $slice con $push mantiene un historial acotado de las últimas N entradas.",
+      "examples": [
+        {
+          "description": "Quitar elementos que cumplen una condición",
+          "code": "db.usuarios.updateOne({ _id: id }, { $pull: { roles: \"invitado\" } })"
+        },
+        {
+          "description": "Quitar el último elemento",
+          "code": "db.usuarios.updateOne({ _id: id }, { $pop: { historial: 1 } })"
+        },
+        {
+          "description": "Actualizar un elemento por filtro (arrayFilters)",
+          "code": "db.pedidos.updateOne({ _id: id }, { $set: { \"items.$[i].cantidad\": 5 } }, { arrayFilters: [{ \"i.sku\": \"A1\" }] })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "arrays",
+        "push",
+        "pull",
+        "arrayfilters"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Iterar resultados y cursores en scripts",
+      "command": "db.usuarios.find({ activo: true }).forEach(u => print(u.email))",
+      "section": "CRUD y consultas",
+      "topic": "Consultar",
+      "description": "En mongosh los cursores son iterables. forEach, map, toArray y for...of permiten procesar resultados en scripts.",
+      "examples": [
+        {
+          "description": "Convertir a array",
+          "code": "db.usuarios.find({}, { email: 1 }).limit(5).toArray()"
+        },
+        {
+          "description": "Procesar por lotes grandes",
+          "code": "const c = db.logs.find().batchSize(1000); while (c.hasNext()) { const d = c.next(); /* ... */ }"
+        },
+        {
+          "description": "Seleccionar una muestra aleatoria",
+          "code": "db.usuarios.aggregate([{ $sample: { size: 5 } }])"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "cursor",
+        "foreach",
+        "scripting",
+        "sample"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "toArray() carga todo en memoria; con millones de documentos itera el cursor. No uses find().skip().limit() para recorrer colecciones enormes."
+    },
+    {
+      "title": "Comparar campos con $expr",
+      "command": "db.pedidos.find({ $expr: { $gt: [\"$total\", \"$limite_credito\"] } })",
+      "section": "CRUD y consultas",
+      "topic": "Consultar",
+      "description": "$expr permite usar expresiones de agregación en un filtro, incluida la comparación entre dos campos del mismo documento.",
+      "examples": [
+        {
+          "description": "Calcular en la consulta",
+          "code": "db.ventas.find({ $expr: { $gt: [{ $multiply: [\"$cantidad\", \"$precio\"] }, 100000] } })"
+        },
+        {
+          "description": "Fechas relativas con $$NOW",
+          "code": "db.sesiones.find({ $expr: { $lt: [\"$expira\", \"$$NOW\"] } })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "expr",
+        "comparar",
+        "campos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "$expr no aprovecha índices en todos los casos (sobre todo con comparaciones entre campos). Para fechas relativas, calcula el valor en la aplicación y úsalo en un filtro normal."
+    },
+    {
+      "title": "$unionWith y $setWindowFields",
+      "command": "db.ventas_2025.aggregate([{ $unionWith: \"ventas_2026\" }, { $group: { _id: \"$cliente_id\", total: { $sum: \"$total\" } } }])",
+      "section": "Índices y agregación",
+      "topic": "Agregación",
+      "description": "$unionWith concatena resultados de otra colección; $setWindowFields calcula ventanas deslizantes y acumulados sin agrupar.",
+      "examples": [
+        {
+          "description": "Acumulado por cliente",
+          "code": "db.ventas.aggregate([{ $setWindowFields: { partitionBy: \"$cliente_id\", sortBy: { fecha: 1 }, output: { acumulado: { $sum: \"$total\", window: { documents: [\"unbounded\", \"current\"] } } } } }])"
+        },
+        {
+          "description": "Ranking",
+          "code": "db.ventas.aggregate([{ $setWindowFields: { sortBy: { total: -1 }, output: { puesto: { $rank: {} } } } }])"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "unionwith",
+        "window",
+        "acumulado"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Optimizar pipelines y usar disco",
+      "command": "db.ventas.aggregate([{ $match: { fecha: { $gte: ISODate(\"2026-01-01\") } } }, { $group: { _id: \"$cliente_id\", total: { $sum: \"$total\" } } }], { allowDiskUse: true, maxTimeMS: 60000 })",
+      "section": "Índices y agregación",
+      "topic": "Agregación",
+      "description": "allowDiskUse permite que las etapas pesadas usen disco al exceder la memoria. maxTimeMS impide que una agregación se ejecute para siempre.",
+      "examples": [
+        {
+          "description": "Ver el plan de la agregación",
+          "code": "db.ventas.explain(\"executionStats\").aggregate([{ $match: { estado: \"pagado\" } }])"
+        },
+        {
+          "description": "Agregar un comentario para rastrearla en logs",
+          "code": "db.ventas.aggregate([{ $count: \"n\" }], { comment: \"reporte-diario\" })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "aggregate",
+        "allowdiskuse",
+        "optimizacion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Escuchar cambios con change streams",
+      "command": "const cs = db.pedidos.watch([{ $match: { operationType: \"insert\" } }]); while (!cs.isClosed()) { if (cs.tryNext()) printjson(cs.next()); }",
+      "section": "Backup y herramientas",
+      "topic": "Cambios",
+      "description": "Los change streams notifican inserciones, actualizaciones y borrados en tiempo real. Base de arquitecturas orientadas a eventos y sincronización.",
+      "examples": [
+        {
+          "description": "Reanudar desde un token guardado",
+          "code": "db.pedidos.watch([], { resumeAfter: tokenGuardado })"
+        },
+        {
+          "description": "Incluir el documento completo en updates",
+          "code": "db.pedidos.watch([], { fullDocument: \"updateLookup\" })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "watch",
+        "changestreams",
+        "eventos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Requieren replica set. Guarda el resumeToken para no perder eventos si tu proceso se cae. El oplog tiene tamaño limitado: si el token es muy antiguo ya no se podrá reanudar."
+    },
+    {
+      "title": "Snapshot consistente con fsyncLock",
+      "command": "db.fsyncLock()",
+      "section": "Backup y herramientas",
+      "topic": "Backup",
+      "description": "Vacía los datos a disco y bloquea escrituras para poder tomar un snapshot del sistema de archivos (LVM, EBS, ZFS). Después se libera con fsyncUnlock.",
+      "examples": [
+        {
+          "description": "Liberar el bloqueo",
+          "code": "db.fsyncUnlock()"
+        },
+        {
+          "description": "Comprobar si está bloqueado",
+          "code": "db.currentOp().fsyncLock"
+        },
+        {
+          "description": "Snapshot LVM entre medio",
+          "code": "sudo lvcreate --size 5G --snapshot --name mongo_snap /dev/vg0/mongo"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "fsynclock",
+        "snapshot",
+        "backup"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Si el journal está en el mismo volumen que los datos, un snapshot atómico del volumen ya es consistente sin fsyncLock. Olvidar fsyncUnlock deja el servidor sin escrituras: protégelo con un script que siempre desbloquee."
+    },
+    {
+      "title": "Estado de conexiones y memoria del servidor",
+      "command": "db.serverStatus().connections",
+      "section": "Administración y producción",
+      "topic": "Operaciones",
+      "description": "serverStatus devuelve métricas del servidor. Selecciona secciones para no recibir un documento enorme.",
+      "examples": [
+        {
+          "description": "Memoria residente y virtual",
+          "code": "db.serverStatus().mem"
+        },
+        {
+          "description": "Estadísticas del motor WiredTiger (caché)",
+          "code": "db.serverStatus().wiredTiger.cache"
+        },
+        {
+          "description": "Uptime en horas",
+          "code": "Math.round(db.serverStatus().uptime/3600)"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "serverstatus",
+        "conexiones",
+        "memoria"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Vigila connections.current frente a available, y la presión de caché de WiredTiger ('bytes currently in the cache' contra 'maximum bytes configured'). En contenedores con límite de RAM, mongod usa la mitad de (RAM - 1 GB) para su caché por defecto."
+    },
+    {
+      "title": "Ver logs de mongod y rotarlos",
+      "command": "sudo tail -f /var/log/mongodb/mongod.log",
+      "section": "Administración y producción",
+      "topic": "Operaciones",
+      "description": "El log de mongod es JSON estructurado desde 4.4. jq ayuda a filtrarlo.",
+      "examples": [
+        {
+          "description": "Consultas lentas del log",
+          "code": "sudo grep '\"Slow query\"' /var/log/mongodb/mongod.log | tail -n 5 | jq '.attr | {ns, durationMillis, command}'"
+        },
+        {
+          "description": "Rotar el log desde mongosh",
+          "code": "db.adminCommand({ logRotate: 1 })"
+        },
+        {
+          "description": "Con systemd/journald",
+          "code": "sudo journalctl -u mongod -n 100 --no-pager"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "logs",
+        "mongod",
+        "jq",
+        "lentas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "En Docker el log va a stdout: docker logs mongo. Para rotación diaria configura systemLog.logRotate: reopen y logrotate del sistema."
+    }
+  ]
+}

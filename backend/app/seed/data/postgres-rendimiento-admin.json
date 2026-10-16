@@ -1,0 +1,829 @@
+{
+  "category": {
+    "slug": "postgres",
+    "name": "PostgreSQL",
+    "icon": "storage",
+    "order": 10,
+    "description": "PostgreSQL desde psql: esquema, roles, backups con pg_dump, diagnóstico de rendimiento y administración en producción."
+  },
+  "commands": [
+    {
+      "title": "EXPLAIN (ANALYZE, BUFFERS)",
+      "command": "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM ventas WHERE cliente_id = 42 ORDER BY fecha DESC LIMIT 20;",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Planes",
+      "description": "Ejecuta la consulta y muestra el plan real con tiempos, filas y bloques leídos de caché o disco. Es la herramienta central para optimizar.",
+      "examples": [
+        {
+          "description": "Solo el plan estimado, sin ejecutar",
+          "code": "EXPLAIN SELECT * FROM ventas WHERE cliente_id = 42;"
+        },
+        {
+          "description": "Con más detalle y salida JSON",
+          "code": "EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON) SELECT count(*) FROM ventas;"
+        },
+        {
+          "description": "Probar un UPDATE sin dejar cambios",
+          "code": "BEGIN;\nEXPLAIN (ANALYZE, BUFFERS) UPDATE ventas SET total = total WHERE id < 1000;\nROLLBACK;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "explain",
+        "analyze",
+        "buffers",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "ANALYZE ejecuta de verdad (UPDATE/DELETE modifican datos): usa transacción y ROLLBACK. Compara 'rows' estimadas con 'actual rows'; una gran diferencia indica estadísticas desactualizadas (ANALYZE). Busca Seq Scan sobre tablas grandes y 'Buffers: read' altos."
+    },
+    {
+      "title": "Habilitar pg_stat_statements",
+      "command": "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;\nSELECT query, calls, round(total_exec_time::numeric,1) AS total_ms, round(mean_exec_time::numeric,2) AS media_ms FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 10;",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Planes",
+      "description": "Acumula estadísticas de todas las consultas normalizadas: cuántas veces corren y cuánto tardan. Es la mejor fuente para saber qué optimizar.",
+      "examples": [
+        {
+          "description": "Configurar la precarga en postgresql.conf (requiere reinicio)",
+          "code": "shared_preload_libraries = 'pg_stat_statements'"
+        },
+        {
+          "description": "Reiniciar contadores",
+          "code": "SELECT pg_stat_statements_reset();"
+        },
+        {
+          "description": "Consultas con más lecturas de disco",
+          "code": "SELECT query, shared_blks_read FROM pg_stat_statements ORDER BY shared_blks_read DESC LIMIT 10;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_stat_statements",
+        "rendimiento"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Si olvidas shared_preload_libraries la extensión se crea pero la vista falla con 'must be loaded via shared_preload_libraries'. Los nombres de columna cambiaron en PG 13 (total_exec_time en vez de total_time)."
+    },
+    {
+      "title": "Ver actividad con pg_stat_activity",
+      "command": "SELECT pid, usename, state, now() - query_start AS duracion, left(query, 80) AS consulta FROM pg_stat_activity WHERE state <> 'idle' ORDER BY duracion DESC;",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Actividad",
+      "description": "Lista las sesiones y lo que ejecutan. Equivale al SHOW PROCESSLIST de MySQL. Es la primera consulta ante lentitud o bloqueos.",
+      "examples": [
+        {
+          "description": "Conexiones por estado",
+          "code": "SELECT state, count(*) FROM pg_stat_activity GROUP BY state;"
+        },
+        {
+          "description": "Transacciones abiertas sin actividad (peligrosas)",
+          "code": "SELECT pid, usename, now() - xact_start AS abierta, query FROM pg_stat_activity WHERE state = 'idle in transaction' ORDER BY abierta DESC;"
+        },
+        {
+          "description": "Conexiones por aplicación",
+          "code": "SELECT application_name, count(*) FROM pg_stat_activity GROUP BY 1 ORDER BY 2 DESC;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_stat_activity",
+        "actividad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Muchas sesiones 'idle in transaction' suelen ser un bug de la aplicación (olvidó commit) y bloquean el VACUUM. Fija idle_in_transaction_session_timeout. Ver las consultas de otros usuarios requiere el rol pg_read_all_stats."
+    },
+    {
+      "title": "Detener sesiones con pg_cancel_backend y pg_terminate_backend",
+      "command": "SELECT pg_cancel_backend(12345);",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Actividad",
+      "description": "pg_cancel_backend cancela la consulta en curso manteniendo la conexión. pg_terminate_backend cierra la sesión entera. Prueba siempre primero con cancel.",
+      "examples": [
+        {
+          "description": "Terminar una sesión",
+          "code": "SELECT pg_terminate_backend(12345);"
+        },
+        {
+          "description": "Terminar todas las conexiones a una base (p. ej. antes de un DROP)",
+          "code": "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'tienda' AND pid <> pg_backend_pid();"
+        },
+        {
+          "description": "Terminar sesiones inactivas hace más de 1 hora",
+          "code": "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle' AND state_change < now() - interval '1 hour';"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_terminate_backend",
+        "cancel"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Nunca mates procesos postgres con kill -9: reinicia todo el clúster. pg_terminate_backend de una transacción grande dispara un rollback que puede tardar. Excluye tu propia sesión con pg_backend_pid()."
+    },
+    {
+      "title": "Detectar bloqueos con pg_locks",
+      "command": "SELECT blocked.pid AS bloqueado, blocking.pid AS bloqueador, blocked.query AS consulta_bloqueada, blocking.query AS consulta_bloqueadora FROM pg_stat_activity blocked JOIN LATERAL unnest(pg_blocking_pids(blocked.pid)) AS b(pid) ON true JOIN pg_stat_activity blocking ON blocking.pid = b.pid;",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Actividad",
+      "description": "pg_blocking_pids() devuelve quién bloquea a cada sesión. Esta consulta cruza ambas para ver bloqueador y bloqueado con su SQL.",
+      "examples": [
+        {
+          "description": "Ver locks no concedidos",
+          "code": "SELECT locktype, relation::regclass, mode, pid FROM pg_locks WHERE NOT granted;"
+        },
+        {
+          "description": "Registrar esperas largas de locks en el log",
+          "code": "ALTER SYSTEM SET log_lock_waits = on;\nSELECT pg_reload_conf();"
+        },
+        {
+          "description": "Fijar deadlock_timeout",
+          "code": "SHOW deadlock_timeout;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_locks",
+        "bloqueos",
+        "deadlock"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Estadísticas de uso de tablas e índices",
+      "command": "SELECT relname, seq_scan, idx_scan, n_live_tup, n_dead_tup FROM pg_stat_user_tables ORDER BY seq_scan DESC LIMIT 10;",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Actividad",
+      "description": "pg_stat_user_tables muestra cuántos escaneos secuenciales o por índice sufre cada tabla y cuántas filas muertas acumula.",
+      "examples": [
+        {
+          "description": "Índices nunca usados",
+          "code": "SELECT relname, indexrelname, idx_scan, pg_size_pretty(pg_relation_size(indexrelid)) FROM pg_stat_user_indexes WHERE idx_scan = 0 ORDER BY pg_relation_size(indexrelid) DESC;"
+        },
+        {
+          "description": "Tasa de aciertos de caché (debería ser >99 %)",
+          "code": "SELECT round(100.0*sum(blks_hit)/nullif(sum(blks_hit)+sum(blks_read),0),2) AS cache_hit FROM pg_stat_database;"
+        },
+        {
+          "description": "Tablas con más filas muertas",
+          "code": "SELECT relname, n_dead_tup, last_autovacuum FROM pg_stat_user_tables ORDER BY n_dead_tup DESC LIMIT 10;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_stat_user_tables",
+        "indices",
+        "diagnostico"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Antes de borrar un índice 'sin uso' verifica que el contador lleve suficiente tiempo (stats_reset) y que no sea un índice único o de clave foránea."
+    },
+    {
+      "title": "VACUUM, ANALYZE y autovacuum",
+      "command": "VACUUM (VERBOSE, ANALYZE) ventas;",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Mantenimiento",
+      "description": "VACUUM recupera espacio de filas muertas (MVCC) y ANALYZE actualiza estadísticas del planificador. Normalmente lo hace autovacuum solo.",
+      "examples": [
+        {
+          "description": "Estado del autovacuum por tabla",
+          "code": "SELECT relname, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze FROM pg_stat_user_tables ORDER BY relname;"
+        },
+        {
+          "description": "Ajustar autovacuum para una tabla muy activa",
+          "code": "ALTER TABLE ventas SET (autovacuum_vacuum_scale_factor = 0.02, autovacuum_analyze_scale_factor = 0.01);"
+        },
+        {
+          "description": "Desde shell para toda la base",
+          "code": "vacuumdb -U postgres --analyze-in-stages --all"
+        },
+        {
+          "description": "Reconstruir una tabla inflada (lock exclusivo)",
+          "code": "VACUUM FULL ventas;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "vacuum",
+        "analyze",
+        "autovacuum"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "VACUUM FULL bloquea la tabla por completo y necesita espacio libre igual a su tamaño: úsalo solo en ventana de mantenimiento. Para compactar sin bloqueo existe pg_repack (extensión). Tras pg_upgrade ejecuta ANALYZE: las estadísticas no se migran."
+    },
+    {
+      "title": "REINDEX CONCURRENTLY",
+      "command": "REINDEX INDEX CONCURRENTLY idx_ventas_fecha;",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Mantenimiento",
+      "description": "Reconstruye un índice hinchado o corrupto sin bloquear escrituras (PG 12+).",
+      "examples": [
+        {
+          "description": "Todos los índices de una tabla",
+          "code": "REINDEX TABLE CONCURRENTLY ventas;"
+        },
+        {
+          "description": "Toda la base de datos",
+          "code": "REINDEX DATABASE CONCURRENTLY tienda;"
+        },
+        {
+          "description": "Desde shell",
+          "code": "reindexdb -U postgres --concurrently -d tienda"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "reindex",
+        "concurrently",
+        "mantenimiento"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "REINDEX sin CONCURRENTLY bloquea escrituras. Si falla, deja índices temporales _ccnew que debes limpiar. Tras actualizar glibc/ICU (p. ej. al cambiar de imagen) los índices de texto pueden quedar inconsistentes y requerir reindexar."
+    },
+    {
+      "title": "Ver y cambiar parámetros con SHOW y ALTER SYSTEM",
+      "command": "SHOW shared_buffers;",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Configuración",
+      "description": "SHOW consulta un parámetro; ALTER SYSTEM lo persiste en postgresql.auto.conf y pg_reload_conf() lo aplica si no requiere reinicio.",
+      "examples": [
+        {
+          "description": "Cambiar y recargar",
+          "code": "ALTER SYSTEM SET work_mem = '32MB';\nSELECT pg_reload_conf();"
+        },
+        {
+          "description": "Ver si un parámetro requiere reinicio",
+          "code": "SELECT name, setting, unit, context, pending_restart FROM pg_settings WHERE name IN ('shared_buffers','work_mem','max_connections');"
+        },
+        {
+          "description": "Valores de ajuste inicial típicos para 4 GB de RAM",
+          "code": "ALTER SYSTEM SET shared_buffers = '1GB';\nALTER SYSTEM SET effective_cache_size = '3GB';\nALTER SYSTEM SET maintenance_work_mem = '256MB';"
+        },
+        {
+          "description": "Ver dónde está el archivo de configuración",
+          "code": "SHOW config_file;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "configuracion",
+        "alter-system",
+        "pg_settings"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "En pg_settings, context='postmaster' significa que requiere reinicio, 'sighup' que basta reload. work_mem es POR operación y por sesión: 32MB × muchas conexiones puede agotar la RAM. Ubuntu: /etc/postgresql/<ver>/main/postgresql.conf; AlmaLinux: /var/lib/pgsql/<ver>/data/postgresql.conf."
+    },
+    {
+      "title": "Pruebas de carga con pgbench",
+      "command": "pgbench -i -s 50 -U postgres bench",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Pruebas",
+      "description": "pgbench inicializa y ejecuta un benchmark estándar (tipo TPC-B). Sirve para comparar configuraciones o servidores, no para predecir tu carga real.",
+      "examples": [
+        {
+          "description": "Ejecutar 10 clientes, 2 hilos, 60 segundos",
+          "code": "pgbench -c 10 -j 2 -T 60 -U postgres bench"
+        },
+        {
+          "description": "Solo lecturas",
+          "code": "pgbench -S -c 10 -j 2 -T 60 -U postgres bench"
+        },
+        {
+          "description": "Con un script propio",
+          "code": "pgbench -f consulta.sql -c 8 -T 30 -U postgres tienda"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pgbench",
+        "benchmark",
+        "carga"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Nunca lo ejecutes contra la base de producción con -i (borra y recrea las tablas pgbench_*). Usa una base aparte. Para medir consultas reales, ejecuta tu propio script con -f."
+    },
+    {
+      "title": "Auditar consultas lentas con log_min_duration_statement",
+      "command": "ALTER SYSTEM SET log_min_duration_statement = '500ms';\nSELECT pg_reload_conf();",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Pruebas",
+      "description": "Registra en el log toda sentencia que supere el umbral. Simple y muy eficaz para detectar consultas lentas en producción.",
+      "examples": [
+        {
+          "description": "Ver el log en Ubuntu",
+          "code": "sudo tail -f /var/log/postgresql/postgresql-18-main.log"
+        },
+        {
+          "description": "Ver el log en AlmaLinux",
+          "code": "sudo tail -f /var/lib/pgsql/18/data/log/postgresql-$(date +%a).log"
+        },
+        {
+          "description": "Habilitar auto_explain para planes de consultas lentas",
+          "code": "ALTER SYSTEM SET session_preload_libraries = 'auto_explain';\nALTER SYSTEM SET auto_explain.log_min_duration = '1s';"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "logs",
+        "lentas",
+        "log_min_duration_statement"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "En Docker el log va a stdout: docker logs postgres. Evita poner 0 (registra todo) en producción. Las rutas de log varían según logging_collector, versión y distribución."
+    },
+    {
+      "title": "Administrar el servicio en Ubuntu: pg_lsclusters y pg_ctlcluster",
+      "command": "pg_lsclusters",
+      "section": "Administración y producción",
+      "topic": "Servicio",
+      "description": "Debian y Ubuntu gestionan clústeres con herramientas propias (postgresql-common). Permiten varios clústeres y versiones en un mismo servidor.",
+      "examples": [
+        {
+          "description": "Reiniciar un clúster concreto",
+          "code": "sudo pg_ctlcluster 18 main restart"
+        },
+        {
+          "description": "Estado vía systemd",
+          "code": "sudo systemctl status postgresql@18-main"
+        },
+        {
+          "description": "Crear un nuevo clúster",
+          "code": "sudo pg_createcluster 18 staging --start"
+        },
+        {
+          "description": "Conectarse a un clúster por puerto",
+          "code": "sudo -u postgres psql -p 5433"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "ubuntu",
+        "pg_lsclusters",
+        "pg_ctlcluster"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En Ubuntu el servicio 'postgresql' es solo un meta-servicio; el real es postgresql@<ver>-<cluster>. Archivos en /etc/postgresql/<ver>/<cluster>/ y datos en /var/lib/postgresql/<ver>/<cluster>/."
+    },
+    {
+      "title": "Instalar e inicializar en AlmaLinux 9",
+      "command": "sudo dnf install -y postgresql-server && sudo postgresql-setup --initdb && sudo systemctl enable --now postgresql",
+      "section": "Administración y producción",
+      "topic": "Servicio",
+      "description": "En RHEL y derivados el clúster no se crea al instalar: hay que inicializarlo con postgresql-setup (paquetes de AppStream) o con pgdg-setup según el repositorio.",
+      "examples": [
+        {
+          "description": "Con el repositorio oficial PGDG (versión 18)",
+          "code": "sudo dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm\nsudo dnf -qy module disable postgresql\nsudo dnf install -y postgresql18-server\nsudo /usr/pgsql-18/bin/postgresql-18-setup initdb\nsudo systemctl enable --now postgresql-18"
+        },
+        {
+          "description": "Ubicación de los datos",
+          "code": "sudo ls /var/lib/pgsql/18/data/"
+        },
+        {
+          "description": "Abrir la base solo si hace falta (firewalld)",
+          "code": "sudo firewall-cmd --permanent --add-service=postgresql && sudo firewall-cmd --reload"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "almalinux",
+        "dnf",
+        "initdb",
+        "pgdg"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con PGDG el servicio se llama postgresql-18 y los binarios viven en /usr/pgsql-18/bin (no están en el PATH). El módulo AppStream 'postgresql' hay que deshabilitarlo para evitar conflictos. No expongas 5432 a Internet; usa túnel SSH o red privada."
+    },
+    {
+      "title": "Aplicar configuración: reload vs restart",
+      "command": "SELECT pg_reload_conf();",
+      "section": "Administración y producción",
+      "topic": "Servicio",
+      "description": "Recarga postgresql.conf y pg_hba.conf sin cortar conexiones. Solo ciertos parámetros (contexto sighup) se aplican así; los demás requieren reinicio.",
+      "examples": [
+        {
+          "description": "Reload desde shell (Ubuntu)",
+          "code": "sudo systemctl reload postgresql"
+        },
+        {
+          "description": "Reload con pg_ctl",
+          "code": "sudo -u postgres pg_ctl reload -D /var/lib/pgsql/18/data"
+        },
+        {
+          "description": "Reinicio completo (corta las conexiones)",
+          "code": "sudo systemctl restart postgresql"
+        },
+        {
+          "description": "Ver qué cambios están pendientes de reinicio",
+          "code": "SELECT name, setting, pending_restart FROM pg_settings WHERE pending_restart;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "reload",
+        "restart",
+        "configuracion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si reload no tuvo efecto, mira el log y pg_settings.pending_restart. Para parar rápido: pg_ctl stop -m fast (desconecta clientes con rollback); -m immediate es como un crash."
+    },
+    {
+      "title": "Ruta de datos y versión",
+      "command": "SHOW data_directory;",
+      "section": "Administración y producción",
+      "topic": "Servicio",
+      "description": "Datos básicos del servidor: dónde guarda los archivos, versión y uptime.",
+      "examples": [
+        {
+          "description": "Versión completa",
+          "code": "SELECT version();"
+        },
+        {
+          "description": "Desde shell",
+          "code": "psql --version && postgres --version"
+        },
+        {
+          "description": "Tiempo encendido",
+          "code": "SELECT now() - pg_postmaster_start_time() AS uptime;"
+        },
+        {
+          "description": "Estado de recuperación (¿es réplica?)",
+          "code": "SELECT pg_is_in_recovery();"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "version",
+        "data_directory"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Actualizar entre versiones mayores con pg_upgrade",
+      "command": "pg_upgrade -b /usr/lib/postgresql/17/bin -B /usr/lib/postgresql/18/bin -d /var/lib/postgresql/17/main -D /var/lib/postgresql/18/main --check",
+      "section": "Administración y producción",
+      "topic": "Actualización",
+      "description": "Migra el clúster a una versión mayor sin volcar y recargar datos. --check hace una simulación sin cambiar nada. Hazlo siempre antes de la migración real.",
+      "examples": [
+        {
+          "description": "Migración rápida con enlaces duros",
+          "code": "pg_upgrade -b /usr/lib/postgresql/17/bin -B /usr/lib/postgresql/18/bin -d /var/lib/postgresql/17/main -D /var/lib/postgresql/18/main --link"
+        },
+        {
+          "description": "Ubuntu: wrapper que gestiona todo",
+          "code": "sudo pg_upgradecluster 17 main"
+        },
+        {
+          "description": "Tras migrar: estadísticas",
+          "code": "vacuumdb --all --analyze-in-stages"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_upgrade",
+        "actualizacion",
+        "version"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Haz backup completo antes: con --link no hay vuelta atrás una vez arrancas el clúster nuevo. Los clústeres 17 y 18 deben tener las mismas extensiones instaladas. Desde PG 18 se conservan las estadísticas del planificador entre versiones, pero igual conviene ANALYZE."
+    },
+    {
+      "title": "Levantar PostgreSQL 18 en Docker",
+      "command": "docker run -d --name postgres -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD -e POSTGRES_DB=tienda -v pg_data:/var/lib/postgresql -p 127.0.0.1:5432:5432 postgres:18-alpine",
+      "section": "Administración y producción",
+      "topic": "Docker",
+      "description": "Servidor PostgreSQL en contenedor con volumen persistente. Desde la imagen 18 el volumen debe montarse en /var/lib/postgresql (ya no en /var/lib/postgresql/data).",
+      "examples": [
+        {
+          "description": "Con locale y encoding explícitos",
+          "code": "docker run -d --name postgres -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD -e POSTGRES_INITDB_ARGS=\"--encoding=UTF8 --locale=C.UTF-8\" -v pg_data:/var/lib/postgresql postgres:18-alpine"
+        },
+        {
+          "description": "Esperar a que esté listo",
+          "code": "until docker exec postgres pg_isready -U postgres -q; do sleep 1; done"
+        },
+        {
+          "description": "Ver logs de arranque",
+          "code": "docker logs -f postgres"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "docker",
+        "contenedor",
+        "volumen",
+        "18"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "TRAMPA REAL: desde postgres:18 el PGDATA es /var/lib/postgresql/18/docker, así que el volumen se monta en /var/lib/postgresql y NO en /var/lib/postgresql/data (si lo montas en el sitio antiguo, el contenedor no arranca o los datos se pierden al recrearlo). POSTGRES_PASSWORD y POSTGRES_DB solo se aplican si el volumen está vacío."
+    },
+    {
+      "title": "PostgreSQL en Docker Compose con healthcheck",
+      "command": "services:\n  db:\n    image: postgres:18-alpine\n    environment:\n      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}\n      POSTGRES_DB: tienda\n    volumes:\n      - pg_data:/var/lib/postgresql\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U postgres -d tienda\"]\n      interval: 5s\n      timeout: 3s\n      retries: 10\nvolumes:\n  pg_data:",
+      "section": "Administración y producción",
+      "topic": "Docker",
+      "description": "Definición Compose estándar con volumen nombrado y healthcheck, para que la app arranque cuando la base esté lista.",
+      "examples": [
+        {
+          "description": "Esperar a que esté healthy",
+          "code": "depends_on:\n  db:\n    condition: service_healthy"
+        },
+        {
+          "description": "Abrir psql en el servicio",
+          "code": "docker compose exec db psql -U postgres -d tienda"
+        },
+        {
+          "description": "Scripts de inicio (solo se ejecutan con volumen vacío)",
+          "code": "volumes:\n  - ./init:/docker-entrypoint-initdb.d:ro"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "docker",
+        "compose",
+        "healthcheck"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Un volumen nombrado persiste aunque borres el contenedor; 'docker compose down -v' sí lo borra. Si cambias la versión mayor (17 a 18) con el mismo volumen, el servidor no arranca: hay que usar pg_upgrade o dump y restore."
+    },
+    {
+      "title": "Cliente y backups dentro del contenedor",
+      "command": "docker exec -it postgres psql -U postgres -d tienda",
+      "section": "Administración y producción",
+      "topic": "Docker",
+      "description": "Usa los binarios del contenedor sin instalar nada en el host: psql, pg_dump y pg_restore.",
+      "examples": [
+        {
+          "description": "Dump a un archivo del host",
+          "code": "docker exec postgres pg_dump -U postgres -Fc tienda > tienda.dump"
+        },
+        {
+          "description": "Restaurar desde el host",
+          "code": "docker exec -i postgres pg_restore -U postgres -d tienda --clean --if-exists --no-owner < tienda.dump"
+        },
+        {
+          "description": "Ejecutar un archivo SQL",
+          "code": "docker exec -i postgres psql -U postgres -d tienda -v ON_ERROR_STOP=1 < migracion.sql"
+        },
+        {
+          "description": "Ejecutar psql sin TTY en un script",
+          "code": "docker exec postgres psql -U postgres -d tienda -tAc \"SELECT count(*) FROM usuarios\""
+        }
+      ],
+      "tags": [
+        "postgres",
+        "docker",
+        "exec",
+        "backup",
+        "psql"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "-tA da salida sin cabeceras ni alineación (apta para scripts). Con redirección usa -i y NUNCA -t, o los datos binarios se corrompen. pg_dump del contenedor debe ser de versión igual o mayor al servidor."
+    },
+    {
+      "title": "Estado de replicación y réplica en streaming",
+      "command": "SELECT client_addr, state, sync_state, pg_wal_lsn_diff(sent_lsn, replay_lsn) AS bytes_atraso FROM pg_stat_replication;",
+      "section": "Administración y producción",
+      "topic": "Replicación",
+      "description": "Desde el primario muestra las réplicas conectadas y cuánto atraso llevan. En la réplica se consulta pg_stat_wal_receiver.",
+      "examples": [
+        {
+          "description": "En la réplica: atraso en tiempo",
+          "code": "SELECT now() - pg_last_xact_replay_timestamp() AS atraso;"
+        },
+        {
+          "description": "Slots de replicación (¡pueden llenar el disco!)",
+          "code": "SELECT slot_name, active, pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS wal_retenido FROM pg_replication_slots;"
+        },
+        {
+          "description": "Promover la réplica a primario",
+          "code": "SELECT pg_promote();"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "replicacion",
+        "streaming",
+        "slots"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Un slot de replicación inactivo retiene WAL indefinidamente y puede llenar el disco del primario: monitorea y borra con pg_drop_replication_slot(). pg_promote() y pg_ctl promote hacen lo mismo."
+    },
+    {
+      "title": "Espacio en disco y WAL",
+      "command": "SELECT pg_size_pretty(sum(size)) FROM pg_ls_waldir();",
+      "section": "Administración y producción",
+      "topic": "Operación",
+      "description": "El directorio WAL puede crecer si falla el archivado o hay slots retenidos. Un disco lleno de WAL tumba el servidor.",
+      "examples": [
+        {
+          "description": "Tamaño de la base de datos y del directorio",
+          "code": "du -sh /var/lib/postgresql/18/main/pg_wal"
+        },
+        {
+          "description": "Estado del archivador",
+          "code": "SELECT archived_count, failed_count, last_failed_wal, last_failed_time FROM pg_stat_archiver;"
+        },
+        {
+          "description": "Punto de control manual",
+          "code": "CHECKPOINT;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "wal",
+        "disco",
+        "archivador"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Nunca borres archivos de pg_wal a mano: corrompes el clúster. Si el disco se llena, libera espacio en otro lado, resuelve la causa (slot o archive_command roto) y deja que PostgreSQL recicle el WAL."
+    },
+    {
+      "title": "Programar tareas con pg_cron",
+      "command": "CREATE EXTENSION pg_cron;\nSELECT cron.schedule('limpiar-sesiones', '0 3 * * *', $$DELETE FROM sesiones WHERE expira < now()$$);",
+      "section": "Administración y producción",
+      "topic": "Operación",
+      "description": "pg_cron ejecuta SQL programado dentro de la base, con sintaxis cron. Útil para limpiezas, vistas materializadas y particiones.",
+      "examples": [
+        {
+          "description": "Ver las tareas",
+          "code": "SELECT jobid, schedule, command, active FROM cron.job;"
+        },
+        {
+          "description": "Historial de ejecuciones",
+          "code": "SELECT jobid, status, return_message, start_time FROM cron.job_run_details ORDER BY start_time DESC LIMIT 10;"
+        },
+        {
+          "description": "Eliminar una tarea",
+          "code": "SELECT cron.unschedule('limpiar-sesiones');"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_cron",
+        "tareas",
+        "programadas"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Es opcional y no viene en la imagen oficial: instala el paquete (postgresql-18-cron en Ubuntu con PGDG, pg_cron_18 en AlmaLinux con PGDG), añade shared_preload_libraries='pg_cron' y reinicia. Solo se crea en la base indicada por cron.database_name."
+    },
+    {
+      "title": "Refrescar vistas materializadas",
+      "command": "REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ventas_mes;",
+      "section": "Administración y producción",
+      "topic": "Operación",
+      "description": "Actualiza una vista materializada sin bloquear las lecturas. Requiere un índice único en la vista.",
+      "examples": [
+        {
+          "description": "Crear la vista materializada",
+          "code": "CREATE MATERIALIZED VIEW mv_ventas_mes AS SELECT date_trunc('month', fecha) AS mes, sum(total) AS total FROM ventas GROUP BY 1;"
+        },
+        {
+          "description": "Índice único necesario para CONCURRENTLY",
+          "code": "CREATE UNIQUE INDEX ON mv_ventas_mes (mes);"
+        },
+        {
+          "description": "Refrescar desde cron del sistema",
+          "code": "*/15 * * * * psql -U app -d tienda -c 'REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ventas_mes'"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "materialized-view",
+        "refresh",
+        "cron"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Healthcheck de PostgreSQL para monitoreo",
+      "command": "psql -h localhost -U monitor -d postgres -tAc \"SELECT 1\" || echo CAIDO",
+      "section": "Administración y producción",
+      "topic": "Operación",
+      "description": "Comprobación mínima de que el servidor acepta conexiones y ejecuta consultas. Combínala con cron y un aviso (por ejemplo a un webhook de n8n).",
+      "examples": [
+        {
+          "description": "Rol de solo monitoreo",
+          "code": "CREATE ROLE monitor LOGIN PASSWORD '<contraseña>';\nGRANT pg_monitor TO monitor;"
+        },
+        {
+          "description": "Atraso de la réplica en un check",
+          "code": "psql -tAc \"SELECT extract(epoch FROM now() - pg_last_xact_replay_timestamp())\""
+        },
+        {
+          "description": "Alerta si hay demasiadas conexiones",
+          "code": "psql -tAc \"SELECT count(*) FROM pg_stat_activity\" | awk '{ if ($1 > 150) print \"ALERTA\" }'"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "healthcheck",
+        "monitoreo",
+        "pg_monitor"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "El rol predefinido pg_monitor (PG 10+) da lectura de estadísticas sin ser superusuario. Para un monitoreo serio usa postgres_exporter con Prometheus."
+    }
+  ]
+}

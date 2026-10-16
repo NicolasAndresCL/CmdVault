@@ -1,0 +1,468 @@
+{
+  "category": {
+    "slug": "cloud",
+    "name": "Cloud",
+    "icon": "cloud_queue",
+    "order": 13,
+    "description": "Otras nubes desde la terminal: Google Cloud, Azure, DigitalOcean, Cloudflare y Hetzner."
+  },
+  "commands": [
+    {
+      "title": "Iniciar sesión con az login",
+      "command": "az login",
+      "section": "Azure (az)",
+      "topic": "Autenticación",
+      "description": "Abre el navegador para autenticarte en Azure y lista las suscripciones. Es el primer paso de Azure CLI.",
+      "examples": [
+        {
+          "description": "En un servidor sin navegador",
+          "code": "az login --use-device-code"
+        },
+        {
+          "description": "Ver la suscripción activa",
+          "code": "az account show --output table"
+        },
+        {
+          "description": "Listar suscripciones",
+          "code": "az account list --output table"
+        },
+        {
+          "description": "Cambiar de suscripción",
+          "code": "az account set --subscription \"Mi Suscripcion\""
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "login",
+        "suscripcion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Confirma con az account show antes de crear recursos: se factura a la suscripción activa. Tras cambios de cuenta puede ser necesario az logout y volver a entrar."
+    },
+    {
+      "title": "Valores por defecto y formato de salida",
+      "command": "az configure --defaults group=rg-tienda location=brazilsouth",
+      "section": "Azure (az)",
+      "topic": "Configuración",
+      "description": "Fija grupo de recursos y ubicación predeterminados para no repetirlos en cada comando.",
+      "examples": [
+        {
+          "description": "Salida en tabla por defecto",
+          "code": "az config set core.output=table"
+        },
+        {
+          "description": "Consultar con JMESPath",
+          "code": "az vm list --query \"[].{nombre:name,estado:powerState}\" --output table"
+        },
+        {
+          "description": "Listar regiones",
+          "code": "az account list-locations --query \"[].name\" --output tsv"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "configure",
+        "defaults",
+        "query"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Como en AWS --query usa JMESPath. 'brazilsouth' es la región más cercana a Chile. Los valores por defecto se guardan en ~/.azure/config."
+    },
+    {
+      "title": "Grupos de recursos",
+      "command": "az group create --name rg-tienda --location brazilsouth",
+      "section": "Azure (az)",
+      "topic": "Recursos",
+      "description": "Un grupo de recursos es el contenedor lógico de todo lo de un proyecto. Borrar el grupo elimina todo su contenido.",
+      "examples": [
+        {
+          "description": "Listar",
+          "code": "az group list --output table"
+        },
+        {
+          "description": "Ver recursos de un grupo",
+          "code": "az resource list --resource-group rg-tienda --output table"
+        },
+        {
+          "description": "Eliminar con todo su contenido",
+          "code": "az group delete --name rg-tienda --yes --no-wait"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "group",
+        "recursos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "az group delete es la forma más rápida de limpiar un laboratorio y evitar costos. Etiqueta los grupos (--tags proyecto=tienda) para controlar gastos."
+    },
+    {
+      "title": "Crear y listar VM",
+      "command": "az vm create --resource-group rg-tienda --name web-01 --image Ubuntu2204 --size Standard_B2s --admin-username azureuser --generate-ssh-keys",
+      "section": "Azure (az)",
+      "topic": "Máquinas virtuales",
+      "description": "Crea una VM Linux con clave SSH. Azure crea red, IP pública y disco asociados al grupo.",
+      "examples": [
+        {
+          "description": "Listar con IP y estado",
+          "code": "az vm list --resource-group rg-tienda --show-details --query \"[].{nombre:name,estado:powerState,ip:publicIps}\" --output table"
+        },
+        {
+          "description": "Abrir el puerto 443",
+          "code": "az vm open-port --resource-group rg-tienda --name web-01 --port 443 --priority 1010"
+        },
+        {
+          "description": "Conectar",
+          "code": "ssh azureuser@<ip-publica>"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "vm",
+        "crear",
+        "ssh"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Verifica el alias de imagen vigente con az vm image list --output table (por ejemplo Ubuntu2204 o Ubuntu2404 según disponibilidad). Una VM detenida desde dentro del SO sigue cobrando: usa deallocate."
+    },
+    {
+      "title": "Iniciar, detener y desasignar VM",
+      "command": "az vm deallocate --resource-group rg-tienda --name web-01",
+      "section": "Azure (az)",
+      "topic": "Máquinas virtuales",
+      "description": "deallocate libera el cómputo y deja de facturar. stop solo apaga el sistema operativo pero mantiene la asignación (y el cobro).",
+      "examples": [
+        {
+          "description": "Iniciar",
+          "code": "az vm start --resource-group rg-tienda --name web-01"
+        },
+        {
+          "description": "Reiniciar",
+          "code": "az vm restart --resource-group rg-tienda --name web-01"
+        },
+        {
+          "description": "Ejecutar un comando en la VM sin SSH",
+          "code": "az vm run-command invoke --resource-group rg-tienda --name web-01 --command-id RunShellScript --scripts \"uptime\""
+        },
+        {
+          "description": "Eliminar",
+          "code": "az vm delete --resource-group rg-tienda --name web-01 --yes"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "vm",
+        "deallocate",
+        "run-command"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Eliminar la VM no borra el disco, la IP ni la interfaz de red: elimina el grupo de recursos para limpiar todo."
+    },
+    {
+      "title": "Publicar una web con az webapp up",
+      "command": "az webapp up --name mi-app-tienda --runtime \"PYTHON:3.13\" --sku B1 --location brazilsouth",
+      "section": "Azure (az)",
+      "topic": "App Service",
+      "description": "Crea (si no existen) el plan, el sitio y despliega el código del directorio actual en un solo paso.",
+      "examples": [
+        {
+          "description": "Ver logs en vivo",
+          "code": "az webapp log tail --name mi-app-tienda --resource-group rg-tienda"
+        },
+        {
+          "description": "Configurar variables de entorno",
+          "code": "az webapp config appsettings set --name mi-app-tienda --resource-group rg-tienda --settings ENTORNO=prod"
+        },
+        {
+          "description": "Listar runtimes disponibles",
+          "code": "az webapp list-runtimes --os linux"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "webapp",
+        "app-service",
+        "deploy"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Verifica con az webapp list-runtimes qué versiones de Python hay: el nombre exacto cambia. El plan B1 cobra aunque el sitio esté detenido; elimina el plan para dejar de pagar."
+    },
+    {
+      "title": "Azure Container Registry",
+      "command": "az acr create --resource-group rg-tienda --name acrtienda2026 --sku Basic",
+      "section": "Azure (az)",
+      "topic": "Contenedores",
+      "description": "ACR guarda imágenes de contenedor privadas. Se puede autenticar Docker o construir en la nube con az acr build.",
+      "examples": [
+        {
+          "description": "Login de Docker",
+          "code": "az acr login --name acrtienda2026"
+        },
+        {
+          "description": "Construir en la nube sin Docker local",
+          "code": "az acr build --registry acrtienda2026 --image mi-app:1.0.0 ."
+        },
+        {
+          "description": "Listar repositorios",
+          "code": "az acr repository list --name acrtienda2026 --output table"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "acr",
+        "registry",
+        "docker"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "El nombre del registro debe ser único globalmente y solo alfanumérico. az acr login obtiene un token temporal."
+    },
+    {
+      "title": "Azure Container Apps",
+      "command": "az containerapp up --name mi-api --resource-group rg-tienda --source . --ingress external --target-port 8080",
+      "section": "Azure (az)",
+      "topic": "Contenedores",
+      "description": "Despliega un contenedor serverless desde el código o una imagen, con HTTPS y escalado automático.",
+      "examples": [
+        {
+          "description": "Desde una imagen",
+          "code": "az containerapp up --name mi-api --resource-group rg-tienda --image acrtienda2026.azurecr.io/mi-api:1.0.0 --ingress external --target-port 8080"
+        },
+        {
+          "description": "Ver logs",
+          "code": "az containerapp logs show --name mi-api --resource-group rg-tienda --follow"
+        },
+        {
+          "description": "Listar apps",
+          "code": "az containerapp list --resource-group rg-tienda --output table"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "containerapp",
+        "serverless"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Puede requerir instalar la extensión: az extension add --name containerapp --upgrade. Ingreso external lo hace público."
+    },
+    {
+      "title": "Credenciales de AKS",
+      "command": "az aks get-credentials --resource-group rg-tienda --name aks-tienda",
+      "section": "Azure (az)",
+      "topic": "Kubernetes",
+      "description": "Añade el clúster AKS a tu kubeconfig para usar kubectl.",
+      "examples": [
+        {
+          "description": "Sobrescribir un contexto existente",
+          "code": "az aks get-credentials --resource-group rg-tienda --name aks-tienda --overwrite-existing"
+        },
+        {
+          "description": "Listar clústeres",
+          "code": "az aks list --output table"
+        },
+        {
+          "description": "Escalar el pool de nodos",
+          "code": "az aks scale --resource-group rg-tienda --name aks-tienda --node-count 3"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "aks",
+        "kubernetes",
+        "kubeconfig"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Blob Storage: crear cuenta y subir archivos",
+      "command": "az storage blob upload --account-name sttienda2026 --container-name backups --name backup.tar.gz --file ./backup.tar.gz --auth-mode login",
+      "section": "Azure (az)",
+      "topic": "Almacenamiento",
+      "description": "Sube un archivo a un contenedor de Blob Storage autenticándote con tu identidad de Azure AD (sin claves de cuenta).",
+      "examples": [
+        {
+          "description": "Crear la cuenta de almacenamiento",
+          "code": "az storage account create --name sttienda2026 --resource-group rg-tienda --location brazilsouth --sku Standard_LRS"
+        },
+        {
+          "description": "Crear el contenedor",
+          "code": "az storage container create --account-name sttienda2026 --name backups --auth-mode login"
+        },
+        {
+          "description": "Subir una carpeta",
+          "code": "az storage blob upload-batch --account-name sttienda2026 --destination backups --source ./dist --auth-mode login"
+        },
+        {
+          "description": "Listar blobs",
+          "code": "az storage blob list --account-name sttienda2026 --container-name backups --auth-mode login --output table"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "storage",
+        "blob",
+        "backup"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Con --auth-mode login necesitas el rol 'Storage Blob Data Contributor' asignado a tu usuario. El nombre de la cuenta es global, en minúsculas, entre 3 y 24 caracteres."
+    },
+    {
+      "title": "Key Vault: guardar y leer secretos",
+      "command": "az keyvault secret set --vault-name kv-tienda --name db-password --value \"<valor>\"",
+      "section": "Azure (az)",
+      "topic": "Secretos",
+      "description": "Almacena secretos con control de acceso y auditoría.",
+      "examples": [
+        {
+          "description": "Leer un secreto",
+          "code": "az keyvault secret show --vault-name kv-tienda --name db-password --query value --output tsv"
+        },
+        {
+          "description": "Crear el vault",
+          "code": "az keyvault create --name kv-tienda --resource-group rg-tienda --location brazilsouth"
+        },
+        {
+          "description": "Listar secretos",
+          "code": "az keyvault secret list --vault-name kv-tienda --output table"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "keyvault",
+        "secretos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "--value deja el secreto en el historial: usa --file o una variable en un script no interactivo. El nombre del vault es único globalmente."
+    },
+    {
+      "title": "Service principal para CI/CD",
+      "command": "az ad sp create-for-rbac --name sp-ci-tienda --role Contributor --scopes /subscriptions/<id-suscripcion>/resourceGroups/rg-tienda",
+      "section": "Azure (az)",
+      "topic": "Identidad",
+      "description": "Crea una identidad de aplicación con permisos acotados a un grupo de recursos. Su salida contiene el secreto UNA sola vez.",
+      "examples": [
+        {
+          "description": "Listar asignaciones de rol",
+          "code": "az role assignment list --resource-group rg-tienda --output table"
+        },
+        {
+          "description": "Dar un rol a un usuario",
+          "code": "az role assignment create --assignee usuario@ejemplo.cl --role Reader --resource-group rg-tienda"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "service-principal",
+        "rbac",
+        "ci"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Acota SIEMPRE el scope al mínimo (no la suscripción entera). Para GitHub Actions prefiere OIDC (federated credentials) en lugar de guardar un secreto."
+    },
+    {
+      "title": "Listar servidores de bases de datos gestionadas",
+      "command": "az postgres flexible-server list --output table",
+      "section": "Azure (az)",
+      "topic": "Bases de datos",
+      "description": "Azure Database for PostgreSQL (flexible server) y MySQL (az mysql flexible-server) son las bases gestionadas.",
+      "examples": [
+        {
+          "description": "MySQL",
+          "code": "az mysql flexible-server list --output table"
+        },
+        {
+          "description": "Abrir el firewall a tu IP (nombre de regla propio)",
+          "code": "az postgres flexible-server firewall-rule create --resource-group rg-tienda --name tienda-pg --rule-name mi-ip --start-ip-address 203.0.113.10 --end-ip-address 203.0.113.10"
+        },
+        {
+          "description": "Detener para ahorrar costo",
+          "code": "az postgres flexible-server stop --resource-group rg-tienda --name tienda-pg"
+        }
+      ],
+      "tags": [
+        "azure",
+        "az",
+        "postgres",
+        "mysql",
+        "flexible-server"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El servidor detenido se reinicia solo tras 7 días. Para producción usa redes privadas en vez de reglas por IP."
+    }
+  ]
+}

@@ -1,0 +1,367 @@
+{
+  "category": {
+    "slug": "postgres",
+    "name": "PostgreSQL",
+    "icon": "storage",
+    "order": 10,
+    "description": "PostgreSQL desde psql: esquema, roles, backups con pg_dump, diagnóstico de rendimiento y administración en producción."
+  },
+  "commands": [
+    {
+      "title": "Servicios con pg_service.conf",
+      "command": "psql \"service=tienda_prod\"",
+      "section": "psql y conexión",
+      "topic": "Conexión",
+      "description": "pg_service.conf agrupa los parámetros de conexión bajo un nombre; así evitas repetir host, puerto y base y mantienes la clave en ~/.pgpass.",
+      "examples": [
+        {
+          "description": "Definir el servicio en ~/.pg_service.conf",
+          "code": "[tienda_prod]\nhost=db.ejemplo.cl\nport=5432\ndbname=tienda\nuser=app\nsslmode=verify-full"
+        },
+        {
+          "description": "Usarlo con pg_dump",
+          "code": "pg_dump \"service=tienda_prod\" -Fc -f tienda.dump"
+        },
+        {
+          "description": "Usar por variable de entorno",
+          "code": "PGSERVICE=tienda_prod psql"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_service",
+        "conexion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los nombres de servicio no pueden mezclarse con -h/-U en todas las herramientas; revisa qué prevalece. sslmode=verify-full valida certificado y nombre de host (recomendado en producción)."
+    },
+    {
+      "title": "Usar psql en scripts de shell",
+      "command": "psql -U app -d tienda -tAF',' -c \"SELECT id, email FROM usuarios LIMIT 5\"",
+      "section": "psql y conexión",
+      "topic": "Scripting",
+      "description": "-t quita cabeceras, -A desactiva el alineado y -F define el separador: salida limpia para procesar con awk, cut o jq.",
+      "examples": [
+        {
+          "description": "Un único valor en una variable",
+          "code": "TOTAL=$(psql -U app -d tienda -tAc \"SELECT count(*) FROM usuarios\")"
+        },
+        {
+          "description": "Salida JSON directa",
+          "code": "psql -U app -d tienda -tAc \"SELECT json_agg(t) FROM (SELECT id, email FROM usuarios LIMIT 3) t\""
+        },
+        {
+          "description": "CSV directo desde la shell",
+          "code": "psql -U app -d tienda --csv -c \"SELECT * FROM ventas LIMIT 100\" > ventas.csv"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "scripting",
+        "csv",
+        "json"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Usa -X para ignorar ~/.psqlrc y -v ON_ERROR_STOP=1 para fallar rápido. --csv (PG 12+) maneja comillas y comas correctamente, a diferencia de -F','."
+    },
+    {
+      "title": "Generar y ejecutar SQL con \\gexec",
+      "command": "SELECT format('VACUUM ANALYZE %I.%I', schemaname, relname) FROM pg_stat_user_tables WHERE n_dead_tup > 10000\n\\gexec",
+      "section": "psql y conexión",
+      "topic": "Scripting",
+      "description": "\\gexec ejecuta como sentencias cada valor devuelto por la consulta anterior. Permite generar SQL dinámico sin escribir un script aparte.",
+      "examples": [
+        {
+          "description": "Dar SELECT en todas las tablas del esquema a un rol",
+          "code": "SELECT format('GRANT SELECT ON %I.%I TO lectura', schemaname, tablename) FROM pg_tables WHERE schemaname = 'ventas'\n\\gexec"
+        },
+        {
+          "description": "Borrar todas las tablas de pruebas",
+          "code": "SELECT format('DROP TABLE %I CASCADE', tablename) FROM pg_tables WHERE tablename LIKE 'tmp_%'\n\\gexec"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "gexec",
+        "sql-dinamico"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "format() con %I cita identificadores correctamente (evita inyección y mayúsculas raras). Revisa primero el SELECT sin \\gexec para ver qué va a ejecutar."
+    },
+    {
+      "title": "Ver código de funciones y vistas",
+      "command": "\\sf public.calcular_total",
+      "section": "psql y conexión",
+      "topic": "Metacomandos",
+      "description": "\\sf muestra la definición de una función y \\sv la de una vista. Alternativa a consultar el catálogo.",
+      "examples": [
+        {
+          "description": "Definición de una vista",
+          "code": "\\sv v_ventas_mes"
+        },
+        {
+          "description": "Listar funciones con detalle",
+          "code": "\\df+ public.*"
+        },
+        {
+          "description": "Ver consulta de un índice",
+          "code": "SELECT indexdef FROM pg_indexes WHERE tablename = 'ventas';"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "funciones",
+        "vistas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Particionar una tabla por rango de fechas",
+      "command": "CREATE TABLE eventos (\n  id bigint GENERATED ALWAYS AS IDENTITY,\n  creado_en timestamptz NOT NULL,\n  datos jsonb,\n  PRIMARY KEY (id, creado_en)\n) PARTITION BY RANGE (creado_en);\nCREATE TABLE eventos_2026_10 PARTITION OF eventos FOR VALUES FROM ('2026-10-01') TO ('2026-11-01');",
+      "section": "Consultas y esquema",
+      "topic": "Particionado",
+      "description": "El particionado declarativo divide una tabla enorme en partes por rango, lista o hash. Acelera borrados (DROP de partición) y consultas con filtro por fecha.",
+      "examples": [
+        {
+          "description": "Borrar datos antiguos al instante",
+          "code": "DROP TABLE eventos_2025_01;"
+        },
+        {
+          "description": "Separar una partición sin borrarla",
+          "code": "ALTER TABLE eventos DETACH PARTITION eventos_2025_01 CONCURRENTLY;"
+        },
+        {
+          "description": "Partición por defecto para no perder filas",
+          "code": "CREATE TABLE eventos_default PARTITION OF eventos DEFAULT;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "particionado",
+        "partition",
+        "range"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "La clave primaria debe incluir la columna de partición. Hay que crear las particiones futuras con antelación (pg_cron o pg_partman) o los INSERT fallarán."
+    },
+    {
+      "title": "Consultar columnas JSONB",
+      "command": "SELECT datos->>'usuario' AS usuario, datos->'meta'->>'ip' AS ip FROM eventos WHERE datos @> '{\"tipo\":\"login\"}' LIMIT 20;",
+      "section": "Consultas y esquema",
+      "topic": "JSON",
+      "description": "->> extrae un campo como texto; -> como JSON; @> comprueba contención y usa índices GIN. jsonb_path_query permite consultas más ricas.",
+      "examples": [
+        {
+          "description": "Agregar un campo",
+          "code": "UPDATE eventos SET datos = jsonb_set(datos, '{revisado}', 'true') WHERE id = 10;"
+        },
+        {
+          "description": "Expandir un array",
+          "code": "SELECT id, jsonb_array_elements_text(datos->'tags') AS tag FROM eventos;"
+        },
+        {
+          "description": "Agrupar por un campo del JSON",
+          "code": "SELECT datos->>'tipo' AS tipo, count(*) FROM eventos GROUP BY 1 ORDER BY 2 DESC;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "jsonb",
+        "json",
+        "consultas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ]
+    },
+    {
+      "title": "Generar datos de prueba con generate_series",
+      "command": "INSERT INTO ventas (cliente_id, total, fecha) SELECT (random()*1000)::int, round((random()*100000)::numeric, 2), now() - (random()*365) * interval '1 day' FROM generate_series(1, 100000);",
+      "section": "Consultas y esquema",
+      "topic": "Datos de prueba",
+      "description": "generate_series crea filas sintéticas para probar rendimiento e índices con volumen realista.",
+      "examples": [
+        {
+          "description": "Calendario de fechas",
+          "code": "SELECT d::date FROM generate_series('2026-01-01'::date, '2026-12-31'::date, '1 day') AS d;"
+        },
+        {
+          "description": "Actualizar estadísticas tras cargar",
+          "code": "ANALYZE ventas;"
+        },
+        {
+          "description": "Texto aleatorio",
+          "code": "SELECT md5(random()::text) FROM generate_series(1, 5);"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "generate_series",
+        "datos-de-prueba"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "LISTEN y NOTIFY",
+      "command": "LISTEN canal_pedidos;",
+      "section": "Consultas y esquema",
+      "topic": "Mensajería",
+      "description": "Mecanismo de notificaciones asíncronas entre sesiones. Una sesión escucha un canal y otra envía mensajes con NOTIFY o pg_notify().",
+      "examples": [
+        {
+          "description": "Enviar un mensaje",
+          "code": "NOTIFY canal_pedidos, 'pedido 42';"
+        },
+        {
+          "description": "Enviar desde una función o trigger",
+          "code": "SELECT pg_notify('canal_pedidos', json_build_object('id', 42)::text);"
+        },
+        {
+          "description": "Dejar de escuchar",
+          "code": "UNLISTEN canal_pedidos;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "listen",
+        "notify",
+        "mensajeria"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "psql solo muestra las notificaciones cuando termina la siguiente sentencia. Los mensajes no persisten: si nadie escucha, se pierden. El payload máximo es de 8000 bytes."
+    },
+    {
+      "title": "Seguridad a nivel de fila (RLS)",
+      "command": "ALTER TABLE documentos ENABLE ROW LEVEL SECURITY;\nCREATE POLICY solo_dueno ON documentos USING (dueno = current_user);",
+      "section": "Roles y permisos",
+      "topic": "Seguridad",
+      "description": "Row Level Security limita qué filas ve o modifica cada rol mediante políticas. Útil en aplicaciones multi-inquilino.",
+      "examples": [
+        {
+          "description": "Ver las políticas",
+          "code": "\\d+ documentos"
+        },
+        {
+          "description": "Incluir al dueño de la tabla (por defecto lo ignora)",
+          "code": "ALTER TABLE documentos FORCE ROW LEVEL SECURITY;"
+        },
+        {
+          "description": "Política por inquilino usando un parámetro de sesión",
+          "code": "CREATE POLICY por_tenant ON pedidos USING (tenant_id = current_setting('app.tenant_id')::int);"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "rls",
+        "seguridad",
+        "politicas"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Los superusuarios y roles con BYPASSRLS ignoran RLS. Si la tabla está sin políticas y RLS está activa, nadie ve nada. La aplicación debe conectarse con un rol sin BYPASSRLS."
+    },
+    {
+      "title": "Ver progreso de operaciones largas",
+      "command": "SELECT * FROM pg_stat_progress_create_index;",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Progreso",
+      "description": "Las vistas pg_stat_progress_* muestran el avance de CREATE INDEX, VACUUM, CLUSTER, COPY y pg_basebackup.",
+      "examples": [
+        {
+          "description": "Progreso de un VACUUM",
+          "code": "SELECT relid::regclass, phase, heap_blks_scanned, heap_blks_total FROM pg_stat_progress_vacuum;"
+        },
+        {
+          "description": "Progreso de un COPY",
+          "code": "SELECT relid::regclass, bytes_processed, tuples_processed FROM pg_stat_progress_copy;"
+        },
+        {
+          "description": "Progreso de pg_basebackup",
+          "code": "SELECT phase, backup_total, backup_streamed FROM pg_stat_progress_basebackup;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_stat_progress",
+        "vacuum",
+        "index"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Estimar filas con estadísticas de columna",
+      "command": "SELECT attname, n_distinct, null_frac, correlation FROM pg_stats WHERE tablename = 'ventas';",
+      "section": "Rendimiento y diagnóstico",
+      "topic": "Planes",
+      "description": "pg_stats expone lo que el planificador sabe de cada columna. Útil para entender por qué elige un plan.",
+      "examples": [
+        {
+          "description": "Subir el detalle de estadísticas de una columna",
+          "code": "ALTER TABLE ventas ALTER COLUMN cliente_id SET STATISTICS 500;\nANALYZE ventas;"
+        },
+        {
+          "description": "Estadísticas multicolumna",
+          "code": "CREATE STATISTICS st_ventas_cli_fecha (dependencies) ON cliente_id, fecha FROM ventas;\nANALYZE ventas;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_stats",
+        "estadisticas",
+        "planificador"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    }
+  ]
+}

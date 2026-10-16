@@ -1,0 +1,806 @@
+{
+  "category": {
+    "slug": "web",
+    "name": "Servidores web",
+    "icon": "language",
+    "order": 14,
+    "description": "Publicar sitios y APIs: Nginx, Apache, Caddy, certificados TLS y pruebas HTTP desde la terminal."
+  },
+  "commands": [
+    {
+      "title": "Validar la configuración de Nginx",
+      "command": "sudo nginx -t",
+      "section": "Nginx",
+      "topic": "Control",
+      "description": "Comprueba la sintaxis y que los archivos referenciados existan, sin aplicar nada. Hazlo siempre antes de recargar.",
+      "syntax": "nginx -t [-c ARCHIVO]",
+      "examples": [
+        {
+          "description": "Volcar la configuración completa efectiva (incluye los include)",
+          "code": "sudo nginx -T"
+        },
+        {
+          "description": "Solo ver los server_name y puertos configurados",
+          "code": "sudo nginx -T 2>/dev/null | grep -E 'server_name|listen'"
+        },
+        {
+          "description": "Versión y módulos compilados",
+          "code": "nginx -V"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "test",
+        "configuracion",
+        "sintaxis"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Un nginx -t exitoso no garantiza que el servicio arranque: puede fallar al hacer bind si otro proceso usa el puerto o por SELinux. nginx -T es ideal para pegar la configuración efectiva en una consulta de soporte (quita los secretos antes)."
+    },
+    {
+      "title": "Recargar, reiniciar y controlar Nginx",
+      "command": "sudo nginx -t && sudo systemctl reload nginx",
+      "section": "Nginx",
+      "topic": "Control",
+      "description": "reload aplica la nueva configuración sin cortar conexiones activas (los workers se renuevan). restart detiene y vuelve a iniciar el servicio.",
+      "examples": [
+        {
+          "description": "Con la señal de Nginx",
+          "code": "sudo nginx -s reload"
+        },
+        {
+          "description": "Estado y últimos logs del servicio",
+          "code": "sudo systemctl status nginx --no-pager"
+        },
+        {
+          "description": "Habilitar al arrancar",
+          "code": "sudo systemctl enable --now nginx"
+        },
+        {
+          "description": "Detener ordenadamente",
+          "code": "sudo nginx -s quit"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "reload",
+        "restart",
+        "systemctl"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Encadena nginx -t con && para no recargar una configuración rota. reload falla en silencio si la configuración es inválida: el servicio sigue con la anterior. Cambios de listen en puertos o módulos requieren restart."
+    },
+    {
+      "title": "Instalar Nginx en Ubuntu y AlmaLinux",
+      "command": "sudo apt update && sudo apt install -y nginx",
+      "section": "Nginx",
+      "topic": "Instalación",
+      "description": "Instalación desde los repositorios de la distribución. La estructura de configuración difiere entre Ubuntu y AlmaLinux.",
+      "examples": [
+        {
+          "description": "AlmaLinux 9",
+          "code": "sudo dnf install -y nginx && sudo systemctl enable --now nginx"
+        },
+        {
+          "description": "Abrir el firewall en Ubuntu (ufw)",
+          "code": "sudo ufw allow 'Nginx Full'"
+        },
+        {
+          "description": "Abrir el firewall en AlmaLinux (firewalld)",
+          "code": "sudo firewall-cmd --permanent --add-service=http --add-service=https && sudo firewall-cmd --reload"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "instalar",
+        "ubuntu",
+        "almalinux",
+        "firewall"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Ubuntu usa /etc/nginx/sites-available y sites-enabled; AlmaLinux usa solo /etc/nginx/conf.d/*.conf. Esa diferencia hace que las guías de una distribución 'no funcionen' en la otra."
+    },
+    {
+      "title": "Crear un sitio con server block (Ubuntu)",
+      "command": "sudo ln -s /etc/nginx/sites-available/ejemplo.cl /etc/nginx/sites-enabled/ && sudo nginx -t && sudo systemctl reload nginx",
+      "section": "Nginx",
+      "topic": "Server blocks",
+      "description": "En Ubuntu cada sitio es un archivo en sites-available que se activa con un enlace simbólico en sites-enabled.",
+      "examples": [
+        {
+          "description": "Contenido mínimo de /etc/nginx/sites-available/ejemplo.cl",
+          "code": "server {\n    listen 80;\n    listen [::]:80;\n    server_name ejemplo.cl www.ejemplo.cl;\n    root /var/www/ejemplo.cl/html;\n    index index.html;\n\n    location / {\n        try_files $uri $uri/ =404;\n    }\n}"
+        },
+        {
+          "description": "Desactivar un sitio",
+          "code": "sudo rm /etc/nginx/sites-enabled/ejemplo.cl && sudo systemctl reload nginx"
+        },
+        {
+          "description": "Quitar el sitio por defecto",
+          "code": "sudo rm /etc/nginx/sites-enabled/default"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "server-block",
+        "sites-available",
+        "ubuntu"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Usa ln -s con rutas absolutas o el enlace queda roto. Borra el enlace, no el archivo de sites-available, para desactivar sin perder la configuración."
+    },
+    {
+      "title": "Crear un sitio con conf.d (AlmaLinux)",
+      "command": "sudo nano /etc/nginx/conf.d/ejemplo.cl.conf",
+      "section": "Nginx",
+      "topic": "Server blocks",
+      "description": "En AlmaLinux (y RHEL en general) se colocan los archivos .conf directamente en /etc/nginx/conf.d/; no existen sites-available/enabled.",
+      "examples": [
+        {
+          "description": "Contenido típico",
+          "code": "server {\n    listen 80;\n    server_name ejemplo.cl www.ejemplo.cl;\n    root /usr/share/nginx/html;\n}"
+        },
+        {
+          "description": "Validar y aplicar",
+          "code": "sudo nginx -t && sudo systemctl reload nginx"
+        },
+        {
+          "description": "Ver el contexto SELinux del directorio web",
+          "code": "ls -Z /usr/share/nginx/html"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "conf.d",
+        "almalinux",
+        "server-block"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si sirves archivos desde un directorio fuera de /usr/share/nginx o /var/www, SELinux los bloquea (403): ajusta con semanage fcontext + restorecon, ver el comando de SELinux en esta misma categoría."
+    },
+    {
+      "title": "Reverse proxy a una aplicación",
+      "command": "location / {\n    proxy_pass http://127.0.0.1:8000;\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    proxy_set_header X-Forwarded-Proto $scheme;\n}",
+      "section": "Nginx",
+      "topic": "Reverse proxy",
+      "description": "Redirige el tráfico a una aplicación local (FastAPI, Django, Node...). Los encabezados X-Forwarded-* permiten que la app sepa la IP y el esquema reales del cliente.",
+      "examples": [
+        {
+          "description": "Servidor completo para una app en el puerto 8000",
+          "code": "server {\n    listen 80;\n    server_name app.ejemplo.cl;\n\n    location / {\n        proxy_pass http://127.0.0.1:8000;\n        proxy_set_header Host $host;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n}"
+        },
+        {
+          "description": "Probar el proxy desde el servidor",
+          "code": "curl -I http://127.0.0.1:8000 && curl -I -H 'Host: app.ejemplo.cl' http://127.0.0.1"
+        },
+        {
+          "description": "Timeouts para peticiones lentas",
+          "code": "proxy_connect_timeout 5s;\nproxy_read_timeout 60s;"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "reverse-proxy",
+        "proxy_pass",
+        "headers"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Con proxy_pass http://127.0.0.1:8000/ (con barra final) Nginx reescribe la ruta del location; sin barra la pasa tal cual: es una fuente clásica de 404. Configura la app para confiar en X-Forwarded-* (por ejemplo --forwarded-allow-ips en uvicorn/gunicorn)."
+    },
+    {
+      "title": "WebSockets a través de Nginx (NiceGUI, Socket.IO)",
+      "command": "location / {\n    proxy_pass http://127.0.0.1:8080;\n    proxy_http_version 1.1;\n    proxy_set_header Upgrade $http_upgrade;\n    proxy_set_header Connection \"upgrade\";\n    proxy_set_header Host $host;\n    proxy_read_timeout 3600s;\n}",
+      "section": "Nginx",
+      "topic": "Reverse proxy",
+      "description": "Para que los WebSockets funcionen hay que usar HTTP/1.1 y reenviar los encabezados Upgrade y Connection. NiceGUI, Streamlit, Socket.IO y FastAPI WebSocket los necesitan.",
+      "examples": [
+        {
+          "description": "Mapa recomendado para Connection (en el contexto http)",
+          "code": "map $http_upgrade $connection_upgrade {\n    default upgrade;\n    ''      close;\n}"
+        },
+        {
+          "description": "Usarlo en el location",
+          "code": "proxy_set_header Connection $connection_upgrade;"
+        },
+        {
+          "description": "Probar el upgrade con curl",
+          "code": "curl -i -N -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: SGVsbG8=' http://127.0.0.1:8080/_nicegui_ws/socket.io/"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "websocket",
+        "upgrade",
+        "nicegui"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Síntoma de la trampa: la página carga pero queda 'Connection lost' o sin interactividad. Sin proxy_http_version 1.1 y el Upgrade, el WebSocket se cae a los segundos. proxy_read_timeout bajo (60 s por defecto) cierra conexiones inactivas."
+    },
+    {
+      "title": "Balanceo de carga con upstream",
+      "command": "upstream backend {\n    least_conn;\n    server 10.0.0.11:8000 max_fails=3 fail_timeout=10s;\n    server 10.0.0.12:8000;\n    server 10.0.0.13:8000 backup;\n}\nserver {\n    location / { proxy_pass http://backend; }\n}",
+      "section": "Nginx",
+      "topic": "Reverse proxy",
+      "description": "Reparte las peticiones entre varias instancias de la app. Nginx abierto hace comprobaciones pasivas de salud (max_fails).",
+      "examples": [
+        {
+          "description": "Afinidad por IP del cliente",
+          "code": "upstream backend {\n    ip_hash;\n    server 10.0.0.11:8000;\n    server 10.0.0.12:8000;\n}"
+        },
+        {
+          "description": "Keepalive hacia los backends",
+          "code": "upstream backend {\n    server 10.0.0.11:8000;\n    keepalive 32;\n}"
+        },
+        {
+          "description": "Ver a qué backend fue una petición (log)",
+          "code": "log_format upstream '$remote_addr -> $upstream_addr $status $request_time';"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "upstream",
+        "balanceo",
+        "least_conn"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para usar keepalive hacia upstream añade proxy_http_version 1.1 y proxy_set_header Connection \"\". Los chequeos activos de salud están solo en NGINX Plus."
+    },
+    {
+      "title": "Compresión gzip",
+      "command": "gzip on;\ngzip_comp_level 5;\ngzip_min_length 256;\ngzip_proxied any;\ngzip_vary on;\ngzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;",
+      "section": "Nginx",
+      "topic": "Rendimiento",
+      "description": "Comprime respuestas de texto para reducir el tráfico. Se coloca en el contexto http o server.",
+      "examples": [
+        {
+          "description": "Verificar que se comprime",
+          "code": "curl -s -H 'Accept-Encoding: gzip' -o /dev/null -D - https://ejemplo.cl | grep -i content-encoding"
+        },
+        {
+          "description": "Comparar tamaños",
+          "code": "curl -s https://ejemplo.cl | wc -c && curl -s -H 'Accept-Encoding: gzip' https://ejemplo.cl | wc -c"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "gzip",
+        "compresion",
+        "rendimiento"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "No comprimas imágenes JPG/PNG/WebP ni vídeos: ya están comprimidos. Nivel 4-6 es el equilibrio habitual. Brotli requiere un módulo adicional."
+    },
+    {
+      "title": "Caché de archivos estáticos",
+      "command": "location ~* \\.(?:css|js|woff2|png|jpg|jpeg|gif|svg|ico|webp)$ {\n    expires 30d;\n    add_header Cache-Control \"public, immutable\";\n    access_log off;\n}",
+      "section": "Nginx",
+      "topic": "Rendimiento",
+      "description": "Indica al navegador que guarde los estáticos durante semanas, reduciendo peticiones. Útil junto a nombres de archivo con hash en el build.",
+      "examples": [
+        {
+          "description": "Verificar las cabeceras",
+          "code": "curl -I https://ejemplo.cl/assets/app.8f3a.js"
+        },
+        {
+          "description": "Sin caché para el HTML principal",
+          "code": "location = /index.html {\n    add_header Cache-Control \"no-cache\";\n}"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "cache",
+        "estaticos",
+        "expires"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Una cabecera 'immutable' con 30 días solo es segura si los archivos tienen hash en el nombre. Si cambias un archivo sin cambiar su nombre, los usuarios verán la versión vieja. Ojo: add_header en un location anula los add_header del nivel superior."
+    },
+    {
+      "title": "Caché de proxy (proxy_cache)",
+      "command": "proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=api_cache:10m max_size=1g inactive=60m use_temp_path=off;",
+      "section": "Nginx",
+      "topic": "Rendimiento",
+      "description": "Guarda respuestas del backend en disco para servirlas sin llegar a la app. Se define en http y se activa en el location.",
+      "examples": [
+        {
+          "description": "Activarla en el location",
+          "code": "location /api/publico/ {\n    proxy_cache api_cache;\n    proxy_cache_valid 200 5m;\n    proxy_cache_use_stale error timeout updating;\n    add_header X-Cache-Status $upstream_cache_status;\n    proxy_pass http://127.0.0.1:8000;\n}"
+        },
+        {
+          "description": "Ver si hubo HIT o MISS",
+          "code": "curl -sI https://ejemplo.cl/api/publico/ | grep -i x-cache-status"
+        },
+        {
+          "description": "Vaciar el caché",
+          "code": "sudo rm -rf /var/cache/nginx/* && sudo systemctl reload nginx"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "proxy_cache",
+        "cache",
+        "rendimiento"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "No caches respuestas con cookies de sesión ni datos por usuario sin definir proxy_cache_key. La carpeta de caché debe ser escribible por el usuario de Nginx."
+    },
+    {
+      "title": "Limitar peticiones con limit_req",
+      "command": "limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;\n\nserver {\n    location /api/ {\n        limit_req zone=api burst=20 nodelay;\n        proxy_pass http://127.0.0.1:8000;\n    }\n}",
+      "section": "Nginx",
+      "topic": "Seguridad",
+      "description": "Protege la app de abusos y fuerza bruta limitando las peticiones por IP. Las peticiones excedentes reciben 503 (o el código que definas).",
+      "examples": [
+        {
+          "description": "Devolver 429 en lugar de 503",
+          "code": "limit_req_status 429;"
+        },
+        {
+          "description": "Limitar conexiones simultáneas por IP",
+          "code": "limit_conn_zone $binary_remote_addr zone=conn:10m;\nserver {\n    limit_conn conn 20;\n}"
+        },
+        {
+          "description": "Limitar solo el login",
+          "code": "location = /login {\n    limit_req zone=login burst=5;\n}"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "limit_req",
+        "rate-limit",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si hay un proxy o CDN delante (Cloudflare), $remote_addr será la IP del CDN: usa el módulo realip (set_real_ip_from + real_ip_header) para limitar por la IP real. limit_req_zone va en el contexto http, no en server."
+    },
+    {
+      "title": "Redirigir HTTP a HTTPS",
+      "command": "server {\n    listen 80;\n    listen [::]:80;\n    server_name ejemplo.cl www.ejemplo.cl;\n    return 301 https://$host$request_uri;\n}",
+      "section": "Nginx",
+      "topic": "Seguridad",
+      "description": "Redirige permanentemente todo el tráfico HTTP a HTTPS conservando host y ruta. Certbot suele añadirlo solo.",
+      "examples": [
+        {
+          "description": "Redirigir de www a dominio sin www",
+          "code": "server {\n    listen 443 ssl;\n    server_name www.ejemplo.cl;\n    return 301 https://ejemplo.cl$request_uri;\n}"
+        },
+        {
+          "description": "Comprobar la redirección",
+          "code": "curl -I http://ejemplo.cl"
+        },
+        {
+          "description": "Activar HSTS (solo cuando HTTPS funciona bien)",
+          "code": "add_header Strict-Transport-Security \"max-age=31536000; includeSubDomains\" always;"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "redireccion",
+        "https",
+        "301",
+        "hsts"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "301 se cachea de forma agresiva en los navegadores: pruébalo primero con 302. HSTS con max-age largo es difícil de revertir: actívalo solo si todo el dominio soportará HTTPS."
+    },
+    {
+      "title": "Cabeceras de seguridad",
+      "command": "add_header X-Content-Type-Options \"nosniff\" always;\nadd_header X-Frame-Options \"SAMEORIGIN\" always;\nadd_header Referrer-Policy \"strict-origin-when-cross-origin\" always;\nserver_tokens off;",
+      "section": "Nginx",
+      "topic": "Seguridad",
+      "description": "Cabeceras que endurecen la app frente a ataques comunes. server_tokens off oculta la versión de Nginx en errores y cabeceras.",
+      "examples": [
+        {
+          "description": "Content-Security-Policy básica (ajústala a tu app)",
+          "code": "add_header Content-Security-Policy \"default-src 'self'\" always;"
+        },
+        {
+          "description": "Revisar cabeceras de respuesta",
+          "code": "curl -sI https://ejemplo.cl | grep -iE 'x-frame|nosniff|strict-transport|server'"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "seguridad",
+        "cabeceras",
+        "headers"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Una CSP demasiado estricta rompe la app (scripts inline, fuentes de terceros): empieza con Content-Security-Policy-Report-Only. Usa 'always' para que las cabeceras vayan también en errores 4xx/5xx."
+    },
+    {
+      "title": "Autenticación básica con htpasswd",
+      "command": "sudo htpasswd -c /etc/nginx/.htpasswd admin",
+      "section": "Nginx",
+      "topic": "Seguridad",
+      "description": "Crea un archivo de usuarios para proteger una ruta con usuario y contraseña. Rápido para paneles internos o entornos de staging.",
+      "examples": [
+        {
+          "description": "Añadir otro usuario (sin -c para no sobrescribir)",
+          "code": "sudo htpasswd /etc/nginx/.htpasswd ana"
+        },
+        {
+          "description": "Proteger una ruta",
+          "code": "location /admin/ {\n    auth_basic \"Zona privada\";\n    auth_basic_user_file /etc/nginx/.htpasswd;\n    proxy_pass http://127.0.0.1:8000;\n}"
+        },
+        {
+          "description": "Sin htpasswd instalado (openssl)",
+          "code": "printf 'admin:%s\\n' \"$(openssl passwd -apr1)\" | sudo tee -a /etc/nginx/.htpasswd"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "htpasswd",
+        "auth_basic",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "htpasswd viene en apache2-utils (Ubuntu) o httpd-tools (AlmaLinux). -c crea el archivo y destruye el anterior. Basic auth sin HTTPS expone las credenciales en texto claro. Restringe permisos con chmod 640 y chgrp www-data/nginx."
+    },
+    {
+      "title": "Servir una SPA con try_files",
+      "command": "location / {\n    root /var/www/app/dist;\n    try_files $uri $uri/ /index.html;\n}",
+      "section": "Nginx",
+      "topic": "Aplicaciones",
+      "description": "En aplicaciones de una sola página (React, Vue, Angular) las rutas del cliente deben devolver index.html en vez de 404.",
+      "examples": [
+        {
+          "description": "Servir la API en /api y el frontend en /",
+          "code": "location /api/ {\n    proxy_pass http://127.0.0.1:8000/;\n}\nlocation / {\n    root /var/www/app/dist;\n    try_files $uri /index.html;\n}"
+        },
+        {
+          "description": "Verificar una ruta del cliente",
+          "code": "curl -I https://ejemplo.cl/dashboard/ventas"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "spa",
+        "try_files",
+        "frontend"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Subida de archivos grandes: client_max_body_size",
+      "command": "client_max_body_size 50m;",
+      "section": "Nginx",
+      "topic": "Aplicaciones",
+      "description": "Nginx rechaza cuerpos de petición mayores a 1 MB por defecto con el error 413. Súbelo para formularios de carga de archivos.",
+      "examples": [
+        {
+          "description": "En un location específico",
+          "code": "location /upload/ {\n    client_max_body_size 200m;\n    proxy_pass http://127.0.0.1:8000;\n}"
+        },
+        {
+          "description": "Ver el error en el log",
+          "code": "sudo grep 413 /var/log/nginx/access.log | tail"
+        },
+        {
+          "description": "Tiempos más largos para cargas lentas",
+          "code": "client_body_timeout 120s;\nproxy_request_buffering off;"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "client_max_body_size",
+        "413",
+        "upload"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "El límite también existe en la app (Django DATA_UPLOAD_MAX_MEMORY_SIZE, FastAPI/uvicorn, Gunicorn): si subes el de Nginx y falla igual, revisa los de atrás."
+    },
+    {
+      "title": "Leer logs de Nginx",
+      "command": "sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log",
+      "section": "Nginx",
+      "topic": "Logs",
+      "description": "access.log registra cada petición; error.log los problemas del servidor y del proxy. Primera parada ante 502/504.",
+      "examples": [
+        {
+          "description": "Top de IP que más piden",
+          "code": "awk '{print $1}' /var/log/nginx/access.log | sort | uniq -c | sort -rn | head"
+        },
+        {
+          "description": "Códigos de estado más frecuentes",
+          "code": "awk '{print $9}' /var/log/nginx/access.log | sort | uniq -c | sort -rn"
+        },
+        {
+          "description": "Solo errores 5xx",
+          "code": "awk '$9 ~ /^5/' /var/log/nginx/access.log | tail"
+        },
+        {
+          "description": "Con journald",
+          "code": "sudo journalctl -u nginx -n 100 --no-pager"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "logs",
+        "access",
+        "error",
+        "tail"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Logs rotan con logrotate (/etc/logrotate.d/nginx); después de rotar manualmente envía nginx -s reopen. Un error 'connect() failed (111: Connection refused) while connecting to upstream' significa que la app de atrás está caída."
+    },
+    {
+      "title": "Formato de log personalizado con tiempos",
+      "command": "log_format tiempos '$remote_addr [$time_local] \"$request\" $status $body_bytes_sent rt=$request_time urt=$upstream_response_time';\naccess_log /var/log/nginx/access.log tiempos;",
+      "section": "Nginx",
+      "topic": "Logs",
+      "description": "Añade tiempos de respuesta del servidor y del upstream para encontrar endpoints lentos.",
+      "examples": [
+        {
+          "description": "Peticiones más lentas",
+          "code": "awk '{for(i=1;i<=NF;i++) if($i ~ /^rt=/){split($i,a,\"=\"); print a[2], $0}}' /var/log/nginx/access.log | sort -rn | head"
+        },
+        {
+          "description": "Formato JSON para ingestar en herramientas",
+          "code": "log_format json escape=json '{\"ip\":\"$remote_addr\",\"status\":$status,\"rt\":$request_time,\"uri\":\"$request_uri\"}';"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "log_format",
+        "rendimiento",
+        "tiempos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Diagnosticar 502, 504 y 403",
+      "command": "sudo tail -n 50 /var/log/nginx/error.log",
+      "section": "Nginx",
+      "topic": "Diagnóstico",
+      "description": "Guía rápida de causas típicas: 502 (la app no responde o cerró la conexión), 504 (timeout), 403 (permisos o SELinux), 404 (ruta o proxy_pass mal).",
+      "examples": [
+        {
+          "description": "¿Está la app escuchando?",
+          "code": "sudo ss -tulpn | grep -E ':8000|:8080'"
+        },
+        {
+          "description": "¿Responde directo, saltando Nginx?",
+          "code": "curl -sv http://127.0.0.1:8000/ -o /dev/null"
+        },
+        {
+          "description": "Permisos del directorio del sitio",
+          "code": "namei -l /var/www/ejemplo.cl/html/index.html"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "502",
+        "504",
+        "403",
+        "diagnostico"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "502 en AlmaLinux con una app que SÍ responde por curl directo = casi seguro SELinux (httpd_can_network_connect). 403 con permisos correctos = contexto SELinux o falta de index. namei -l muestra qué directorio de la ruta bloquea."
+    },
+    {
+      "title": "SELinux y Nginx en AlmaLinux: proxy a la app",
+      "command": "sudo setsebool -P httpd_can_network_connect 1",
+      "section": "Nginx",
+      "topic": "SELinux",
+      "description": "Por defecto SELinux impide que Nginx abra conexiones de red salientes, por lo que el proxy_pass a una app devuelve 502. Este booleano lo permite de forma persistente (-P).",
+      "examples": [
+        {
+          "description": "Ver el booleano",
+          "code": "getsebool httpd_can_network_connect"
+        },
+        {
+          "description": "Confirmar el bloqueo en los logs de auditoría",
+          "code": "sudo ausearch -m avc -ts recent | grep nginx"
+        },
+        {
+          "description": "Permitir solo un puerto no estándar a Nginx",
+          "code": "sudo semanage port -a -t http_port_t -p tcp 8080"
+        },
+        {
+          "description": "Permitir servir contenido desde otra carpeta",
+          "code": "sudo semanage fcontext -a -t httpd_sys_content_t \"/srv/sitio(/.*)?\" && sudo restorecon -Rv /srv/sitio"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "selinux",
+        "almalinux",
+        "httpd_can_network_connect"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "TRAMPA REAL: en AlmaLinux 9 el proxy funciona en pruebas locales con curl pero Nginx devuelve 502 'Permission denied while connecting to upstream'. No desactives SELinux (setenforce 0 es solo diagnóstico): usa el booleano. Ubuntu no trae SELinux activo por defecto (usa AppArmor)."
+    },
+    {
+      "title": "Páginas de error y mantenimiento",
+      "command": "error_page 502 503 504 /mantenimiento.html;\nlocation = /mantenimiento.html {\n    root /var/www/errores;\n    internal;\n}",
+      "section": "Nginx",
+      "topic": "Aplicaciones",
+      "description": "Muestra una página amigable cuando el backend cae. También sirve para poner el sitio en modo mantenimiento.",
+      "examples": [
+        {
+          "description": "Modo mantenimiento con 503",
+          "code": "if (-f /var/www/mantenimiento.flag) { return 503; }"
+        },
+        {
+          "description": "Activar mantenimiento",
+          "code": "sudo touch /var/www/mantenimiento.flag"
+        },
+        {
+          "description": "Desactivar",
+          "code": "sudo rm /var/www/mantenimiento.flag"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "error_page",
+        "mantenimiento",
+        "503"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Bloquear rutas, agentes y países de bots",
+      "command": "location ~ /\\.(?!well-known) {\n    deny all;\n}",
+      "section": "Nginx",
+      "topic": "Aplicaciones",
+      "description": "Bloquea el acceso a archivos ocultos (.git, .env) excepto /.well-known, necesario para validar certificados.",
+      "examples": [
+        {
+          "description": "Bloquear user-agents abusivos",
+          "code": "if ($http_user_agent ~* (sqlmap|nikto|masscan)) { return 444; }"
+        },
+        {
+          "description": "Permitir solo ciertas IP a /admin",
+          "code": "location /admin/ {\n    allow 203.0.113.10;\n    deny all;\n}"
+        },
+        {
+          "description": "Probar que .env no se expone",
+          "code": "curl -I https://ejemplo.cl/.env"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "bloquear",
+        "seguridad",
+        "deny",
+        "well-known"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Nunca dejes .git o .env dentro del directorio publicado. El código 444 de Nginx cierra la conexión sin responder."
+    },
+    {
+      "title": "Estado de Nginx con stub_status",
+      "command": "location = /nginx_status {\n    stub_status;\n    allow 127.0.0.1;\n    deny all;\n}",
+      "section": "Nginx",
+      "topic": "Diagnóstico",
+      "description": "Expone métricas básicas (conexiones activas, peticiones) solo a localhost. Base para Prometheus nginx-exporter o checks de monitoreo.",
+      "examples": [
+        {
+          "description": "Consultarlo",
+          "code": "curl -s http://127.0.0.1/nginx_status"
+        },
+        {
+          "description": "Número de conexiones activas",
+          "code": "curl -s http://127.0.0.1/nginx_status | awk '/Active/ {print $3}'"
+        }
+      ],
+      "tags": [
+        "nginx",
+        "stub_status",
+        "monitoreo",
+        "metricas"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    }
+  ]
+}

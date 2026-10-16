@@ -1,0 +1,515 @@
+{
+  "category": {
+    "slug": "claude",
+    "name": "Claude",
+    "icon": "smart_toy",
+    "order": 16,
+    "description": "Claude desde la terminal: Claude Code (sesiones, modo -p, permisos, MCP, plugins, agentes), la API con curl, el CLI ant y el SDK de Python."
+  },
+  "commands": [
+    {
+      "title": "Enviar un mensaje a la API",
+      "command": "curl https://api.anthropic.com/v1/messages",
+      "section": "API con curl",
+      "topic": "Messages",
+      "description": "Llamada mínima a la Messages API: modelo, max_tokens y la lista de mensajes. Requiere las cabeceras x-api-key y anthropic-version.",
+      "examples": [
+        {
+          "description": "Mensaje simple",
+          "code": "curl -s https://api.anthropic.com/v1/messages -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" \\\n  -d '{\"model\":\"claude-opus-5-5\",\"max_tokens\":16000,\"messages\":[{\"role\":\"user\",\"content\":\"Explica qué es un healthcheck\"}]}'"
+        },
+        {
+          "description": "Solo el texto de la respuesta",
+          "code": "curl -s https://api.anthropic.com/v1/messages -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" \\\n  -d '{\"model\":\"claude-opus-5-5\",\"max_tokens\":16000,\"messages\":[{\"role\":\"user\",\"content\":\"Hola\"}]}' | jq -r '.content[] | select(.type==\"text\") | .text'"
+        }
+      ],
+      "tags": [
+        "api",
+        "curl",
+        "messages"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "syntax": "POST /v1/messages  {model, max_tokens, messages[, system, tools, ...]}",
+      "notes": "Parsea siempre con jq, nunca con grep/sed: el JSON puede traer comillas y saltos de línea."
+    },
+    {
+      "title": "Exportar la API key de forma segura",
+      "command": "export ANTHROPIC_API_KEY=...",
+      "section": "API con curl",
+      "topic": "Autenticación",
+      "description": "La key va en una variable de entorno, nunca escrita en scripts ni en el historial de la shell.",
+      "examples": [
+        {
+          "description": "Leerla sin que quede en el historial",
+          "code": "read -rs ANTHROPIC_API_KEY && export ANTHROPIC_API_KEY"
+        },
+        {
+          "description": "Cargarla desde un .env ignorado por git",
+          "code": "set -a; source .env; set +a"
+        },
+        {
+          "description": "PowerShell (solo la sesión actual)",
+          "code": "$env:ANTHROPIC_API_KEY = Read-Host -MaskInput"
+        }
+      ],
+      "tags": [
+        "api",
+        "seguridad",
+        "secretos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "DevOps"
+      ],
+      "notes": "Una ANTHROPIC_API_KEY exportada (aunque vacía) tiene prioridad sobre cualquier perfil OAuth del CLI ant y de los SDK: desexpórtala con unset si usas perfiles."
+    },
+    {
+      "title": "Respuesta en streaming (SSE)",
+      "command": "\"stream\": true",
+      "section": "API con curl",
+      "topic": "Streaming",
+      "description": "Con stream:true la respuesta llega como Server-Sent Events: message_start, content_block_delta… message_stop. Evita timeouts en respuestas largas.",
+      "examples": [
+        {
+          "description": "Ver los eventos crudos",
+          "code": "curl -N https://api.anthropic.com/v1/messages -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" \\\n  -d '{\"model\":\"claude-opus-5-5\",\"max_tokens\":64000,\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"Escribe un haiku\"}]}'"
+        },
+        {
+          "description": "Imprimir solo el texto a medida que llega",
+          "code": "curl -sN https://api.anthropic.com/v1/messages -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" \\\n  -d '{\"model\":\"claude-opus-5-5\",\"max_tokens\":64000,\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"Explica Docker\"}]}' \\\n  | sed -n 's/^data: //p' | jq -rj 'select(.type==\"content_block_delta\") | .delta.text // empty'"
+        }
+      ],
+      "tags": [
+        "api",
+        "streaming",
+        "sse"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "curl -N desactiva el buffer para ver los eventos en tiempo real."
+    },
+    {
+      "title": "System prompt y esfuerzo",
+      "command": "\"system\": \"...\", \"output_config\": {\"effort\": \"high\"}",
+      "section": "API con curl",
+      "topic": "Parámetros",
+      "description": "system fija el rol y las reglas; output_config.effort (low…max) controla cuánto razona el modelo. En claude-opus-5-5 el pensamiento siempre está activo y el esfuerzo por defecto es medium.",
+      "examples": [
+        {
+          "description": "Asistente con reglas y esfuerzo alto",
+          "code": "curl -s https://api.anthropic.com/v1/messages -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" \\\n  -d '{\"model\":\"claude-opus-5-5\",\"max_tokens\":16000,\"system\":\"Eres un SRE senior. Responde en español.\",\"output_config\":{\"effort\":\"high\"},\"messages\":[{\"role\":\"user\",\"content\":\"¿Cómo diagnostico un OOMKilled?\"}]}'"
+        },
+        {
+          "description": "Esfuerzo bajo para tareas mecánicas",
+          "code": "curl -s https://api.anthropic.com/v1/messages -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" \\\n  -d '{\"model\":\"claude-haiku-5-5\",\"max_tokens\":1024,\"output_config\":{\"effort\":\"low\"},\"messages\":[{\"role\":\"user\",\"content\":\"Clasifica: error de red\"}]}'"
+        }
+      ],
+      "tags": [
+        "api",
+        "effort",
+        "system"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "En los modelos actuales budget_tokens fue eliminado (400). Usa thinking {type: adaptive} y output_config.effort."
+    },
+    {
+      "title": "Contar tokens antes de enviar",
+      "command": "POST /v1/messages/count_tokens",
+      "section": "API con curl",
+      "topic": "Costos",
+      "description": "Calcula cuántos tokens de entrada tendría una petición sin ejecutarla: útil para estimar costos de archivos grandes.",
+      "examples": [
+        {
+          "description": "Contar los tokens de un archivo",
+          "code": "jq -n --rawfile t README.md '{model:\"claude-opus-5-5\",messages:[{role:\"user\",content:$t}]}' \\\n  | curl -s https://api.anthropic.com/v1/messages/count_tokens -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" -d @- | jq .input_tokens"
+        },
+        {
+          "description": "Comparar dos versiones de un prompt",
+          "code": "for f in prompt-v1.txt prompt-v2.txt; do echo -n \"$f: \"; jq -n --rawfile t $f '{model:\"claude-opus-5-5\",messages:[{role:\"user\",content:$t}]}' | curl -s https://api.anthropic.com/v1/messages/count_tokens -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" -d @- | jq .input_tokens; done"
+        }
+      ],
+      "tags": [
+        "api",
+        "tokens",
+        "costos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "jq --rawfile escapa bien el contenido del archivo: nunca lo concatenes a mano dentro del JSON."
+    },
+    {
+      "title": "Listar los modelos disponibles",
+      "command": "GET /v1/models",
+      "section": "API con curl",
+      "topic": "Modelos",
+      "description": "Devuelve los modelos de tu cuenta con su ventana de contexto (max_input_tokens), salida máxima y capacidades.",
+      "examples": [
+        {
+          "description": "IDs disponibles",
+          "code": "curl -s https://api.anthropic.com/v1/models -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" | jq -r '.data[].id'"
+        },
+        {
+          "description": "Detalle de un modelo",
+          "code": "curl -s https://api.anthropic.com/v1/models/claude-opus-5-5 -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" | jq '{id, max_input_tokens, max_tokens}'"
+        }
+      ],
+      "tags": [
+        "api",
+        "modelos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Prompt caching",
+      "command": "\"cache_control\": {\"type\": \"ephemeral\"}",
+      "section": "API con curl",
+      "topic": "Costos",
+      "description": "Marca el final del prefijo estable (system largo, documentos) para que las llamadas siguientes lo lean desde caché, mucho más barato.",
+      "examples": [
+        {
+          "description": "Cachear un system prompt grande",
+          "code": "curl -s https://api.anthropic.com/v1/messages -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" \\\n  -d '{\"model\":\"claude-opus-5-5\",\"max_tokens\":16000,\"system\":[{\"type\":\"text\",\"text\":\"<manual de 50 páginas>\",\"cache_control\":{\"type\":\"ephemeral\"}}],\"messages\":[{\"role\":\"user\",\"content\":\"Resume el capítulo 3\"}]}' | jq .usage"
+        },
+        {
+          "description": "Verificar que la caché funciona",
+          "code": "# En la segunda llamada idéntica: usage.cache_read_input_tokens > 0"
+        }
+      ],
+      "tags": [
+        "api",
+        "cache",
+        "costos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Cualquier byte distinto en el prefijo invalida la caché: nada de timestamps en el system prompt."
+    },
+    {
+      "title": "Definir herramientas (tool use)",
+      "command": "\"tools\": [{\"name\", \"description\", \"input_schema\"}]",
+      "section": "API con curl",
+      "topic": "Herramientas",
+      "description": "Describe funciones que Claude puede pedir usar; tu código las ejecuta y devuelve el resultado como tool_result.",
+      "examples": [
+        {
+          "description": "Herramienta para consultar el estado de un servicio",
+          "code": "curl -s https://api.anthropic.com/v1/messages -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" \\\n  -d '{\"model\":\"claude-opus-5-5\",\"max_tokens\":16000,\"tools\":[{\"name\":\"estado_servicio\",\"description\":\"Devuelve el estado systemd de un servicio\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"nombre\":{\"type\":\"string\"}},\"required\":[\"nombre\"]}}],\"messages\":[{\"role\":\"user\",\"content\":\"¿Está arriba nginx?\"}]}' | jq '.stop_reason, .content'"
+        },
+        {
+          "description": "Detectar que pidió una herramienta",
+          "code": "jq -e '.stop_reason == \"tool_use\"' respuesta.json && jq '.content[] | select(.type==\"tool_use\")' respuesta.json"
+        }
+      ],
+      "tags": [
+        "api",
+        "tools",
+        "agentes"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "En claude-opus-5-5 tool_choice any/tool devuelve 400: usa auto + instrucción en el prompt, o strict:true en la herramienta."
+    },
+    {
+      "title": "Procesamiento por lotes (Batches)",
+      "command": "POST /v1/messages/batches",
+      "section": "API con curl",
+      "topic": "Batches",
+      "description": "Envía muchas peticiones de una vez para procesarlas de forma asíncrona al 50 % del costo; los resultados se descargan al terminar.",
+      "examples": [
+        {
+          "description": "Crear un lote",
+          "code": "curl -s https://api.anthropic.com/v1/messages/batches -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" -H \"content-type: application/json\" -d @lote.json | jq '{id, processing_status}'"
+        },
+        {
+          "description": "Consultar el estado",
+          "code": "curl -s https://api.anthropic.com/v1/messages/batches/$BATCH_ID -H \"x-api-key: $ANTHROPIC_API_KEY\" -H \"anthropic-version: 2023-06-01\" | jq .processing_status"
+        }
+      ],
+      "tags": [
+        "api",
+        "batches",
+        "costos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Los resultados llegan en cualquier orden: identifícalos por custom_id, nunca por posición."
+    },
+    {
+      "title": "Autenticarse con el CLI ant",
+      "command": "ant auth login",
+      "section": "CLI ant",
+      "topic": "Autenticación",
+      "description": "Login OAuth en el navegador: guarda un perfil que usan ant y los SDK sin necesidad de API key estática.",
+      "examples": [
+        {
+          "description": "Login",
+          "code": "ant auth login"
+        },
+        {
+          "description": "En un servidor sin navegador",
+          "code": "ant auth login --no-browser"
+        },
+        {
+          "description": "Ver qué credencial está activa",
+          "code": "ant auth status"
+        }
+      ],
+      "tags": [
+        "ant",
+        "auth"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Trampa n.º 1: una ANTHROPIC_API_KEY exportada gana sobre el perfil. Revisa con ant auth status y haz unset si hace falta."
+    },
+    {
+      "title": "Perfiles por workspace",
+      "command": "ant auth login --profile <nombre>",
+      "section": "CLI ant",
+      "topic": "Autenticación",
+      "description": "Cada perfil queda atado a una organización y workspace: uno por entorno evita mezclar recursos.",
+      "examples": [
+        {
+          "description": "Crear un perfil",
+          "code": "ant auth login --profile trabajo"
+        },
+        {
+          "description": "Usarlo en un comando",
+          "code": "ant --profile trabajo models list"
+        },
+        {
+          "description": "Cambiar el perfil por defecto",
+          "code": "ant profile activate trabajo"
+        }
+      ],
+      "tags": [
+        "ant",
+        "perfiles"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Mensaje desde el CLI ant",
+      "command": "ant messages create --model <m> --max-tokens <n> --message '<msg>'",
+      "section": "CLI ant",
+      "topic": "Messages",
+      "description": "Lo mismo que el curl pero con flags tipados en YAML relajado; --transform extrae campos sin jq.",
+      "examples": [
+        {
+          "description": "Pregunta y solo el texto",
+          "code": "ant messages create --model claude-opus-5-5 --max-tokens 1024 \\\n  --message '{role: user, content: \"¿Qué es un advisory lock?\"}' --transform 'content.0.text' -r"
+        },
+        {
+          "description": "Listar modelos",
+          "code": "ant models list --transform id -r"
+        }
+      ],
+      "tags": [
+        "ant",
+        "messages"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Token OAuth para curl",
+      "command": "ant auth print-credentials --access-token",
+      "section": "CLI ant",
+      "topic": "Autenticación",
+      "description": "Imprime un token de acceso de corta duración para usarlo con curl como Bearer, junto a la cabecera beta de OAuth.",
+      "examples": [
+        {
+          "description": "curl con el perfil activo",
+          "code": "curl -s https://api.anthropic.com/v1/messages \\\n  -H \"Authorization: Bearer $(ant auth print-credentials --access-token)\" \\\n  -H \"anthropic-version: 2023-06-01\" -H \"anthropic-beta: oauth-2025-04-20\" -H \"content-type: application/json\" \\\n  -d '{\"model\":\"claude-opus-5-5\",\"max_tokens\":1024,\"messages\":[{\"role\":\"user\",\"content\":\"Hola\"}]}'"
+        },
+        {
+          "description": "Exportar las credenciales a un script",
+          "code": "set -a; eval \"$(ant auth print-credentials --env)\"; set +a"
+        }
+      ],
+      "tags": [
+        "ant",
+        "oauth",
+        "curl"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "Sin --access-token imprime el JSON completo de credenciales, no el token: en una cabecera falla."
+    },
+    {
+      "title": "Depurar peticiones con ant",
+      "command": "ant <recurso> <acción> --debug",
+      "section": "CLI ant",
+      "topic": "Diagnóstico",
+      "description": "Muestra la petición y la respuesta HTTP completas (con la key oculta): la forma rápida de entender un 400.",
+      "examples": [
+        {
+          "description": "Ver el HTTP de una llamada",
+          "code": "ant models list --debug"
+        },
+        {
+          "description": "Formatear errores en YAML",
+          "code": "ant messages create --model claude-opus-5-5 --max-tokens 10 --message '{role: user, content: hola}' --format-error yaml"
+        }
+      ],
+      "tags": [
+        "ant",
+        "debug"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Instalar el SDK de Python",
+      "command": "pip install anthropic",
+      "section": "SDK Python",
+      "topic": "Instalación",
+      "description": "SDK oficial: maneja reintentos, streaming, tipos y errores. El cliente sin argumentos toma ANTHROPIC_API_KEY o el perfil de ant.",
+      "examples": [
+        {
+          "description": "Instalar en el venv del proyecto",
+          "code": "python -m venv env && env/bin/pip install anthropic"
+        },
+        {
+          "description": "Fijarlo en requirements",
+          "code": "echo 'anthropic' >> requirements.txt && pip freeze | grep anthropic"
+        }
+      ],
+      "tags": [
+        "sdk",
+        "python"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Primer mensaje con el SDK",
+      "command": "client.messages.create(...)",
+      "section": "SDK Python",
+      "topic": "Messages",
+      "description": "Llamada básica con el cliente oficial; la respuesta trae bloques de contenido y el uso de tokens.",
+      "examples": [
+        {
+          "description": "Script mínimo",
+          "code": "import anthropic\n\nclient = anthropic.Anthropic()\nmsg = client.messages.create(\n    model=\"claude-opus-5-5\",\n    max_tokens=16000,\n    messages=[{\"role\": \"user\", \"content\": \"Dame 3 consejos de hardening SSH\"}],\n)\nprint(next(b.text for b in msg.content if b.type == \"text\"))\nprint(msg.usage)"
+        },
+        {
+          "description": "Ejecutarlo en una línea",
+          "code": "python -c 'import anthropic; m=anthropic.Anthropic().messages.create(model=\"claude-opus-5-5\",max_tokens=1024,messages=[{\"role\":\"user\",\"content\":\"hola\"}]); print(m.content[-1].text)'"
+        }
+      ],
+      "tags": [
+        "sdk",
+        "python",
+        "messages"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Streaming con el SDK",
+      "command": "client.messages.stream(...)",
+      "section": "SDK Python",
+      "topic": "Streaming",
+      "description": "Imprime el texto a medida que llega y al final obtiene el mensaje completo con get_final_message().",
+      "examples": [
+        {
+          "description": "Streaming en terminal",
+          "code": "import anthropic\n\nclient = anthropic.Anthropic()\nwith client.messages.stream(\n    model=\"claude-opus-5-5\", max_tokens=64000,\n    messages=[{\"role\": \"user\", \"content\": \"Explica Kubernetes a un dev backend\"}],\n) as stream:\n    for texto in stream.text_stream:\n        print(texto, end=\"\", flush=True)\n    final = stream.get_final_message()\nprint(\"\\n\", final.usage)"
+        },
+        {
+          "description": "Por qué usarlo",
+          "code": "# max_tokens grandes sin streaming chocan con el timeout HTTP del SDK"
+        }
+      ],
+      "tags": [
+        "sdk",
+        "python",
+        "streaming"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ]
+    },
+    {
+      "title": "Manejo de errores del SDK",
+      "command": "except anthropic.RateLimitError",
+      "section": "SDK Python",
+      "topic": "Errores",
+      "description": "Captura de lo más específico a lo más general para distinguir lo reintentable (429, 5xx, red) de lo que no (400, 404).",
+      "examples": [
+        {
+          "description": "Cadena de excepciones",
+          "code": "import anthropic\n\ntry:\n    client.messages.create(model=\"claude-opus-5-5\", max_tokens=1024, messages=msgs)\nexcept anthropic.NotFoundError:\n    print(\"modelo inexistente\")\nexcept anthropic.RateLimitError:\n    print(\"429: reintentar más tarde\")\nexcept anthropic.APIStatusError as e:\n    print(\"error HTTP\", e.status_code)\nexcept anthropic.APIConnectionError:\n    print(\"sin red\")"
+        },
+        {
+          "description": "Ajustar reintentos y timeout",
+          "code": "client = anthropic.Anthropic(max_retries=5, timeout=60.0)"
+        }
+      ],
+      "tags": [
+        "sdk",
+        "python",
+        "errores"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Software"
+      ],
+      "notes": "El SDK ya reintenta 2 veces 408/409/429/5xx por defecto: no envuelvas cada llamada en tu propio bucle de reintentos."
+    }
+  ]
+}

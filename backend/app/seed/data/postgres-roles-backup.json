@@ -1,0 +1,548 @@
+{
+  "category": {
+    "slug": "postgres",
+    "name": "PostgreSQL",
+    "icon": "storage",
+    "order": 10,
+    "description": "PostgreSQL desde psql: esquema, roles, backups con pg_dump, diagnóstico de rendimiento y administración en producción."
+  },
+  "commands": [
+    {
+      "title": "Crear un rol de aplicación",
+      "command": "CREATE ROLE app LOGIN PASSWORD '<contraseña>';",
+      "section": "Roles y permisos",
+      "topic": "Roles",
+      "description": "En PostgreSQL usuarios y grupos son roles. Un rol con LOGIN puede conectarse. Crea uno por aplicación con los mínimos privilegios.",
+      "examples": [
+        {
+          "description": "Desde la shell",
+          "code": "createuser -U postgres --pwprompt app"
+        },
+        {
+          "description": "Con límite de conexiones y caducidad",
+          "code": "CREATE ROLE reportes LOGIN PASSWORD '<contraseña>' CONNECTION LIMIT 10 VALID UNTIL '2027-01-01';"
+        },
+        {
+          "description": "Rol sin login para agrupar permisos",
+          "code": "CREATE ROLE lectura NOLOGIN;"
+        },
+        {
+          "description": "Cambiar la contraseña con \\password (no queda en el historial)",
+          "code": "\\password app"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "roles",
+        "create-role",
+        "login"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Escribir CREATE ROLE ... PASSWORD '...' deja la clave en el historial de psql y posiblemente en los logs; usa \\password. Las contraseñas se guardan con SCRAM-SHA-256 desde PG 14 (password_encryption)."
+    },
+    {
+      "title": "Dueño y permisos sobre la base",
+      "command": "ALTER DATABASE tienda OWNER TO app;",
+      "section": "Roles y permisos",
+      "topic": "Roles",
+      "description": "El dueño de una base u objeto tiene todos los privilegios sobre él. Define dueños claros: la app idealmente no es superusuario ni dueña de todo.",
+      "examples": [
+        {
+          "description": "Cambiar dueño de una tabla",
+          "code": "ALTER TABLE ventas OWNER TO app;"
+        },
+        {
+          "description": "Reasignar todo lo de un rol antes de borrarlo",
+          "code": "REASSIGN OWNED BY viejo TO app;\nDROP OWNED BY viejo;\nDROP ROLE viejo;"
+        },
+        {
+          "description": "Quitar el CONNECT público a una base",
+          "code": "REVOKE CONNECT ON DATABASE tienda FROM PUBLIC;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "owner",
+        "alter",
+        "reassign"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Por defecto PUBLIC tiene CONNECT y TEMP sobre las bases nuevas. DROP ROLE falla si el rol aún posee objetos: usa REASSIGN OWNED + DROP OWNED primero."
+    },
+    {
+      "title": "GRANT sobre esquema y tablas",
+      "command": "GRANT USAGE ON SCHEMA ventas TO app;\nGRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ventas TO app;\nGRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ventas TO app;",
+      "section": "Roles y permisos",
+      "topic": "Permisos",
+      "description": "Para acceder a una tabla se necesita USAGE sobre el esquema y el privilegio sobre la tabla. Olvidar las secuencias es un error clásico al insertar.",
+      "examples": [
+        {
+          "description": "Solo lectura",
+          "code": "GRANT USAGE ON SCHEMA ventas TO lectura;\nGRANT SELECT ON ALL TABLES IN SCHEMA ventas TO lectura;"
+        },
+        {
+          "description": "Dar el rol de grupo a un usuario",
+          "code": "GRANT lectura TO ana;"
+        },
+        {
+          "description": "Revocar",
+          "code": "REVOKE DELETE ON ALL TABLES IN SCHEMA ventas FROM app;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "grant",
+        "permisos",
+        "esquema"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "GRANT ... ON ALL TABLES afecta solo a las tablas EXISTENTES. Para las futuras usa ALTER DEFAULT PRIVILEGES. Sin GRANT USAGE ON SCHEMA obtendrás 'permission denied for schema' aunque la tabla tenga permisos."
+    },
+    {
+      "title": "Permisos por defecto para objetos futuros",
+      "command": "ALTER DEFAULT PRIVILEGES IN SCHEMA ventas GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app;",
+      "section": "Roles y permisos",
+      "topic": "Permisos",
+      "description": "Define qué permisos recibirán automáticamente las tablas que se creen en adelante. Se aplica a los objetos creados por el rol que ejecuta el comando (o el que indiques con FOR ROLE).",
+      "examples": [
+        {
+          "description": "Para objetos creados por el rol migrador",
+          "code": "ALTER DEFAULT PRIVILEGES FOR ROLE migrador IN SCHEMA ventas GRANT SELECT ON TABLES TO lectura;"
+        },
+        {
+          "description": "Secuencias futuras",
+          "code": "ALTER DEFAULT PRIVILEGES IN SCHEMA ventas GRANT USAGE, SELECT ON SEQUENCES TO app;"
+        },
+        {
+          "description": "Ver los defaults configurados",
+          "code": "\\ddp"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "default-privileges",
+        "permisos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los defaults valen solo para objetos creados por el rol que corrió el comando: si las migraciones las ejecuta otro rol, indica FOR ROLE. Es la causa típica de 'las tablas nuevas no son visibles para el usuario de solo lectura'."
+    },
+    {
+      "title": "Endurecer el esquema public (PG 15+)",
+      "command": "REVOKE CREATE ON SCHEMA public FROM PUBLIC;",
+      "section": "Roles y permisos",
+      "topic": "Permisos",
+      "description": "Impide que cualquier rol cree objetos en public. Desde PG 15 es el comportamiento por defecto en bases nuevas, pero las migradas desde versiones anteriores lo conservan abierto.",
+      "examples": [
+        {
+          "description": "Verificar los permisos del esquema",
+          "code": "\\dn+ public"
+        },
+        {
+          "description": "Crear un esquema propio para la aplicación",
+          "code": "CREATE SCHEMA app AUTHORIZATION app;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "seguridad",
+        "public",
+        "schema"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Tras pg_upgrade desde PG 14 o anterior, public sigue permitiendo CREATE a todos: ejecuta el REVOKE explícitamente."
+    },
+    {
+      "title": "Controlar el acceso con pg_hba.conf",
+      "command": "host    tienda    app    10.0.0.0/24    scram-sha-256",
+      "section": "Roles y permisos",
+      "topic": "Autenticación",
+      "description": "pg_hba.conf define quién puede conectarse, desde dónde y con qué método. Se evalúa de arriba abajo y gana la primera línea que coincide.",
+      "examples": [
+        {
+          "description": "Ver la ruta del archivo",
+          "code": "SHOW hba_file;"
+        },
+        {
+          "description": "Ver las reglas cargadas (PG 10+)",
+          "code": "SELECT line_number, type, database, user_name, address, auth_method FROM pg_hba_file_rules;"
+        },
+        {
+          "description": "Aplicar cambios sin reiniciar",
+          "code": "SELECT pg_reload_conf();"
+        },
+        {
+          "description": "Exigir TLS a conexiones remotas",
+          "code": "hostssl  all  all  0.0.0.0/0  scram-sha-256"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_hba",
+        "autenticacion",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Un error de sintaxis en pg_hba.conf hace que el reload ignore el cambio (revisa pg_hba_file_rules.error). 'trust' nunca en producción. Ubuntu: /etc/postgresql/<ver>/main/pg_hba.conf; AlmaLinux: /var/lib/pgsql/<ver>/data/pg_hba.conf. Escuchar en red además requiere listen_addresses en postgresql.conf."
+    },
+    {
+      "title": "Backup en formato custom con pg_dump",
+      "command": "pg_dump -h localhost -U app -Fc -f tienda_$(date +%F).dump tienda",
+      "section": "Backup y restauración",
+      "topic": "pg_dump",
+      "description": "El formato custom (-Fc) está comprimido y permite restaurar selectivamente y en paralelo con pg_restore. Es el formato recomendado para backups lógicos.",
+      "syntax": "pg_dump [opciones] BASE",
+      "examples": [
+        {
+          "description": "Desde un contenedor",
+          "code": "docker exec postgres pg_dump -U postgres -Fc tienda > tienda.dump"
+        },
+        {
+          "description": "Texto SQL plano comprimido",
+          "code": "pg_dump -U app tienda | gzip > tienda.sql.gz"
+        },
+        {
+          "description": "Con nivel de compresión explícito",
+          "code": "pg_dump -U app -Fc -Z 9 -f tienda.dump tienda"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_dump",
+        "backup",
+        "custom"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con redirección > en contenedores NO uses -t en docker exec (la TTY añade \\r y corrompe el binario). pg_dump toma una instantánea consistente sin bloquear escrituras, pero no incluye roles: usa pg_dumpall --globals-only aparte."
+    },
+    {
+      "title": "Backup paralelo en formato directorio",
+      "command": "pg_dump -Fd -j 4 -f /var/backups/tienda_dir tienda",
+      "section": "Backup y restauración",
+      "topic": "pg_dump",
+      "description": "El formato directorio (-Fd) permite volcar y restaurar con varios procesos en paralelo (-j). Acelera mucho las bases grandes.",
+      "examples": [
+        {
+          "description": "Restaurar en paralelo",
+          "code": "pg_restore -j 4 -d tienda_nueva /var/backups/tienda_dir"
+        },
+        {
+          "description": "Comprimir el directorio para transportarlo",
+          "code": "tar czf tienda_dir.tgz -C /var/backups tienda_dir"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_dump",
+        "paralelo",
+        "directorio"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "-j solo funciona con -Fd (no con -Fc ni texto). El directorio de destino no debe existir. Usa tantos jobs como núcleos disponibles sin saturar el disco."
+    },
+    {
+      "title": "pg_dump parcial: esquema, datos o tablas",
+      "command": "pg_dump -U app --schema-only -f esquema.sql tienda",
+      "section": "Backup y restauración",
+      "topic": "pg_dump",
+      "description": "Exporta solo la estructura, solo los datos o ciertos objetos. Ideal para versionar el DDL o clonar datos concretos.",
+      "examples": [
+        {
+          "description": "Solo datos",
+          "code": "pg_dump -U app --data-only -Fc -f datos.dump tienda"
+        },
+        {
+          "description": "Una tabla",
+          "code": "pg_dump -U app -t public.clientes -Fc -f clientes.dump tienda"
+        },
+        {
+          "description": "Un esquema completo",
+          "code": "pg_dump -U app -n ventas -Fc -f ventas.dump tienda"
+        },
+        {
+          "description": "Excluir datos de una tabla grande",
+          "code": "pg_dump -U app -Fc --exclude-table-data=public.logs -f sin_logs.dump tienda"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_dump",
+        "schema-only",
+        "tablas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Backup de roles y globales con pg_dumpall",
+      "command": "pg_dumpall -U postgres --globals-only > globales.sql",
+      "section": "Backup y restauración",
+      "topic": "pg_dump",
+      "description": "pg_dump no guarda roles ni tablespaces. pg_dumpall --globals-only los exporta para poder recrear permisos al restaurar en otro servidor.",
+      "examples": [
+        {
+          "description": "Todo el clúster en texto plano",
+          "code": "pg_dumpall -U postgres | gzip > cluster.sql.gz"
+        },
+        {
+          "description": "Solo roles",
+          "code": "pg_dumpall -U postgres --roles-only > roles.sql"
+        },
+        {
+          "description": "Restaurar los globales primero",
+          "code": "psql -U postgres -f globales.sql postgres"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_dumpall",
+        "globals",
+        "roles"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El archivo con --globals-only incluye hashes de contraseñas: protégelo (chmod 600). Restaura los roles ANTES de restaurar las bases, o los GRANT/OWNER fallarán."
+    },
+    {
+      "title": "Restaurar con pg_restore",
+      "command": "pg_restore -U postgres -d tienda --clean --if-exists --no-owner -j 4 tienda.dump",
+      "section": "Backup y restauración",
+      "topic": "pg_restore",
+      "description": "Restaura un dump -Fc o -Fd. --clean --if-exists borra los objetos antes de recrearlos; -j acelera con paralelismo.",
+      "syntax": "pg_restore [opciones] archivo.dump",
+      "examples": [
+        {
+          "description": "Crear la base y restaurar",
+          "code": "createdb -U postgres tienda_nueva && pg_restore -U postgres -d tienda_nueva tienda.dump"
+        },
+        {
+          "description": "Hacer que cree la base ella misma",
+          "code": "pg_restore -U postgres -C -d postgres tienda.dump"
+        },
+        {
+          "description": "Restaurar en contenedor",
+          "code": "docker exec -i postgres pg_restore -U postgres -d tienda --clean --if-exists < tienda.dump"
+        },
+        {
+          "description": "Abortar ante el primer error",
+          "code": "pg_restore -U postgres -d tienda --exit-on-error tienda.dump"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_restore",
+        "restaurar"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "--no-owner evita errores 'role does not exist' si el rol dueño no está en el destino. Sin --exit-on-error, pg_restore sigue y termina con avisos: revisa el resumen. Para archivos SQL de texto no sirve pg_restore, usa psql -f."
+    },
+    {
+      "title": "Restaurar selectivamente con -l y -L",
+      "command": "pg_restore -l tienda.dump > lista.txt",
+      "section": "Backup y restauración",
+      "topic": "pg_restore",
+      "description": "-l lista el contenido del dump (tabla de contenidos). Edita la lista y pásala con -L para restaurar solo lo que quieras.",
+      "examples": [
+        {
+          "description": "Comentar con ';' las líneas que NO quieres y restaurar el resto",
+          "code": "pg_restore -L lista.txt -d tienda tienda.dump"
+        },
+        {
+          "description": "Restaurar una sola tabla",
+          "code": "pg_restore -U postgres -d tienda -t clientes tienda.dump"
+        },
+        {
+          "description": "Generar el SQL en vez de ejecutarlo",
+          "code": "pg_restore -f salida.sql tienda.dump"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_restore",
+        "lista",
+        "selectivo"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Restaurar un dump SQL de texto",
+      "command": "psql -U app -d tienda -v ON_ERROR_STOP=1 -f tienda.sql",
+      "section": "Backup y restauración",
+      "topic": "pg_dump",
+      "description": "Los dumps en formato texto se restauran con psql. ON_ERROR_STOP evita seguir cargando sobre un estado inconsistente.",
+      "examples": [
+        {
+          "description": "Desde un archivo comprimido",
+          "code": "gunzip -c tienda.sql.gz | psql -U app -d tienda -v ON_ERROR_STOP=1"
+        },
+        {
+          "description": "Todo en una sola transacción",
+          "code": "psql -U app -d tienda -1 -v ON_ERROR_STOP=1 -f tienda.sql"
+        },
+        {
+          "description": "Dump de un contenedor a otro",
+          "code": "docker exec postgres_a pg_dump -U postgres tienda | docker exec -i postgres_b psql -U postgres tienda"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "restaurar",
+        "sql"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Backup programado con cron y rotación",
+      "command": "0 2 * * * /usr/local/bin/pg-backup.sh >> /var/log/pg-backup.log 2>&1",
+      "section": "Backup y restauración",
+      "topic": "Automatización",
+      "description": "Script diario que genera un dump y borra copias antiguas. Usa ~/.pgpass para la clave y ejecuta como el usuario con permisos.",
+      "examples": [
+        {
+          "description": "Contenido del script",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\nDEST=/var/backups/postgres\nmkdir -p \"$DEST\"\npg_dump -h localhost -U app -Fc -f \"$DEST/tienda_$(date +%F_%H%M).dump\" tienda\nfind \"$DEST\" -name 'tienda_*.dump' -mtime +14 -delete"
+        },
+        {
+          "description": "Verificar que el dump es legible",
+          "code": "pg_restore -l /var/backups/postgres/tienda_2026-10-16_0200.dump | head"
+        },
+        {
+          "description": "Instalar la tarea para el usuario postgres",
+          "code": "sudo -u postgres crontab -e"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "backup",
+        "cron",
+        "rotacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Un backup sin verificación de restauración no existe: restaura periódicamente en una base de prueba. Copia fuera del VPS (restic, rclone, rsync). En cron el entorno es mínimo: usa rutas absolutas."
+    },
+    {
+      "title": "Backup físico con pg_basebackup",
+      "command": "pg_basebackup -h primario -U replicador -D /var/lib/postgresql/replica -Fp -Xs -P -R",
+      "section": "Backup y restauración",
+      "topic": "Físico",
+      "description": "Copia binaria del clúster completo. Con -R deja listo el archivo para arrancar como réplica en streaming. Base de la replicación y del PITR.",
+      "examples": [
+        {
+          "description": "Backup comprimido en formato tar",
+          "code": "pg_basebackup -h primario -U replicador -D /var/backups/base -Ft -z -Xs -P"
+        },
+        {
+          "description": "Crear el rol de replicación en el primario",
+          "code": "CREATE ROLE replicador WITH REPLICATION LOGIN PASSWORD '<contraseña>';"
+        },
+        {
+          "description": "Verificar el estado de réplicas en el primario",
+          "code": "SELECT client_addr, state, sent_lsn, replay_lsn FROM pg_stat_replication;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_basebackup",
+        "replicacion",
+        "backup"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Necesita wal_level=replica (por defecto), max_wal_senders suficiente y una línea 'host replication replicador ...' en pg_hba.conf. El directorio -D destino debe estar vacío. -Xs incluye el WAL necesario por streaming."
+    },
+    {
+      "title": "Archivado WAL y PITR",
+      "command": "archive_mode = on\narchive_command = 'test ! -f /var/backups/wal/%f && cp %p /var/backups/wal/%f'",
+      "section": "Backup y restauración",
+      "topic": "Físico",
+      "description": "El archivado continuo del WAL junto con un pg_basebackup permite restaurar a cualquier instante (PITR). Se configura en postgresql.conf.",
+      "examples": [
+        {
+          "description": "Configurar la restauración a un instante (en postgresql.conf del destino)",
+          "code": "restore_command = 'cp /var/backups/wal/%f %p'\nrecovery_target_time = '2026-10-16 09:14:00-03'"
+        },
+        {
+          "description": "Crear la señal de recuperación y arrancar",
+          "code": "touch /var/lib/postgresql/18/main/recovery.signal && sudo systemctl start postgresql"
+        },
+        {
+          "description": "Forzar un cambio de segmento WAL",
+          "code": "SELECT pg_switch_wal();"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "wal",
+        "pitr",
+        "archivado"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Desde PG 12 se usa recovery.signal (ya no existe recovery.conf). archive_mode requiere reinicio. Herramientas como pgBackRest o Barman gestionan esto de forma más robusta que un cp casero."
+    }
+  ]
+}

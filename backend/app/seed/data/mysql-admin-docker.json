@@ -1,0 +1,709 @@
+{
+  "category": {
+    "slug": "mysql",
+    "name": "MySQL",
+    "icon": "table_chart",
+    "order": 9,
+    "description": "MySQL y MariaDB desde la terminal: cliente, consultas, usuarios, backups, rendimiento y operación en producción."
+  },
+  "commands": [
+    {
+      "title": "Estado del servidor con mysqladmin",
+      "command": "mysqladmin -u root -p status",
+      "section": "Administración y rendimiento",
+      "topic": "mysqladmin",
+      "description": "Muestra de un vistazo uptime, hilos, consultas y consultas lentas. mysqladmin es la herramienta de administración rápida desde shell.",
+      "syntax": "mysqladmin [opciones] comando [args]",
+      "examples": [
+        {
+          "description": "Comprobar si el servidor responde (ideal para healthchecks)",
+          "code": "mysqladmin -u root -p ping"
+        },
+        {
+          "description": "Todas las variables de estado, refrescando cada 2 s",
+          "code": "mysqladmin -u root -p extended-status -i 2 -r"
+        },
+        {
+          "description": "Procesos activos",
+          "code": "mysqladmin -u root -p processlist"
+        },
+        {
+          "description": "Versión y datos del servidor",
+          "code": "mysqladmin -u root -p version"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "mysqladmin",
+        "status",
+        "ping"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "ping devuelve 'mysqld is alive' y código 0 incluso si ese usuario no tiene permisos (basta que el servidor responda); sirve para healthchecks. En MariaDB el binario es mariadb-admin."
+    },
+    {
+      "title": "Apagar, recargar y matar con mysqladmin",
+      "command": "mysqladmin -u root -p shutdown",
+      "section": "Administración y rendimiento",
+      "topic": "mysqladmin",
+      "description": "Apaga el servidor de forma ordenada (flush de buffers). También recarga logs y termina conexiones desde shell.",
+      "examples": [
+        {
+          "description": "Terminar varias conexiones",
+          "code": "mysqladmin -u root -p kill 123,124"
+        },
+        {
+          "description": "Rotar los logs (general, slow, binlog)",
+          "code": "mysqladmin -u root -p flush-logs"
+        },
+        {
+          "description": "Recargar privilegios",
+          "code": "mysqladmin -u root -p reload"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "mysqladmin",
+        "shutdown",
+        "kill"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Prefiere systemctl stop mysqld: respeta timeouts y dependencias. Un shutdown con una transacción grande abierta puede tardar minutos (rollback); no mates el proceso con kill -9."
+    },
+    {
+      "title": "Revisar y reparar tablas con mysqlcheck",
+      "command": "mysqlcheck -u root -p --all-databases --check",
+      "section": "Administración y rendimiento",
+      "topic": "Mantenimiento",
+      "description": "Verifica la integridad de las tablas desde shell, sin entrar al cliente. También permite analizar y optimizar.",
+      "examples": [
+        {
+          "description": "Analizar (actualiza estadísticas del optimizador)",
+          "code": "mysqlcheck -u root -p --analyze tienda"
+        },
+        {
+          "description": "Optimizar tablas fragmentadas",
+          "code": "mysqlcheck -u root -p --optimize tienda"
+        },
+        {
+          "description": "Auto-reparación de tablas MyISAM dañadas",
+          "code": "mysqlcheck -u root -p --auto-repair --check tienda"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "mysqlcheck",
+        "mantenimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En InnoDB OPTIMIZE equivale a recrear la tabla (reconstruye y bloquea brevemente); no lo programes a ciegas. REPAIR no existe para InnoDB: si una tabla InnoDB está corrupta, restaura desde backup."
+    },
+    {
+      "title": "ANALYZE y OPTIMIZE TABLE",
+      "command": "ANALYZE TABLE ventas;",
+      "section": "Administración y rendimiento",
+      "topic": "Mantenimiento",
+      "description": "ANALYZE refresca las estadísticas de índices para que el optimizador elija mejores planes. OPTIMIZE reconstruye la tabla y recupera espacio.",
+      "examples": [
+        {
+          "description": "Reconstruir y compactar",
+          "code": "OPTIMIZE TABLE logs;"
+        },
+        {
+          "description": "Ver fragmentación antes de decidir",
+          "code": "SELECT table_name, ROUND(data_free/1024/1024) AS libre_mb FROM information_schema.tables WHERE table_schema='tienda' ORDER BY data_free DESC LIMIT 10;"
+        },
+        {
+          "description": "Equivalente en línea para InnoDB",
+          "code": "ALTER TABLE logs ENGINE=InnoDB;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "analyze",
+        "optimize",
+        "fragmentacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En tablas grandes OPTIMIZE necesita espacio libre similar al tamaño de la tabla y genera mucho binlog. Hazlo en ventanas de bajo tráfico. Con innodb_file_per_table=ON (por defecto) el espacio sí se devuelve al disco."
+    },
+    {
+      "title": "Activar el slow query log",
+      "command": "SET GLOBAL slow_query_log = 1; SET GLOBAL long_query_time = 1;",
+      "section": "Administración y rendimiento",
+      "topic": "Rendimiento",
+      "description": "Registra las consultas que tardan más que el umbral. Es la fuente número uno para encontrar qué optimizar.",
+      "examples": [
+        {
+          "description": "Registrar también consultas sin índice (con cuidado)",
+          "code": "SET GLOBAL log_queries_not_using_indexes = 1;"
+        },
+        {
+          "description": "Ver dónde escribe el log",
+          "code": "SHOW VARIABLES LIKE 'slow_query_log_file';"
+        },
+        {
+          "description": "Persistir en my.cnf",
+          "code": "[mysqld]\nslow_query_log=1\nlong_query_time=1\nslow_query_log_file=/var/log/mysql/slow.log"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "slow-query-log",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "log_queries_not_using_indexes puede llenar el disco en tablas pequeñas con full scan legítimo; combínalo con log_throttle_queries_not_using_indexes. Rota el log con logrotate. En AlmaLinux la ruta suele ser /var/lib/mysql/<host>-slow.log."
+    },
+    {
+      "title": "Analizar el slow log con mysqldumpslow y pt-query-digest",
+      "command": "mysqldumpslow -s t -t 10 /var/log/mysql/slow.log",
+      "section": "Administración y rendimiento",
+      "topic": "Rendimiento",
+      "description": "Resume el slow log agrupando consultas similares. mysqldumpslow viene con MySQL; pt-query-digest (Percona Toolkit) es mucho más completo.",
+      "examples": [
+        {
+          "description": "Ordenar por número de ejecuciones",
+          "code": "mysqldumpslow -s c -t 10 /var/log/mysql/slow.log"
+        },
+        {
+          "description": "Informe completo con Percona Toolkit",
+          "code": "pt-query-digest /var/log/mysql/slow.log | less"
+        },
+        {
+          "description": "Solo la última hora",
+          "code": "pt-query-digest --since '1h' /var/log/mysql/slow.log"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "mysqldumpslow",
+        "pt-query-digest",
+        "slow-log"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los números de las consultas se reemplazan por N y las cadenas por 'S' para agrupar. Optimiza primero lo que más tiempo TOTAL consume, no lo más lento individual."
+    },
+    {
+      "title": "Consultas más costosas con sys y performance_schema",
+      "command": "SELECT * FROM sys.statement_analysis ORDER BY total_latency DESC LIMIT 10;",
+      "section": "Administración y rendimiento",
+      "topic": "Rendimiento",
+      "description": "El esquema sys resume performance_schema en vistas legibles: sentencias más costosas, tablas sin uso, esperas de I/O.",
+      "examples": [
+        {
+          "description": "Índices que nadie usa (candidatos a borrar)",
+          "code": "SELECT * FROM sys.schema_unused_indexes WHERE object_schema = 'tienda';"
+        },
+        {
+          "description": "Tablas con full scans",
+          "code": "SELECT * FROM sys.schema_tables_with_full_table_scans LIMIT 10;"
+        },
+        {
+          "description": "Resumen de uso de memoria",
+          "code": "SELECT * FROM sys.memory_global_total;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "sys",
+        "performance_schema",
+        "diagnostico"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Las estadísticas se reinician al arrancar, así que 'sin uso' solo es fiable tras días de tráfico real. performance_schema ocupa memoria: en servidores muy pequeños puede desactivarse (performance_schema=OFF) pero pierdes estas vistas."
+    },
+    {
+      "title": "Ajustar el buffer pool de InnoDB",
+      "command": "SET GLOBAL innodb_buffer_pool_size = 2147483648;",
+      "section": "Administración y rendimiento",
+      "topic": "Configuración",
+      "description": "El buffer pool es la caché principal de InnoDB: suele ser el ajuste más influyente. En un servidor dedicado se usa 50–70 % de la RAM.",
+      "examples": [
+        {
+          "description": "Ver la tasa de aciertos de lectura",
+          "code": "SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_read%';"
+        },
+        {
+          "description": "Configuración persistente en my.cnf (4 GB)",
+          "code": "[mysqld]\ninnodb_buffer_pool_size=4G"
+        },
+        {
+          "description": "Ver el tamaño actual en MB",
+          "code": "SELECT @@innodb_buffer_pool_size/1024/1024 AS mb;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "innodb",
+        "buffer-pool",
+        "memoria"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Cambiar el valor en caliente es posible (se redimensiona en bloques) pero no en servidores con poca RAM: con swap, el rendimiento cae en picada. Si MySQL comparte VPS con otros servicios (por ejemplo n8n), deja memoria para ellos."
+    },
+    {
+      "title": "Dónde está my.cnf y qué archivos lee",
+      "command": "mysqld --verbose --help | grep -A1 'Default options'",
+      "section": "Administración y rendimiento",
+      "topic": "Configuración",
+      "description": "MySQL lee varios archivos de configuración en orden; los últimos pisan a los anteriores. Conocer el orden evita editar un archivo que se ignora.",
+      "examples": [
+        {
+          "description": "Rutas típicas en Ubuntu",
+          "code": "ls /etc/mysql/ /etc/mysql/mysql.conf.d/ /etc/mysql/conf.d/"
+        },
+        {
+          "description": "Rutas típicas en AlmaLinux",
+          "code": "ls /etc/my.cnf /etc/my.cnf.d/"
+        },
+        {
+          "description": "Ver valores efectivos de [mysqld]",
+          "code": "my_print_defaults mysqld"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "configuracion",
+        "my.cnf"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En Ubuntu el servidor lee /etc/mysql/mysql.conf.d/mysqld.cnf; en AlmaLinux /etc/my.cnf.d/. MariaDB usa /etc/mysql/mariadb.conf.d/ (Debian) o /etc/my.cnf.d/server.cnf. Reinicia el servicio para aplicar variables no dinámicas."
+    },
+    {
+      "title": "Administrar el servicio con systemd",
+      "command": "sudo systemctl status mysql",
+      "section": "Administración y rendimiento",
+      "topic": "Servicio",
+      "description": "Gestiona el demonio del servidor. El nombre del servicio varía por distribución y por motor.",
+      "examples": [
+        {
+          "description": "Ubuntu con MySQL: reiniciar",
+          "code": "sudo systemctl restart mysql"
+        },
+        {
+          "description": "AlmaLinux con MySQL Community: arrancar y habilitar",
+          "code": "sudo systemctl enable --now mysqld"
+        },
+        {
+          "description": "MariaDB (ambas distribuciones)",
+          "code": "sudo systemctl restart mariadb"
+        },
+        {
+          "description": "Ver los últimos logs del servicio",
+          "code": "sudo journalctl -u mysql -n 100 --no-pager"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "systemd",
+        "servicio",
+        "journalctl"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El servicio es 'mysql' en Debian/Ubuntu y 'mysqld' en RHEL/AlmaLinux. En AlmaLinux la contraseña temporal de root de MySQL Community aparece en el log: grep 'temporary password' /var/log/mysqld.log."
+    },
+    {
+      "title": "Endurecer una instalación nueva",
+      "command": "sudo mysql_secure_installation",
+      "section": "Administración y rendimiento",
+      "topic": "Servicio",
+      "description": "Asistente que fija la clave de root, elimina usuarios anónimos y la base 'test', y deshabilita el acceso remoto de root.",
+      "examples": [
+        {
+          "description": "Comprobar usuarios anónimos o sin clave",
+          "code": "SELECT user, host, plugin, authentication_string = '' AS sin_clave FROM mysql.user;"
+        },
+        {
+          "description": "Escuchar solo en local (my.cnf)",
+          "code": "[mysqld]\nbind-address=127.0.0.1"
+        },
+        {
+          "description": "Ver en qué puertos escucha",
+          "code": "sudo ss -tulpn | grep -E '3306|33060'"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "seguridad",
+        "hardening",
+        "bind-address"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "MySQL 8 también abre el puerto 33060 (X Protocol): ciérralo con mysqlx=OFF si no lo usas. Aunque bind-address sea local, abre el firewall solo a las IP que necesites. MariaDB incluye mariadb-secure-installation."
+    },
+    {
+      "title": "Configurar una réplica (MySQL 8.4)",
+      "command": "CHANGE REPLICATION SOURCE TO SOURCE_HOST='10.0.0.10', SOURCE_USER='rep', SOURCE_PASSWORD='<contraseña>', SOURCE_AUTO_POSITION=1, GET_SOURCE_PUBLIC_KEY=1;",
+      "section": "Administración y rendimiento",
+      "topic": "Replicación",
+      "description": "Apunta una réplica a su servidor origen usando GTID. Requiere gtid_mode=ON, server_id únicos y un usuario con REPLICATION SLAVE en el origen.",
+      "examples": [
+        {
+          "description": "Crear el usuario de replicación en el origen",
+          "code": "CREATE USER 'rep'@'10.0.0.%' IDENTIFIED BY '<contraseña>'; GRANT REPLICATION SLAVE ON *.* TO 'rep'@'10.0.0.%';"
+        },
+        {
+          "description": "Arrancar la replicación",
+          "code": "START REPLICA;"
+        },
+        {
+          "description": "Detenerla",
+          "code": "STOP REPLICA;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "replicacion",
+        "gtid",
+        "replica"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Sintaxis nueva: CHANGE REPLICATION SOURCE TO / START REPLICA (CHANGE MASTER TO y START SLAVE fueron retirados en 8.4). En MariaDB sigue siendo CHANGE MASTER TO ... MASTER_USE_GTID=slave_pos. Antes de arrancar, inicializa la réplica con un dump --source-data o un backup físico."
+    },
+    {
+      "title": "Estado de la replicación",
+      "command": "SHOW REPLICA STATUS\\G",
+      "section": "Administración y rendimiento",
+      "topic": "Replicación",
+      "description": "Muestra si los hilos de E/S y SQL de la réplica están corriendo y cuánto atraso hay. Las dos columnas clave son Replica_IO_Running y Replica_SQL_Running.",
+      "examples": [
+        {
+          "description": "Solo las líneas relevantes",
+          "code": "SHOW REPLICA STATUS\\G"
+        },
+        {
+          "description": "Atraso en segundos desde la shell",
+          "code": "mysql -e \"SHOW REPLICA STATUS\\G\" | grep -E 'Running|Seconds_Behind|Last_.*Error'"
+        },
+        {
+          "description": "Saltar un evento problemático con GTID (último recurso)",
+          "code": "STOP REPLICA; SET GTID_NEXT='<uuid>:<n>'; BEGIN; COMMIT; SET GTID_NEXT='AUTOMATIC'; START REPLICA;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "replicacion",
+        "show-replica-status",
+        "lag"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "En MariaDB y versiones antiguas el comando es SHOW SLAVE STATUS y las columnas Slave_IO_Running / Slave_SQL_Running. Seconds_Behind_Source en NULL significa que la replicación está detenida, no que no haya atraso. Saltar eventos puede dejar datos inconsistentes."
+    },
+    {
+      "title": "Levantar MySQL 8.4 en Docker con UTF-8",
+      "command": "docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD -e LANG=C.UTF-8 -p 127.0.0.1:3306:3306 -v mysql_data:/var/lib/mysql mysql:8.4",
+      "section": "Docker y producción",
+      "topic": "Contenedor",
+      "description": "Arranca un servidor MySQL LTS persistiendo datos en un volumen nombrado y publicado solo en localhost. LANG=C.UTF-8 evita corromper ñ y tildes de los scripts de inicialización.",
+      "examples": [
+        {
+          "description": "Con una base y usuario iniciales",
+          "code": "docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD -e MYSQL_DATABASE=tienda -e MYSQL_USER=app -e MYSQL_PASSWORD=$APP_DB_PASSWORD -e LANG=C.UTF-8 -v mysql_data:/var/lib/mysql mysql:8.4"
+        },
+        {
+          "description": "Forzar utf8mb4 como charset del servidor",
+          "code": "docker run -d --name mysql -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD -e LANG=C.UTF-8 -v mysql_data:/var/lib/mysql mysql:8.4 --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci"
+        },
+        {
+          "description": "Esperar a que esté listo",
+          "code": "until docker exec mysql mysqladmin ping -uroot -p\"$MYSQL_ROOT_PASSWORD\" --silent; do sleep 2; done"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "docker",
+        "contenedor",
+        "utf8",
+        "lang"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "TRAMPA REAL: la imagen oficial no define LANG, y sin LANG=C.UTF-8 los scripts de /docker-entrypoint-initdb.d con ñ o tildes se importan corruptos (mojibake). MYSQL_ROOT_PASSWORD y los scripts de init solo se aplican cuando el volumen está VACÍO: cambiar la variable después no cambia la clave. Publica en 127.0.0.1 y no en 0.0.0.0."
+    },
+    {
+      "title": "MySQL en Docker Compose con healthcheck",
+      "command": "services:\n  db:\n    image: mysql:8.4\n    environment:\n      LANG: C.UTF-8\n      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}\n      MYSQL_DATABASE: tienda\n    volumes:\n      - mysql_data:/var/lib/mysql\n      - ./init:/docker-entrypoint-initdb.d:ro\n    healthcheck:\n      test: [\"CMD\", \"mysqladmin\", \"ping\", \"-h\", \"127.0.0.1\", \"-uroot\", \"-p${MYSQL_ROOT_PASSWORD}\"]\n      interval: 10s\n      timeout: 5s\n      retries: 10\nvolumes:\n  mysql_data:",
+      "section": "Docker y producción",
+      "topic": "Contenedor",
+      "description": "Definición típica de un servicio MySQL con volumen persistente, scripts de inicio y healthcheck para que otros servicios esperen con depends_on.",
+      "examples": [
+        {
+          "description": "Esperar a que esté healthy antes de levantar la app",
+          "code": "depends_on:\n  db:\n    condition: service_healthy"
+        },
+        {
+          "description": "Levantar y ver el log de inicialización",
+          "code": "docker compose up -d db && docker compose logs -f db"
+        },
+        {
+          "description": "Reiniciar de cero (borra los datos)",
+          "code": "docker compose down -v && docker compose up -d"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "docker",
+        "compose",
+        "healthcheck"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Los scripts .sql de initdb.d solo corren con el volumen vacío y en orden alfabético. El primer arranque tarda: el healthcheck con start_period evita falsos 'unhealthy'. En Compose, $ literal en la clave debe escribirse $$."
+    },
+    {
+      "title": "Ejecutar el cliente dentro del contenedor",
+      "command": "docker exec -it mysql mysql -uroot -p",
+      "section": "Docker y producción",
+      "topic": "Contenedor",
+      "description": "Abre el cliente mysql del propio contenedor, sin instalar nada en el host. Muy útil en el VPS donde la base corre en Docker.",
+      "examples": [
+        {
+          "description": "Una sentencia puntual",
+          "code": "docker exec mysql mysql -uroot -p\"$MYSQL_ROOT_PASSWORD\" -e \"SHOW DATABASES;\""
+        },
+        {
+          "description": "Restaurar un dump local en el contenedor",
+          "code": "docker exec -i mysql mysql -uroot -p\"$MYSQL_ROOT_PASSWORD\" tienda < tienda.sql"
+        },
+        {
+          "description": "Con Compose",
+          "code": "docker compose exec db mysql -uroot -p"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "docker",
+        "exec",
+        "cliente"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Para recibir un dump por stdin usa -i sin -t (la TTY corrompe la entrada binaria). La contraseña en -p<clave> queda visible en ps dentro del contenedor y en el historial: usa MYSQL_PWD o un archivo de opciones montado."
+    },
+    {
+      "title": "Backup de MySQL en Docker",
+      "command": "docker exec mysql sh -c 'mysqldump -uroot -p\"$MYSQL_ROOT_PASSWORD\" --single-transaction --routines --triggers --events --all-databases' | gzip > mysql_$(date +%F).sql.gz",
+      "section": "Docker y producción",
+      "topic": "Contenedor",
+      "description": "Ejecuta mysqldump dentro del contenedor y comprime el resultado en el host. Las comillas simples hacen que $MYSQL_ROOT_PASSWORD se resuelva dentro del contenedor.",
+      "examples": [
+        {
+          "description": "Verificar que el backup no está vacío ni corrupto",
+          "code": "gzip -t mysql_2026-10-16.sql.gz && zcat mysql_2026-10-16.sql.gz | head -20"
+        },
+        {
+          "description": "Backup del volumen completo (con la base detenida)",
+          "code": "docker stop mysql && docker run --rm -v mysql_data:/datos -v $PWD:/backup alpine tar czf /backup/mysql_data.tgz -C /datos . && docker start mysql"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "docker",
+        "backup",
+        "mysqldump"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El tar del volumen solo es consistente con el servidor detenido. Para backups en caliente usa siempre mysqldump o XtraBackup. Guarda una copia fuera del VPS."
+    },
+    {
+      "title": "Actualizar versión de MySQL en Docker",
+      "command": "docker exec mysql mysql -uroot -p -e \"SELECT VERSION();\"",
+      "section": "Docker y producción",
+      "topic": "Contenedor",
+      "description": "Ver la versión y planificar un cambio de imagen. MySQL solo soporta actualizaciones entre versiones consecutivas (8.0 a 8.4 LTS a 9.x innovación).",
+      "examples": [
+        {
+          "description": "Respaldar antes de cambiar la etiqueta de imagen",
+          "code": "docker exec mysql sh -c 'mysqldump -uroot -p\"$MYSQL_ROOT_PASSWORD\" --all-databases' > pre-upgrade.sql"
+        },
+        {
+          "description": "Cambiar a la nueva imagen",
+          "code": "docker compose pull db && docker compose up -d db"
+        },
+        {
+          "description": "Revisar el log por errores de actualización",
+          "code": "docker compose logs --tail 100 db"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "docker",
+        "actualizacion",
+        "upgrade"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Fija siempre una etiqueta concreta (mysql:8.4) y no latest. En MySQL 8.4 se aplica la actualización automática del diccionario al arrancar; el retroceso no es posible, de ahí el backup. 8.4 es LTS; las 9.x son de innovación y eliminaron mysql_native_password."
+    },
+    {
+      "title": "MariaDB 11 en Docker",
+      "command": "docker run -d --name mariadb -e MARIADB_ROOT_PASSWORD=$MARIADB_ROOT_PASSWORD -e LANG=C.UTF-8 -v mariadb_data:/var/lib/mysql mariadb:11",
+      "section": "Docker y producción",
+      "topic": "Contenedor",
+      "description": "Equivalente en MariaDB: las variables de entorno se llaman MARIADB_* (las MYSQL_* siguen funcionando) y el cliente es mariadb.",
+      "examples": [
+        {
+          "description": "Cliente dentro del contenedor",
+          "code": "docker exec -it mariadb mariadb -uroot -p"
+        },
+        {
+          "description": "Dump con mariadb-dump",
+          "code": "docker exec mariadb sh -c 'mariadb-dump -uroot -p\"$MARIADB_ROOT_PASSWORD\" --single-transaction --all-databases' > mariadb.sql"
+        },
+        {
+          "description": "Healthcheck oficial incluido en la imagen",
+          "code": "docker exec mariadb healthcheck.sh --connect --innodb_initialized"
+        }
+      ],
+      "tags": [
+        "mariadb",
+        "docker",
+        "contenedor"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En MariaDB 11 los binarios mysql* son alias de mariadb*; en imágenes nuevas pueden faltar los nombres antiguos, así que usa mariadb y mariadb-dump. Misma recomendación de LANG=C.UTF-8 para scripts con tildes."
+    },
+    {
+      "title": "Checklist de MySQL en producción: conexiones y límites",
+      "command": "SHOW GLOBAL STATUS LIKE 'Max_used_connections'; SHOW VARIABLES LIKE 'max_connections';",
+      "section": "Docker y producción",
+      "topic": "Producción",
+      "description": "Compara el pico real de conexiones con el límite configurado. Si te acercas al tope, la aplicación empezará a recibir 'Too many connections'.",
+      "examples": [
+        {
+          "description": "Conexiones abortadas o rechazadas",
+          "code": "SHOW GLOBAL STATUS LIKE 'Aborted%';"
+        },
+        {
+          "description": "Conexiones por usuario y host",
+          "code": "SELECT user, host, COUNT(*) AS n FROM information_schema.processlist GROUP BY user, host ORDER BY n DESC;"
+        },
+        {
+          "description": "Uso del disco del datadir",
+          "code": "df -h /var/lib/mysql && du -sh /var/lib/mysql/*/ | sort -h | tail"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "produccion",
+        "conexiones",
+        "max_connections"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Subir max_connections sin más consume memoria por hilo. Mejor usar un pool de conexiones en la aplicación (SQLAlchemy, Django CONN_MAX_AGE) o ProxySQL. Alerta cuando Max_used_connections supere el 80 %."
+    },
+    {
+      "title": "Ver errores del servidor en el log",
+      "command": "sudo tail -f /var/log/mysql/error.log",
+      "section": "Docker y producción",
+      "topic": "Producción",
+      "description": "El log de errores explica arranques fallidos, tablas corruptas, falta de memoria y problemas de permisos. Primer lugar a mirar si el servicio no levanta.",
+      "examples": [
+        {
+          "description": "Ubuntu con MySQL (puede estar en journal)",
+          "code": "sudo journalctl -u mysql -n 200 --no-pager"
+        },
+        {
+          "description": "AlmaLinux con MySQL Community",
+          "code": "sudo tail -n 200 /var/log/mysqld.log"
+        },
+        {
+          "description": "Ver dónde está configurado",
+          "code": "mysql -e \"SHOW VARIABLES LIKE 'log_error';\""
+        }
+      ],
+      "tags": [
+        "mysql",
+        "logs",
+        "error",
+        "diagnostico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Si el proceso muere sin mensaje, revisa el OOM killer: sudo dmesg -T | grep -i 'killed process'. En VPS con poca RAM es una causa común: baja innodb_buffer_pool_size o agrega swap."
+    }
+  ]
+}

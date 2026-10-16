@@ -1,0 +1,1670 @@
+{
+  "category": {
+    "slug": "git",
+    "name": "Git y GitHub",
+    "icon": "commit",
+    "order": 17,
+    "description": "Control de versiones desde la terminal: Git del día a día a recuperación de desastres, y GitHub CLI (gh) para PRs, issues, Actions y releases."
+  },
+  "commands": [
+    {
+      "title": "Identidad global de git",
+      "command": "git config --global user.name \"Nombre\"",
+      "section": "Configuración",
+      "topic": "Identidad",
+      "description": "Define el autor que firma tus commits en todos los repos; se puede sobrescribir por repo sin --global.",
+      "examples": [
+        {
+          "description": "Configurar nombre y correo",
+          "code": "git config --global user.name \"Nicolás Cano\"\ngit config --global user.email \"nicolas@ejemplo.cl\""
+        },
+        {
+          "description": "Correo distinto solo en un repo de trabajo",
+          "code": "git config user.email \"nicolas@empresa.com\""
+        },
+        {
+          "description": "Ver de dónde sale cada valor",
+          "code": "git config --list --show-origin"
+        }
+      ],
+      "tags": [
+        "git",
+        "config"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Rama por defecto main",
+      "command": "git config --global init.defaultBranch main",
+      "section": "Configuración",
+      "topic": "Valores por defecto",
+      "description": "Hace que git init cree main en vez de master.",
+      "examples": [
+        {
+          "description": "Configurarlo",
+          "code": "git config --global init.defaultBranch main"
+        },
+        {
+          "description": "Repo nuevo ya en main",
+          "code": "git init -b main"
+        }
+      ],
+      "tags": [
+        "git",
+        "config",
+        "init"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Finales de línea entre Windows y Linux",
+      "command": "git config --global core.autocrlf input",
+      "section": "Configuración",
+      "topic": "Multiplataforma",
+      "description": "Controla la conversión CRLF/LF. Lo más robusto es fijar la regla en el repo con .gitattributes.",
+      "examples": [
+        {
+          "description": "Regla del repo (recomendado)",
+          "code": "printf '* text=auto eol=lf\\n*.png binary\\n' > .gitattributes"
+        },
+        {
+          "description": "Renormalizar archivos ya versionados",
+          "code": "git add --renormalize . && git status"
+        },
+        {
+          "description": "En Windows, no convertir al hacer checkout",
+          "code": "git config --global core.autocrlf input"
+        }
+      ],
+      "tags": [
+        "git",
+        "crlf",
+        "windows"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Un .sh con CRLF no corre en un runner Linux. .gitattributes manda sobre core.autocrlf y viaja con el repo."
+    },
+    {
+      "title": "Rebase por defecto al hacer pull",
+      "command": "git config --global pull.rebase true",
+      "section": "Configuración",
+      "topic": "Valores por defecto",
+      "description": "git pull pasa a rebasear tus commits locales sobre los del remoto en vez de crear un commit de merge.",
+      "examples": [
+        {
+          "description": "Activarlo",
+          "code": "git config --global pull.rebase true"
+        },
+        {
+          "description": "Guardar cambios sin commitear durante el rebase",
+          "code": "git config --global rebase.autoStash true"
+        }
+      ],
+      "tags": [
+        "git",
+        "pull",
+        "rebase"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Alias útiles",
+      "command": "git config --global alias.<nombre> '<comando>'",
+      "section": "Configuración",
+      "topic": "Alias",
+      "description": "Atajos para los comandos que más se repiten.",
+      "examples": [
+        {
+          "description": "Log compacto en grafo",
+          "code": "git config --global alias.lg \"log --oneline --graph --decorate --all\"\ngit lg"
+        },
+        {
+          "description": "Estado corto",
+          "code": "git config --global alias.st \"status -sb\""
+        },
+        {
+          "description": "Último commit",
+          "code": "git config --global alias.last \"log -1 --stat\""
+        }
+      ],
+      "tags": [
+        "git",
+        "alias"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Editor y herramienta de diff",
+      "command": "git config --global core.editor <editor>",
+      "section": "Configuración",
+      "topic": "Editor",
+      "description": "Elige el editor para mensajes de commit y rebases interactivos.",
+      "examples": [
+        {
+          "description": "VS Code esperando al cierre",
+          "code": "git config --global core.editor \"code --wait\""
+        },
+        {
+          "description": "Vim",
+          "code": "git config --global core.editor vim"
+        }
+      ],
+      "tags": [
+        "git",
+        "config",
+        "editor"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Llave SSH para GitHub",
+      "command": "ssh-keygen -t ed25519 -C <correo>",
+      "section": "Configuración",
+      "topic": "Autenticación",
+      "description": "Genera una llave ed25519 y la registra en GitHub para clonar y pushear sin contraseña.",
+      "examples": [
+        {
+          "description": "Crear la llave",
+          "code": "ssh-keygen -t ed25519 -C \"nicolas@ejemplo.cl\""
+        },
+        {
+          "description": "Subirla con gh",
+          "code": "gh ssh-key add ~/.ssh/id_ed25519.pub --title \"lenovo\""
+        },
+        {
+          "description": "Probar la conexión",
+          "code": "ssh -T git@github.com"
+        }
+      ],
+      "tags": [
+        "git",
+        "ssh",
+        "github"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Firmar commits con la llave SSH",
+      "command": "git config --global commit.gpgsign true",
+      "section": "Configuración",
+      "topic": "Firma",
+      "description": "Firma cada commit con tu llave SSH para que GitHub los muestre como verificados.",
+      "examples": [
+        {
+          "description": "Configurar la firma SSH",
+          "code": "git config --global gpg.format ssh\ngit config --global user.signingkey ~/.ssh/id_ed25519.pub\ngit config --global commit.gpgsign true"
+        },
+        {
+          "description": "Verificar la firma de un commit",
+          "code": "git log --show-signature -1"
+        }
+      ],
+      "tags": [
+        "git",
+        "firma",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Estado del repositorio",
+      "command": "git status -sb",
+      "section": "Día a día",
+      "topic": "Estado",
+      "description": "Muestra rama, relación con el remoto (ahead/behind) y archivos modificados, en formato corto.",
+      "examples": [
+        {
+          "description": "Formato corto con la rama",
+          "code": "git status -sb"
+        },
+        {
+          "description": "Incluir archivos ignorados",
+          "code": "git status --ignored"
+        },
+        {
+          "description": "Comprobar por qué se ignora un archivo",
+          "code": "git check-ignore -v memory.md"
+        }
+      ],
+      "tags": [
+        "git",
+        "status"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "El ahead/behind se calcula contra las refs locales origin/*: haz git fetch antes de confiar en él."
+    },
+    {
+      "title": "Preparar cambios (staging)",
+      "command": "git add <archivo>",
+      "section": "Día a día",
+      "topic": "Staging",
+      "description": "Pasa cambios al área de preparación. -p permite elegir fragmentos concretos de un archivo.",
+      "examples": [
+        {
+          "description": "Agregar archivos concretos",
+          "code": "git add backend/app/api.py README.md"
+        },
+        {
+          "description": "Elegir trozos de un archivo",
+          "code": "git add -p backend/app/repository.py"
+        },
+        {
+          "description": "Ver qué se va a commitear",
+          "code": "git diff --staged --stat"
+        }
+      ],
+      "tags": [
+        "git",
+        "add",
+        "staging"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Evita git add . a ciegas: revisa git status antes para no subir .env ni residuos."
+    },
+    {
+      "title": "Crear un commit",
+      "command": "git commit -m \"tipo: mensaje\"",
+      "section": "Día a día",
+      "topic": "Commits",
+      "description": "Registra lo preparado. Con Conventional Commits (feat, fix, docs, chore, refactor, test) el historial se lee solo.",
+      "examples": [
+        {
+          "description": "Commit con título y cuerpo",
+          "code": "git commit -m \"fix(ci): pytest encuentra el paquete app\" -m \"El runner invoca pytest, que no añade el cwd al sys.path.\""
+        },
+        {
+          "description": "Escribirlo en el editor",
+          "code": "git commit"
+        },
+        {
+          "description": "Commit vacío para disparar el CI",
+          "code": "git commit --allow-empty -m \"ci: relanzar pipeline\""
+        }
+      ],
+      "tags": [
+        "git",
+        "commit",
+        "conventional-commits"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Ver diferencias",
+      "command": "git diff",
+      "section": "Día a día",
+      "topic": "Diff",
+      "description": "Compara el árbol de trabajo, el staging, commits o ramas.",
+      "examples": [
+        {
+          "description": "Cambios sin preparar",
+          "code": "git diff"
+        },
+        {
+          "description": "Lo que ya está preparado",
+          "code": "git diff --staged"
+        },
+        {
+          "description": "Entre la rama y main, solo nombres",
+          "code": "git diff main...HEAD --name-status"
+        }
+      ],
+      "tags": [
+        "git",
+        "diff"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Historial de commits",
+      "command": "git log --oneline --graph",
+      "section": "Día a día",
+      "topic": "Historial",
+      "description": "Recorre el historial; los filtros permiten acotar por autor, fecha, archivo o texto.",
+      "examples": [
+        {
+          "description": "Grafo de todas las ramas",
+          "code": "git log --oneline --graph --decorate --all"
+        },
+        {
+          "description": "Commits de la última semana de un autor",
+          "code": "git log --since=\"1 week ago\" --author=\"Nicolás\" --oneline"
+        },
+        {
+          "description": "Historial de un archivo con sus diffs",
+          "code": "git log -p --follow -- backend/app/main.py"
+        }
+      ],
+      "tags": [
+        "git",
+        "log"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Clonar un repositorio",
+      "command": "git clone <url>",
+      "section": "Día a día",
+      "topic": "Clonado",
+      "description": "Copia un repositorio remoto completo; --depth hace una copia superficial más liviana.",
+      "examples": [
+        {
+          "description": "Clonar por SSH",
+          "code": "git clone git@github.com:NicolasAndresCL/CmdVault.git"
+        },
+        {
+          "description": "Copia superficial para CI o un VPS",
+          "code": "git clone --depth 1 --branch v1.0.1 https://github.com/NicolasAndresCL/CmdVault.git /opt/cmdvault"
+        },
+        {
+          "description": "Con gh",
+          "code": "gh repo clone NicolasAndresCL/CmdVault"
+        }
+      ],
+      "tags": [
+        "git",
+        "clone"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Guardar cambios temporalmente (stash)",
+      "command": "git stash",
+      "section": "Día a día",
+      "topic": "Stash",
+      "description": "Aparta cambios sin commitear para cambiar de rama y los recupera después.",
+      "examples": [
+        {
+          "description": "Guardar con descripción, incluidos archivos nuevos",
+          "code": "git stash push -u -m \"wip: formulario de edición\""
+        },
+        {
+          "description": "Listar y recuperar",
+          "code": "git stash list\ngit stash pop"
+        },
+        {
+          "description": "Aplicar uno concreto sin borrarlo",
+          "code": "git stash apply stash@{1}"
+        }
+      ],
+      "tags": [
+        "git",
+        "stash"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Quitar archivos del índice sin borrarlos",
+      "command": "git rm --cached <archivo>",
+      "section": "Día a día",
+      "topic": "Staging",
+      "description": "Deja de versionar un archivo pero lo conserva en disco: lo típico tras agregarlo al .gitignore tarde.",
+      "examples": [
+        {
+          "description": "Dejar de versionar un .env subido por error",
+          "code": "echo .env >> .gitignore\ngit rm --cached .env\ngit commit -m \"chore: dejar de versionar .env\""
+        },
+        {
+          "description": "Una carpeta entera",
+          "code": "git rm -r --cached .playwright-mcp/"
+        }
+      ],
+      "tags": [
+        "git",
+        "rm",
+        "gitignore"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Si el archivo tenía secretos, ya están en el historial y en el remoto: rota esas credenciales."
+    },
+    {
+      "title": "Marcar un script como ejecutable en git",
+      "command": "git update-index --chmod=+x <archivo>",
+      "section": "Día a día",
+      "topic": "Permisos",
+      "description": "Fija el bit de ejecución en el índice. En Windows (core.filemode=false) un .sh nuevo entra como 100644 y en Linux da Permission denied.",
+      "examples": [
+        {
+          "description": "Marcar los scripts",
+          "code": "git update-index --chmod=+x scripts/*.sh"
+        },
+        {
+          "description": "Agregar un archivo nuevo ya ejecutable",
+          "code": "git add --chmod=+x scripts/deploy.sh"
+        },
+        {
+          "description": "Detectar scripts sin el bit",
+          "code": "git ls-files -s -- '*.sh' | grep -v '^100755'"
+        }
+      ],
+      "tags": [
+        "git",
+        "permisos",
+        "windows",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "chmod +x en NTFS no hace nada y Git Bash ejecuta el script igual: el fallo solo aparece en el runner Linux."
+    },
+    {
+      "title": "Crear y cambiar de rama",
+      "command": "git switch -c <rama>",
+      "section": "Ramas y merge",
+      "topic": "Ramas",
+      "description": "git switch es el comando moderno para moverse entre ramas (git checkout sigue funcionando).",
+      "examples": [
+        {
+          "description": "Crear una rama y pasar a ella",
+          "code": "git switch -c feat/editar-comandos"
+        },
+        {
+          "description": "Volver a la rama anterior",
+          "code": "git switch -"
+        },
+        {
+          "description": "Crear una rama desde un tag",
+          "code": "git switch -c hotfix/1.0.2 v1.0.1"
+        }
+      ],
+      "tags": [
+        "git",
+        "ramas",
+        "switch"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Listar y limpiar ramas",
+      "command": "git branch -vv",
+      "section": "Ramas y merge",
+      "topic": "Ramas",
+      "description": "Muestra las ramas con su upstream y último commit; permite borrar las ya integradas.",
+      "examples": [
+        {
+          "description": "Ramas locales con su upstream",
+          "code": "git branch -vv"
+        },
+        {
+          "description": "Ramas ya mergeadas en main",
+          "code": "git branch --merged main"
+        },
+        {
+          "description": "Borrar una local y su remota",
+          "code": "git branch -d feat/vieja\ngit push origin --delete feat/vieja"
+        }
+      ],
+      "tags": [
+        "git",
+        "ramas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Integrar una rama con merge",
+      "command": "git merge <rama>",
+      "section": "Ramas y merge",
+      "topic": "Merge",
+      "description": "Une el trabajo de otra rama; --no-ff conserva un commit de merge que documenta la integración.",
+      "examples": [
+        {
+          "description": "Merge con commit explícito",
+          "code": "git switch main\ngit merge --no-ff feat/editar-comandos"
+        },
+        {
+          "description": "Solo si es fast-forward",
+          "code": "git merge --ff-only origin/main"
+        },
+        {
+          "description": "Abortar un merge con conflictos",
+          "code": "git merge --abort"
+        }
+      ],
+      "tags": [
+        "git",
+        "merge"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Resolver conflictos",
+      "command": "git status && git add <archivo>",
+      "section": "Ramas y merge",
+      "topic": "Conflictos",
+      "description": "Tras un conflicto: editar los marcadores <<<<<<< ======= >>>>>>>, marcar como resuelto con add y continuar.",
+      "examples": [
+        {
+          "description": "Ver archivos en conflicto",
+          "code": "git diff --name-only --diff-filter=U"
+        },
+        {
+          "description": "Quedarse con una versión entera",
+          "code": "git checkout --theirs package-lock.json\ngit add package-lock.json"
+        },
+        {
+          "description": "Continuar el rebase o merge",
+          "code": "git rebase --continue   # o: git commit"
+        }
+      ],
+      "tags": [
+        "git",
+        "conflictos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "En un rebase, --ours es la rama sobre la que rebaseas y --theirs tus commits: al revés que en un merge."
+    },
+    {
+      "title": "Traer un commit concreto (cherry-pick)",
+      "command": "git cherry-pick <commit>",
+      "section": "Ramas y merge",
+      "topic": "Cherry-pick",
+      "description": "Aplica los cambios de un commit de otra rama sobre la actual: típico para llevar un fix a una rama de release.",
+      "examples": [
+        {
+          "description": "Llevar un fix a la rama de hotfix",
+          "code": "git switch hotfix/1.0.2\ngit cherry-pick a02bbfe"
+        },
+        {
+          "description": "Varios commits seguidos",
+          "code": "git cherry-pick a02bbfe^..94940ea"
+        },
+        {
+          "description": "Registrar de dónde viene",
+          "code": "git cherry-pick -x a02bbfe"
+        }
+      ],
+      "tags": [
+        "git",
+        "cherry-pick"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Rebasear sobre lo último del remoto",
+      "command": "git fetch && git rebase origin/main",
+      "section": "Rebase e historial",
+      "topic": "Rebase",
+      "description": "Reaplica tus commits locales encima de lo último del remoto: historia lineal y sin commits de merge innecesarios.",
+      "examples": [
+        {
+          "description": "Actualizar la rama de trabajo",
+          "code": "git fetch origin\ngit rebase origin/main"
+        },
+        {
+          "description": "Si hay conflictos",
+          "code": "git status          # resolver\ngit add <archivo>\ngit rebase --continue"
+        },
+        {
+          "description": "Arrepentirse a mitad de camino",
+          "code": "git rebase --abort"
+        }
+      ],
+      "tags": [
+        "git",
+        "rebase"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Solo rebasea commits que no has pusheado. Reescribir historia ya publicada desalinea a cualquiera que la tenga."
+    },
+    {
+      "title": "Push rechazado (non-fast-forward)",
+      "command": "git fetch && git rebase origin/<rama> && git push",
+      "section": "Rebase e historial",
+      "topic": "Rebase",
+      "description": "El remoto tiene commits que tú no: se integra con rebase y se vuelve a pushear, sin forzar.",
+      "examples": [
+        {
+          "description": "Secuencia completa",
+          "code": "git fetch origin\ngit rebase origin/main\ngit push"
+        },
+        {
+          "description": "Ver qué trae el remoto antes de rebasear",
+          "code": "git log --oneline main..origin/main"
+        }
+      ],
+      "tags": [
+        "git",
+        "push",
+        "rebase"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "El rebase omite automáticamente los commits que ya estaban aplicados en el remoto. Evita git pull con merge para esto."
+    },
+    {
+      "title": "Reordenar o unir commits locales",
+      "command": "git rebase -i <base>",
+      "section": "Rebase e historial",
+      "topic": "Rebase interactivo",
+      "description": "Abre el editor con la lista de commits para reordenarlos, unirlos (squash/fixup) o renombrarlos antes de pushear.",
+      "examples": [
+        {
+          "description": "Limpiar los últimos 3 commits",
+          "code": "git rebase -i HEAD~3"
+        },
+        {
+          "description": "Corrección automática de un commit anterior",
+          "code": "git commit --fixup a1b2c3d\ngit rebase -i --autosquash origin/main"
+        }
+      ],
+      "tags": [
+        "git",
+        "rebase",
+        "squash"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Solo sobre commits sin pushear. Si ya están en el remoto, corrige con un commit nuevo encima."
+    },
+    {
+      "title": "Corregir el último commit",
+      "command": "git commit --amend",
+      "section": "Rebase e historial",
+      "topic": "Amend",
+      "description": "Modifica el mensaje o el contenido del último commit. Solo si todavía no lo has pusheado.",
+      "examples": [
+        {
+          "description": "Cambiar el mensaje",
+          "code": "git commit --amend -m \"docs: README con formato de autoría\""
+        },
+        {
+          "description": "Agregar un archivo olvidado sin cambiar el mensaje",
+          "code": "git add README.md\ngit commit --amend --no-edit"
+        }
+      ],
+      "tags": [
+        "git",
+        "amend"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Un amend sobre un commit ya pusheado crea un hash distinto: el próximo push es rechazado y tentará a forzar."
+    },
+    {
+      "title": "Forzar push sin pisar trabajo ajeno",
+      "command": "git push --force-with-lease",
+      "section": "Rebase e historial",
+      "topic": "Push forzado",
+      "description": "Fuerza el push solo si el remoto sigue donde lo viste por última vez; nunca uses --force a secas en ramas compartidas.",
+      "examples": [
+        {
+          "description": "Tras rebasear una rama propia de PR",
+          "code": "git push --force-with-lease"
+        },
+        {
+          "description": "Indicando el valor esperado",
+          "code": "git push --force-with-lease=feat/x:origin/feat/x"
+        }
+      ],
+      "tags": [
+        "git",
+        "push",
+        "force"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Nunca sobre main. En ramas propias de PR es aceptable; en ramas compartidas, mejor un commit nuevo."
+    },
+    {
+      "title": "Traer cambios del remoto sin integrar",
+      "command": "git fetch",
+      "section": "Remotos",
+      "topic": "Sincronización",
+      "description": "Actualiza las refs origin/* sin tocar tus ramas: el paso previo obligatorio antes de hablar de qué falta pushear.",
+      "examples": [
+        {
+          "description": "Traer todo y limpiar ramas borradas",
+          "code": "git fetch --all --prune"
+        },
+        {
+          "description": "Qué tengo sin pushear",
+          "code": "git fetch origin && git log --oneline origin/main..main"
+        },
+        {
+          "description": "Qué hay en el remoto que yo no tengo",
+          "code": "git log --oneline main..origin/main"
+        }
+      ],
+      "tags": [
+        "git",
+        "fetch"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Si git log origin/rama..rama dice unknown revision, la rama aún no existe en el remoto."
+    },
+    {
+      "title": "Gestionar remotos",
+      "command": "git remote -v",
+      "section": "Remotos",
+      "topic": "Remotos",
+      "description": "Lista, agrega o cambia la URL de los repositorios remotos.",
+      "examples": [
+        {
+          "description": "Ver los remotos",
+          "code": "git remote -v"
+        },
+        {
+          "description": "Conectar un repo local recién creado",
+          "code": "git remote add origin https://github.com/NicolasAndresCL/CmdVault.git"
+        },
+        {
+          "description": "Cambiar de HTTPS a SSH",
+          "code": "git remote set-url origin git@github.com:NicolasAndresCL/CmdVault.git"
+        }
+      ],
+      "tags": [
+        "git",
+        "remote"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Publicar una rama nueva",
+      "command": "git push -u origin <rama>",
+      "section": "Remotos",
+      "topic": "Push",
+      "description": "Sube la rama y la deja enlazada a su upstream, para que después baste con git push.",
+      "examples": [
+        {
+          "description": "Primer push de una rama",
+          "code": "git push -u origin feat/editar-comandos"
+        },
+        {
+          "description": "Subir solo un commit concreto a main",
+          "code": "git push origin 4b77079:refs/heads/main"
+        },
+        {
+          "description": "Subir los tags",
+          "code": "git push origin --tags"
+        }
+      ],
+      "tags": [
+        "git",
+        "push"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Etiquetar una versión",
+      "command": "git tag -a v1.0.1 -m \"mensaje\"",
+      "section": "Remotos",
+      "topic": "Tags",
+      "description": "Los tags anotados marcan releases con autor, fecha y mensaje; Ansible o el CI pueden desplegar por tag.",
+      "examples": [
+        {
+          "description": "Crear y subir el tag de la versión",
+          "code": "git tag -a v1.0.1 -m \"CmdVault 1.0.1: infra y 16 entornos\"\ngit push origin v1.0.1"
+        },
+        {
+          "description": "Listar tags ordenados por versión",
+          "code": "git tag --sort=-v:refname | head"
+        },
+        {
+          "description": "Borrar un tag local y remoto",
+          "code": "git tag -d v1.0.1-rc\ngit push origin :refs/tags/v1.0.1-rc"
+        }
+      ],
+      "tags": [
+        "git",
+        "tags",
+        "release"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Descartar cambios de un archivo",
+      "command": "git restore <archivo>",
+      "section": "Deshacer y recuperar",
+      "topic": "Restaurar",
+      "description": "Vuelve un archivo a su última versión commiteada; --staged lo saca del staging sin perder los cambios.",
+      "examples": [
+        {
+          "description": "Descartar cambios locales",
+          "code": "git restore backend/app/api.py"
+        },
+        {
+          "description": "Sacar del staging",
+          "code": "git restore --staged .env"
+        },
+        {
+          "description": "Recuperar un archivo de otro commit",
+          "code": "git restore --source=v1.0.0 README.md"
+        }
+      ],
+      "tags": [
+        "git",
+        "restore"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "git restore sin --staged borra cambios no commiteados de forma irreversible."
+    },
+    {
+      "title": "Deshacer un commit ya publicado",
+      "command": "git revert <commit>",
+      "section": "Deshacer y recuperar",
+      "topic": "Revert",
+      "description": "Crea un commit nuevo que invierte otro: la forma segura de deshacer algo que ya está en el remoto.",
+      "examples": [
+        {
+          "description": "Revertir un commit",
+          "code": "git revert a02bbfe"
+        },
+        {
+          "description": "Revertir un merge",
+          "code": "git revert -m 1 <hash-del-merge>"
+        },
+        {
+          "description": "Varios sin commitear todavía",
+          "code": "git revert --no-commit HEAD~3..HEAD"
+        }
+      ],
+      "tags": [
+        "git",
+        "revert"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Mover la rama a otro commit (reset)",
+      "command": "git reset <modo> <commit>",
+      "section": "Deshacer y recuperar",
+      "topic": "Reset",
+      "description": "--soft conserva los cambios preparados, --mixed (por defecto) los deja sin preparar y --hard los borra.",
+      "examples": [
+        {
+          "description": "Deshacer el último commit local conservando los cambios",
+          "code": "git reset --soft HEAD~1"
+        },
+        {
+          "description": "Alinear la rama local con el remoto (descarta lo local)",
+          "code": "git fetch origin\ngit reset --hard origin/main"
+        },
+        {
+          "description": "Antes de un --hard, guardar por si acaso",
+          "code": "git branch respaldo-antes-del-reset"
+        }
+      ],
+      "tags": [
+        "git",
+        "reset"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Nunca sobre commits ya pusheados. reset --hard es irreversible para los cambios sin commitear."
+    },
+    {
+      "title": "Recuperar commits perdidos (reflog)",
+      "command": "git reflog",
+      "section": "Deshacer y recuperar",
+      "topic": "Reflog",
+      "description": "Registro local de todo lo que fue HEAD: permite recuperar commits tras un reset o rebase desafortunado.",
+      "examples": [
+        {
+          "description": "Ver los movimientos recientes",
+          "code": "git reflog -20"
+        },
+        {
+          "description": "Volver al estado previo al rebase",
+          "code": "git reset --hard HEAD@{5}"
+        },
+        {
+          "description": "Rescatar un commit en una rama nueva",
+          "code": "git branch rescate a1b2c3d"
+        }
+      ],
+      "tags": [
+        "git",
+        "reflog",
+        "recuperacion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Limpiar archivos no versionados",
+      "command": "git clean -fdn",
+      "section": "Deshacer y recuperar",
+      "topic": "Limpieza",
+      "description": "Borra archivos y carpetas que git no sigue. Primero siempre en simulación con -n.",
+      "examples": [
+        {
+          "description": "Simular qué se borraría",
+          "code": "git clean -fdn"
+        },
+        {
+          "description": "Borrar de verdad",
+          "code": "git clean -fd"
+        },
+        {
+          "description": "Incluir los ignorados (caches, builds)",
+          "code": "git clean -fdxn"
+        }
+      ],
+      "tags": [
+        "git",
+        "clean"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "-x también borra lo ignorado, como .env, memory.md o venvs. Revisa la simulación línea por línea."
+    },
+    {
+      "title": "Quién cambió cada línea (blame)",
+      "command": "git blame <archivo>",
+      "section": "Inspección y búsqueda",
+      "topic": "Autoría",
+      "description": "Muestra el último commit que tocó cada línea; con -L se acota a un rango.",
+      "examples": [
+        {
+          "description": "Un rango de líneas",
+          "code": "git blame -L 40,60 backend/app/main.py"
+        },
+        {
+          "description": "Ignorando cambios de solo formato",
+          "code": "git blame -w -C backend/app/repository.py"
+        }
+      ],
+      "tags": [
+        "git",
+        "blame"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Ver un commit",
+      "command": "git show <commit>",
+      "section": "Inspección y búsqueda",
+      "topic": "Commits",
+      "description": "Muestra el mensaje y el diff de un commit, o el contenido de un archivo en una versión.",
+      "examples": [
+        {
+          "description": "Detalle con estadística",
+          "code": "git show --stat a02bbfe"
+        },
+        {
+          "description": "Un archivo tal como estaba en un tag",
+          "code": "git show v1.0.0:README.md"
+        }
+      ],
+      "tags": [
+        "git",
+        "show"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Buscar en el código versionado",
+      "command": "git grep <patrón>",
+      "section": "Inspección y búsqueda",
+      "topic": "Búsqueda",
+      "description": "Busca en los archivos versionados, más rápido que grep y sin entrar en venvs ni node_modules.",
+      "examples": [
+        {
+          "description": "Buscar con número de línea",
+          "code": "git grep -n \"pg_advisory_xact_lock\""
+        },
+        {
+          "description": "Buscar en otra versión",
+          "code": "git grep -n \"8080\" v1.0.0"
+        }
+      ],
+      "tags": [
+        "git",
+        "grep"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Buscar cuándo se introdujo un texto (pickaxe)",
+      "command": "git log -S \"texto\"",
+      "section": "Inspección y búsqueda",
+      "topic": "Búsqueda",
+      "description": "Encuentra los commits que agregaron o quitaron una cadena: ideal para saber cuándo apareció un bug o una config.",
+      "examples": [
+        {
+          "description": "Cuándo se agregó una variable",
+          "code": "git log -S \"SEED_ON_STARTUP\" --oneline"
+        },
+        {
+          "description": "Con expresión regular y el diff",
+          "code": "git log -G \"FRONTEND_PORT.*80[89]0\" -p"
+        }
+      ],
+      "tags": [
+        "git",
+        "log",
+        "pickaxe"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Resumen de contribuciones",
+      "command": "git shortlog -sn",
+      "section": "Inspección y búsqueda",
+      "topic": "Estadísticas",
+      "description": "Cuenta commits por autor; útil para métricas honestas de un proyecto.",
+      "examples": [
+        {
+          "description": "Commits por autor",
+          "code": "git shortlog -sn --all"
+        },
+        {
+          "description": "Líneas cambiadas en un período",
+          "code": "git log --since=\"1 month ago\" --shortstat --oneline | tail -5"
+        }
+      ],
+      "tags": [
+        "git",
+        "estadisticas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Varias ramas a la vez con worktrees",
+      "command": "git worktree add <ruta> <rama>",
+      "section": "Avanzado",
+      "topic": "Worktrees",
+      "description": "Crea otro directorio de trabajo enlazado al mismo repo: revisar un PR o hacer un hotfix sin tocar tu rama actual.",
+      "examples": [
+        {
+          "description": "Hotfix en paralelo",
+          "code": "git worktree add ../cmdvault-hotfix -b hotfix/1.0.2 v1.0.1"
+        },
+        {
+          "description": "Listar y quitar",
+          "code": "git worktree list\ngit worktree remove ../cmdvault-hotfix"
+        }
+      ],
+      "tags": [
+        "git",
+        "worktree"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Encontrar el commit que rompió algo (bisect)",
+      "command": "git bisect start",
+      "section": "Avanzado",
+      "topic": "Bisect",
+      "description": "Búsqueda binaria en el historial: marcas un commit bueno y uno malo, y git te lleva al culpable en pocos pasos.",
+      "examples": [
+        {
+          "description": "Bisect manual",
+          "code": "git bisect start\ngit bisect bad HEAD\ngit bisect good v1.0.0\n# probar y marcar: git bisect good | bad\ngit bisect reset"
+        },
+        {
+          "description": "Bisect automático con los tests",
+          "code": "git bisect start HEAD v1.0.0\ngit bisect run pytest -q backend/tests/test_api.py"
+        }
+      ],
+      "tags": [
+        "git",
+        "bisect",
+        "debug"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Hooks de git locales",
+      "command": ".git/hooks/pre-commit",
+      "section": "Avanzado",
+      "topic": "Hooks",
+      "description": "Scripts que git ejecuta en eventos (pre-commit, commit-msg, pre-push): bloquean commits que romperían el CI.",
+      "examples": [
+        {
+          "description": "Pre-commit que corre ruff",
+          "code": "cat > .git/hooks/pre-commit <<'SH'\n#!/usr/bin/env bash\nset -e\nruff check backend frontend\nSH\nchmod +x .git/hooks/pre-commit"
+        },
+        {
+          "description": "Hooks versionados en el repo",
+          "code": "git config core.hooksPath .githooks"
+        }
+      ],
+      "tags": [
+        "git",
+        "hooks"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Clonar repos grandes de forma parcial",
+      "command": "git clone --filter=blob:none <url>",
+      "section": "Avanzado",
+      "topic": "Rendimiento",
+      "description": "Descarga el historial sin el contenido de los archivos, que se baja bajo demanda; sparse-checkout limita carpetas.",
+      "examples": [
+        {
+          "description": "Clon parcial",
+          "code": "git clone --filter=blob:none https://github.com/kubernetes/kubernetes.git"
+        },
+        {
+          "description": "Solo algunas carpetas",
+          "code": "git sparse-checkout set docs infra"
+        }
+      ],
+      "tags": [
+        "git",
+        "rendimiento"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Archivar una versión como tar o zip",
+      "command": "git archive",
+      "section": "Avanzado",
+      "topic": "Empaquetado",
+      "description": "Genera un archivo con el contenido de una versión, sin la carpeta .git: útil para desplegar en un servidor sin git.",
+      "examples": [
+        {
+          "description": "tar.gz de un tag",
+          "code": "git archive --format=tar.gz -o cmdvault-1.0.1.tar.gz --prefix=cmdvault/ v1.0.1"
+        },
+        {
+          "description": "Enviarlo directo a un servidor",
+          "code": "git archive v1.0.1 | ssh deploy@vps 'mkdir -p /opt/cmdvault && tar -x -C /opt/cmdvault'"
+        }
+      ],
+      "tags": [
+        "git",
+        "archive",
+        "despliegue"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Autenticar GitHub CLI",
+      "command": "gh auth login",
+      "section": "GitHub CLI (gh)",
+      "topic": "Autenticación",
+      "description": "Inicia sesión en GitHub desde la terminal; gh configura además git para usar esas credenciales.",
+      "examples": [
+        {
+          "description": "Login interactivo",
+          "code": "gh auth login"
+        },
+        {
+          "description": "Ver con qué cuenta estás",
+          "code": "gh auth status"
+        },
+        {
+          "description": "Usuario autenticado vía API",
+          "code": "gh api user --jq .login"
+        }
+      ],
+      "tags": [
+        "gh",
+        "github",
+        "auth"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Crear un repositorio desde la terminal",
+      "command": "gh repo create",
+      "section": "GitHub CLI (gh)",
+      "topic": "Repositorios",
+      "description": "Crea el repo en GitHub y, con --source, lo conecta al repositorio local.",
+      "examples": [
+        {
+          "description": "Repo público desde el directorio actual",
+          "code": "gh repo create NicolasAndresCL/CmdVault --public --source=. --remote=origin"
+        },
+        {
+          "description": "Repo privado vacío",
+          "code": "gh repo create mi-lab --private --description \"laboratorio\""
+        },
+        {
+          "description": "Abrir el repo en el navegador",
+          "code": "gh repo view --web"
+        }
+      ],
+      "tags": [
+        "gh",
+        "github",
+        "repo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Crear un pull request",
+      "command": "gh pr create",
+      "section": "GitHub CLI (gh)",
+      "topic": "Pull requests",
+      "description": "Abre un PR desde la rama actual; --fill toma título y cuerpo de los commits.",
+      "examples": [
+        {
+          "description": "PR rellenado con los commits",
+          "code": "gh pr create --fill"
+        },
+        {
+          "description": "Con título, cuerpo y revisor",
+          "code": "gh pr create --title \"feat: editar comandos propios\" --body-file pr.md --reviewer usuario"
+        },
+        {
+          "description": "Como borrador",
+          "code": "gh pr create --draft --fill"
+        }
+      ],
+      "tags": [
+        "gh",
+        "pr"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Revisar y mergear PRs",
+      "command": "gh pr list",
+      "section": "GitHub CLI (gh)",
+      "topic": "Pull requests",
+      "description": "Lista los PRs, permite traerlos localmente, ver sus checks y mergearlos.",
+      "examples": [
+        {
+          "description": "PRs abiertos",
+          "code": "gh pr list"
+        },
+        {
+          "description": "Traer un PR para probarlo",
+          "code": "gh pr checkout 2"
+        },
+        {
+          "description": "Ver los checks y mergear con squash",
+          "code": "gh pr checks 2\ngh pr merge 2 --squash --delete-branch"
+        }
+      ],
+      "tags": [
+        "gh",
+        "pr",
+        "review"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Comentar un PR de Dependabot",
+      "command": "gh pr comment <n> --body \"@dependabot rebase\"",
+      "section": "GitHub CLI (gh)",
+      "topic": "Pull requests",
+      "description": "Dependabot obedece comandos en comentarios: rebasear, recrear o ignorar una versión.",
+      "examples": [
+        {
+          "description": "Rebasear su PR sobre lo último de main",
+          "code": "gh pr comment 1 --body \"@dependabot rebase\""
+        },
+        {
+          "description": "Ignorar esa versión mayor",
+          "code": "gh pr comment 2 --body \"@dependabot ignore this major version\""
+        }
+      ],
+      "tags": [
+        "gh",
+        "dependabot"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Ver los runs de GitHub Actions",
+      "command": "gh run list",
+      "section": "GitHub CLI (gh)",
+      "topic": "Actions",
+      "description": "Lista las ejecuciones del CI, permite esperarlas y leer solo los logs de los pasos que fallaron.",
+      "examples": [
+        {
+          "description": "Últimos runs del workflow CI",
+          "code": "gh run list --workflow ci.yml --limit 5"
+        },
+        {
+          "description": "Esperar a que termine uno",
+          "code": "gh run watch <id> --exit-status"
+        },
+        {
+          "description": "Resultado por job y log de lo que falló",
+          "code": "gh run view <id> --json jobs --jq '.jobs[] | .name + \": \" + .conclusion'\ngh run view <id> --log-failed"
+        }
+      ],
+      "tags": [
+        "gh",
+        "actions",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Relanzar o disparar workflows",
+      "command": "gh workflow run <workflow>",
+      "section": "GitHub CLI (gh)",
+      "topic": "Actions",
+      "description": "Dispara un workflow con workflow_dispatch o vuelve a ejecutar un run fallido.",
+      "examples": [
+        {
+          "description": "Disparar con parámetros",
+          "code": "gh workflow run deploy.yml -f entorno=prod"
+        },
+        {
+          "description": "Reintentar solo los jobs fallidos",
+          "code": "gh run rerun <id> --failed"
+        }
+      ],
+      "tags": [
+        "gh",
+        "actions"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Gestionar issues",
+      "command": "gh issue create",
+      "section": "GitHub CLI (gh)",
+      "topic": "Issues",
+      "description": "Crea, lista y cierra issues sin salir de la terminal.",
+      "examples": [
+        {
+          "description": "Crear un issue con etiquetas",
+          "code": "gh issue create --title \"Editar comandos propios desde la UI\" --label enhancement --body \"La API ya tiene PATCH\""
+        },
+        {
+          "description": "Mis issues abiertos",
+          "code": "gh issue list --assignee @me"
+        },
+        {
+          "description": "Cerrar indicando el motivo",
+          "code": "gh issue close 7 --reason completed --comment \"Resuelto en v1.0.1\""
+        }
+      ],
+      "tags": [
+        "gh",
+        "issues"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Publicar una release",
+      "command": "gh release create <tag>",
+      "section": "GitHub CLI (gh)",
+      "topic": "Releases",
+      "description": "Crea la release de un tag con notas generadas automáticamente y archivos adjuntos.",
+      "examples": [
+        {
+          "description": "Release con notas automáticas",
+          "code": "gh release create v1.0.1 --generate-notes"
+        },
+        {
+          "description": "Con notas propias y un artefacto",
+          "code": "gh release create v1.0.1 --title \"CmdVault 1.0.1\" --notes-file CHANGELOG.md dist/cmdvault-1.0.1.tar.gz"
+        }
+      ],
+      "tags": [
+        "gh",
+        "release"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Secretos de Actions desde la terminal",
+      "command": "gh secret set <NOMBRE>",
+      "section": "GitHub CLI (gh)",
+      "topic": "Secretos",
+      "description": "Guarda secretos del repo para los workflows sin pasar por la web; el valor se lee de stdin y no queda en el historial.",
+      "examples": [
+        {
+          "description": "Cargar un secreto desde un archivo",
+          "code": "gh secret set ANTHROPIC_API_KEY < ~/.secrets/anthropic.txt"
+        },
+        {
+          "description": "Listar (sin ver los valores)",
+          "code": "gh secret list"
+        }
+      ],
+      "tags": [
+        "gh",
+        "secretos",
+        "actions"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Llamar a la API de GitHub",
+      "command": "gh api <ruta>",
+      "section": "GitHub CLI (gh)",
+      "topic": "API",
+      "description": "Peticiones autenticadas a la API REST o GraphQL con filtros jq integrados.",
+      "examples": [
+        {
+          "description": "README de un repo decodificado",
+          "code": "gh api repos/NicolasAndresCL/PyDual/readme --jq .content | base64 -d"
+        },
+        {
+          "description": "Última versión de una herramienta",
+          "code": "gh api repos/terraform-linters/tflint/releases/latest --jq .tag_name"
+        },
+        {
+          "description": "Paginar todos tus repos",
+          "code": "gh api --paginate user/repos --jq '.[].full_name'"
+        }
+      ],
+      "tags": [
+        "gh",
+        "api"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    }
+  ]
+}

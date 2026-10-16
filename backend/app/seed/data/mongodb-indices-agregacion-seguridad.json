@@ -1,0 +1,414 @@
+{
+  "category": {
+    "slug": "mongodb",
+    "name": "MongoDB",
+    "icon": "data_object",
+    "order": 11,
+    "description": "MongoDB con mongosh: CRUD, índices, agregaciones, seguridad, backups y réplicas."
+  },
+  "commands": [
+    {
+      "title": "Crear índices simples y compuestos",
+      "command": "db.ventas.createIndex({ cliente_id: 1, fecha: -1 })",
+      "section": "Índices y agregación",
+      "topic": "Índices",
+      "description": "Un índice compuesto acelera consultas que filtran por el prefijo izquierdo y ordenan por los campos siguientes (regla ESR: Igualdad, Sort, Rango).",
+      "syntax": "db.coleccion.createIndex({ campo: 1|-1 }, { opciones })",
+      "examples": [
+        {
+          "description": "Índice único",
+          "code": "db.usuarios.createIndex({ email: 1 }, { unique: true })"
+        },
+        {
+          "description": "Con nombre explícito",
+          "code": "db.ventas.createIndex({ fecha: -1 }, { name: \"idx_fecha_desc\" })"
+        },
+        {
+          "description": "Listar los índices",
+          "code": "db.ventas.getIndexes()"
+        },
+        {
+          "description": "Eliminar un índice",
+          "code": "db.ventas.dropIndex(\"idx_fecha_desc\")"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "createindex",
+        "indices",
+        "compuesto",
+        "unique"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "En MongoDB 4.2+ los índices se construyen sin bloquear de forma casi total. En colecciones con datos, el índice unique falla si ya hay duplicados. Cada índice extra ralentiza las escrituras y usa RAM."
+    },
+    {
+      "title": "Índices TTL para datos con caducidad",
+      "command": "db.sesiones.createIndex({ creada: 1 }, { expireAfterSeconds: 3600 })",
+      "section": "Índices y agregación",
+      "topic": "Índices",
+      "description": "Un índice TTL borra automáticamente los documentos cuando el campo fecha supera la antigüedad indicada. Perfecto para sesiones, tokens y logs.",
+      "examples": [
+        {
+          "description": "Caducidad en una fecha concreta por documento",
+          "code": "db.tokens.createIndex({ expira: 1 }, { expireAfterSeconds: 0 })"
+        },
+        {
+          "description": "Cambiar el tiempo sin reconstruir",
+          "code": "db.runCommand({ collMod: \"sesiones\", index: { keyPattern: { creada: 1 }, expireAfterSeconds: 7200 } })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "ttl",
+        "expireafterseconds",
+        "indices"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "El campo debe ser de tipo Date (un string no caduca). El proceso de limpieza corre cada ~60 s, así que no es exacto al segundo."
+    },
+    {
+      "title": "Índices de texto, parciales y únicos dispersos",
+      "command": "db.articulos.createIndex({ titulo: \"text\", cuerpo: \"text\" }, { default_language: \"spanish\" })",
+      "section": "Índices y agregación",
+      "topic": "Índices",
+      "description": "Índice text para búsqueda de palabras; parciales para indexar solo parte de los documentos; sparse para campos opcionales.",
+      "examples": [
+        {
+          "description": "Buscar con el índice de texto",
+          "code": "db.articulos.find({ $text: { $search: \"docker despliegue\" } }, { score: { $meta: \"textScore\" } }).sort({ score: { $meta: \"textScore\" } })"
+        },
+        {
+          "description": "Índice parcial: solo pedidos pendientes",
+          "code": "db.pedidos.createIndex({ creado: 1 }, { partialFilterExpression: { estado: \"pendiente\" } })"
+        },
+        {
+          "description": "Único solo cuando el campo existe",
+          "code": "db.usuarios.createIndex({ rut: 1 }, { unique: true, partialFilterExpression: { rut: { $exists: true } } })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "text",
+        "partial",
+        "indices",
+        "busqueda"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Solo se permite un índice text por colección. Para búsquedas más potentes (relevancia, sinónimos, autocompletado) usa Atlas Search. Un índice parcial solo se usa si la consulta incluye el filtro compatible."
+    },
+    {
+      "title": "Revisar uso de índices",
+      "command": "db.ventas.aggregate([{ $indexStats: {} }])",
+      "section": "Índices y agregación",
+      "topic": "Índices",
+      "description": "$indexStats muestra cuántas veces se usó cada índice desde el último reinicio. Sirve para detectar índices que cuestan escritura sin dar lectura.",
+      "examples": [
+        {
+          "description": "Tamaño de índices de una colección",
+          "code": "db.ventas.stats().indexSizes"
+        },
+        {
+          "description": "Ocultar un índice para probar sin borrarlo",
+          "code": "db.ventas.hideIndex(\"idx_fecha_desc\")"
+        },
+        {
+          "description": "Volver a mostrarlo",
+          "code": "db.ventas.unhideIndex(\"idx_fecha_desc\")"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "indexstats",
+        "hideindex",
+        "uso"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Pipeline: $match, $group y $sort",
+      "command": "db.ventas.aggregate([\n  { $match: { estado: \"pagado\" } },\n  { $group: { _id: \"$cliente_id\", total: { $sum: \"$total\" }, n: { $sum: 1 } } },\n  { $sort: { total: -1 } },\n  { $limit: 10 }\n])",
+      "section": "Índices y agregación",
+      "topic": "Agregación",
+      "description": "Las agregaciones procesan documentos en etapas. Pon $match lo antes posible para reducir el volumen y aprovechar índices.",
+      "examples": [
+        {
+          "description": "Ventas por mes",
+          "code": "db.ventas.aggregate([{ $group: { _id: { $dateToString: { format: \"%Y-%m\", date: \"$fecha\" } }, total: { $sum: \"$total\" } } }, { $sort: { _id: 1 } }])"
+        },
+        {
+          "description": "Promedio y máximo",
+          "code": "db.ventas.aggregate([{ $group: { _id: null, promedio: { $avg: \"$total\" }, maximo: { $max: \"$total\" } } }])"
+        },
+        {
+          "description": "Contar por campo",
+          "code": "db.usuarios.aggregate([{ $sortByCount: \"$ciudad\" }])"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "aggregate",
+        "match",
+        "group",
+        "sort"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Cada etapa en memoria tiene un límite de 100 MB; con grandes volúmenes agrega { allowDiskUse: true }. Un $match al inicio y un $sort cubierto por índice marcan la diferencia de rendimiento."
+    },
+    {
+      "title": "$project, $addFields y $unwind",
+      "command": "db.pedidos.aggregate([\n  { $unwind: \"$items\" },\n  { $project: { _id: 0, pedido: \"$numero\", sku: \"$items.sku\", subtotal: { $multiply: [\"$items.cantidad\", \"$items.precio\"] } } }\n])",
+      "section": "Índices y agregación",
+      "topic": "Agregación",
+      "description": "$unwind expande cada elemento de un array en un documento propio; $project y $addFields crean y calculan campos.",
+      "examples": [
+        {
+          "description": "Añadir un campo calculado",
+          "code": "db.ventas.aggregate([{ $addFields: { iva: { $multiply: [\"$total\", 0.19] } } }])"
+        },
+        {
+          "description": "Conservar documentos sin array",
+          "code": "db.pedidos.aggregate([{ $unwind: { path: \"$items\", preserveNullAndEmptyArrays: true } }])"
+        },
+        {
+          "description": "Reemplazar la raíz por un subdocumento",
+          "code": "db.pedidos.aggregate([{ $replaceRoot: { newRoot: \"$direccion\" } }])"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "aggregate",
+        "project",
+        "unwind",
+        "addfields"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ]
+    },
+    {
+      "title": "Joins con $lookup",
+      "command": "db.pedidos.aggregate([\n  { $lookup: { from: \"clientes\", localField: \"cliente_id\", foreignField: \"_id\", as: \"cliente\" } },\n  { $unwind: \"$cliente\" }\n])",
+      "section": "Índices y agregación",
+      "topic": "Agregación",
+      "description": "$lookup hace un left outer join con otra colección. Es potente pero costoso: indexa el foreignField.",
+      "examples": [
+        {
+          "description": "Lookup con pipeline y filtro",
+          "code": "db.clientes.aggregate([{ $lookup: { from: \"pedidos\", let: { cid: \"$_id\" }, pipeline: [{ $match: { $expr: { $eq: [\"$cliente_id\", \"$$cid\"] }, estado: \"pagado\" } }], as: \"pagados\" } }])"
+        },
+        {
+          "description": "Solo clientes con pedidos",
+          "code": "db.clientes.aggregate([{ $lookup: { from: \"pedidos\", localField: \"_id\", foreignField: \"cliente_id\", as: \"p\" } }, { $match: { \"p.0\": { $exists: true } } }])"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "lookup",
+        "join",
+        "aggregate"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Si necesitas muchos $lookup, quizá debas denormalizar o incrustar datos. Sin índice en foreignField, $lookup recorre la colección por cada documento."
+    },
+    {
+      "title": "$facet, $bucket y paginación con conteo",
+      "command": "db.productos.aggregate([\n  { $match: { activo: true } },\n  { $facet: {\n    datos: [{ $sort: { precio: 1 } }, { $skip: 0 }, { $limit: 20 }],\n    total: [{ $count: \"n\" }]\n  } }\n])",
+      "section": "Índices y agregación",
+      "topic": "Agregación",
+      "description": "$facet ejecuta varios sub-pipelines sobre la misma entrada: típico para devolver una página de resultados junto con el total.",
+      "examples": [
+        {
+          "description": "Histograma por rangos de precio",
+          "code": "db.productos.aggregate([{ $bucket: { groupBy: \"$precio\", boundaries: [0, 10000, 50000, 100000], default: \"otros\", output: { n: { $sum: 1 } } } }])"
+        },
+        {
+          "description": "Guardar el resultado en otra colección",
+          "code": "db.ventas.aggregate([{ $group: { _id: \"$cliente_id\", total: { $sum: \"$total\" } } }, { $merge: { into: \"resumen_clientes\", whenMatched: \"replace\" } }])"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "facet",
+        "bucket",
+        "merge",
+        "paginacion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Cada sub-pipeline de $facet recibe todos los documentos, y la salida total no puede superar 16 MB. $merge y $out permiten materializar resultados."
+    },
+    {
+      "title": "Crear el primer usuario administrador",
+      "command": "use admin\ndb.createUser({ user: \"admin\", pwd: passwordPrompt(), roles: [{ role: \"root\", db: \"admin\" }] })",
+      "section": "Usuarios y seguridad",
+      "topic": "Usuarios",
+      "description": "Crea un superusuario en la base admin. passwordPrompt() pide la clave por teclado y evita dejarla en el historial de mongosh.",
+      "examples": [
+        {
+          "description": "Usuario de aplicación con acceso a una sola base",
+          "code": "use tienda\ndb.createUser({ user: \"app\", pwd: passwordPrompt(), roles: [{ role: \"readWrite\", db: \"tienda\" }] })"
+        },
+        {
+          "description": "Usuario solo lectura",
+          "code": "db.createUser({ user: \"reportes\", pwd: passwordPrompt(), roles: [{ role: \"read\", db: \"tienda\" }] })"
+        },
+        {
+          "description": "Ver usuarios de la base actual",
+          "code": "db.getUsers()"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "createuser",
+        "admin",
+        "seguridad",
+        "roles"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El usuario se crea en la base donde estás (use X) y esa es su 'authSource'. Si lo creaste en admin pero te conectas con authSource=tienda, fallará. Con --auth activado, la 'excepción localhost' permite crear solo el primer usuario."
+    },
+    {
+      "title": "Roles: grantRolesToUser y revokeRolesFromUser",
+      "command": "db.grantRolesToUser(\"app\", [{ role: \"readWrite\", db: \"logs\" }])",
+      "section": "Usuarios y seguridad",
+      "topic": "Usuarios",
+      "description": "Añade o quita roles de un usuario existente sin recrearlo.",
+      "examples": [
+        {
+          "description": "Quitar un rol",
+          "code": "db.revokeRolesFromUser(\"app\", [{ role: \"readWrite\", db: \"logs\" }])"
+        },
+        {
+          "description": "Cambiar contraseña",
+          "code": "db.changeUserPassword(\"app\", passwordPrompt())"
+        },
+        {
+          "description": "Eliminar usuario",
+          "code": "db.dropUser(\"app\")"
+        },
+        {
+          "description": "Ver privilegios efectivos",
+          "code": "db.getUser(\"app\", { showPrivileges: true })"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "roles",
+        "grantrolestouser",
+        "permisos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Roles útiles: read, readWrite, dbAdmin, userAdmin, clusterMonitor, backup, restore. Evita 'root' y 'dbOwner' en apps."
+    },
+    {
+      "title": "Activar autenticación en el servidor",
+      "command": "security:\n  authorization: enabled\nnet:\n  bindIp: 127.0.0.1",
+      "section": "Usuarios y seguridad",
+      "topic": "Seguridad",
+      "description": "En mongod.conf, authorization:enabled exige credenciales. Sin esto, MongoDB acepta conexiones sin usuario: el origen de muchos incidentes por bases expuestas.",
+      "examples": [
+        {
+          "description": "Archivo de configuración en Ubuntu/AlmaLinux",
+          "code": "sudo nano /etc/mongod.conf"
+        },
+        {
+          "description": "Reiniciar el servicio",
+          "code": "sudo systemctl restart mongod"
+        },
+        {
+          "description": "Comprobar que exige credenciales",
+          "code": "mongosh --quiet --eval \"db.adminCommand('listDatabases')\""
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "auth",
+        "authorization",
+        "bindip",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Antes de activar authorization crea el usuario admin. bindIp debe limitarse: nunca 0.0.0.0 sin firewall, TLS y autenticación. Cierra el puerto 27017 en ufw/firewalld salvo orígenes explícitos."
+    },
+    {
+      "title": "Conexión con TLS en el servidor",
+      "command": "net:\n  tls:\n    mode: requireTLS\n    certificateKeyFile: /etc/ssl/mongo/server.pem\n    CAFile: /etc/ssl/mongo/ca.pem",
+      "section": "Usuarios y seguridad",
+      "topic": "Seguridad",
+      "description": "Cifra las comunicaciones entre clientes y servidor (y entre nodos del replica set). Configurable en mongod.conf.",
+      "examples": [
+        {
+          "description": "Conectar con CA propia",
+          "code": "mongosh \"mongodb://db.ejemplo.cl/tienda\" --tls --tlsCAFile /etc/ssl/mongo/ca.pem"
+        },
+        {
+          "description": "Verificar el certificado presentado",
+          "code": "openssl s_client -connect db.ejemplo.cl:27017 -showcerts </dev/null"
+        }
+      ],
+      "tags": [
+        "mongodb",
+        "tls",
+        "ssl",
+        "certificados",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    }
+  ]
+}

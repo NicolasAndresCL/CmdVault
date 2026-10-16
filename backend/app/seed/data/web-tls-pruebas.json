@@ -1,0 +1,821 @@
+{
+  "category": {
+    "slug": "web",
+    "name": "Servidores web",
+    "icon": "language",
+    "order": 14,
+    "description": "Publicar sitios y APIs: Nginx, Apache, Caddy, certificados TLS y pruebas HTTP desde la terminal."
+  },
+  "commands": [
+    {
+      "title": "Obtener certificado con certbot --nginx",
+      "command": "sudo certbot --nginx -d ejemplo.cl -d www.ejemplo.cl",
+      "section": "TLS y certificados",
+      "topic": "Certbot",
+      "description": "Obtiene un certificado gratuito de Let's Encrypt y modifica la configuración de Nginx para usarlo, añadiendo la redirección a HTTPS.",
+      "examples": [
+        {
+          "description": "Instalación en Ubuntu",
+          "code": "sudo apt install -y certbot python3-certbot-nginx"
+        },
+        {
+          "description": "Instalación en AlmaLinux 9",
+          "code": "sudo dnf install -y epel-release && sudo dnf install -y certbot python3-certbot-nginx"
+        },
+        {
+          "description": "Modo no interactivo",
+          "code": "sudo certbot --nginx -d ejemplo.cl --non-interactive --agree-tos -m admin@ejemplo.cl --redirect"
+        }
+      ],
+      "tags": [
+        "tls",
+        "certbot",
+        "nginx",
+        "letsencrypt"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "El dominio debe apuntar ya a este servidor y el puerto 80 estar abierto (validación HTTP-01). El server block debe tener el server_name correcto para que certbot lo encuentre. Probar primero con --dry-run o --staging evita agotar el límite de emisiones."
+    },
+    {
+      "title": "Certificado con certbot --apache",
+      "command": "sudo certbot --apache -d ejemplo.cl",
+      "section": "TLS y certificados",
+      "topic": "Certbot",
+      "description": "Igual que el de Nginx pero para Apache: obtiene el certificado y configura el VirtualHost con SSL.",
+      "examples": [
+        {
+          "description": "Paquetes en Ubuntu",
+          "code": "sudo apt install -y certbot python3-certbot-apache"
+        },
+        {
+          "description": "Paquetes en AlmaLinux",
+          "code": "sudo dnf install -y certbot python3-certbot-apache mod_ssl"
+        },
+        {
+          "description": "Solo obtener el certificado sin modificar Apache",
+          "code": "sudo certbot certonly --apache -d ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "tls",
+        "certbot",
+        "apache",
+        "letsencrypt"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Certificado con certonly --webroot",
+      "command": "sudo certbot certonly --webroot -w /var/www/ejemplo.cl/html -d ejemplo.cl -d www.ejemplo.cl",
+      "section": "TLS y certificados",
+      "topic": "Certbot",
+      "description": "Obtiene el certificado sin que certbot toque la configuración del servidor: coloca un archivo de validación en el directorio web. Útil con proxies o configuraciones complejas.",
+      "examples": [
+        {
+          "description": "Standalone (certbot abre el puerto 80; el servidor debe estar parado)",
+          "code": "sudo certbot certonly --standalone -d ejemplo.cl"
+        },
+        {
+          "description": "Ubicación de los archivos",
+          "code": "sudo ls -l /etc/letsencrypt/live/ejemplo.cl/"
+        },
+        {
+          "description": "Configuración manual en Nginx",
+          "code": "ssl_certificate /etc/letsencrypt/live/ejemplo.cl/fullchain.pem;\nssl_certificate_key /etc/letsencrypt/live/ejemplo.cl/privkey.pem;"
+        }
+      ],
+      "tags": [
+        "tls",
+        "certbot",
+        "webroot",
+        "certonly"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Usa fullchain.pem (no cert.pem) para ssl_certificate. En webroot, la ruta /.well-known/acme-challenge/ debe ser accesible por HTTP (no la bloquees con 'deny all' ni la redirijas mal)."
+    },
+    {
+      "title": "Certificado comodín (wildcard) con DNS",
+      "command": "sudo certbot certonly --manual --preferred-challenges dns -d ejemplo.cl -d '*.ejemplo.cl'",
+      "section": "TLS y certificados",
+      "topic": "Certbot",
+      "description": "Los comodines exigen validación por DNS: debes crear un registro TXT _acme-challenge. Con plugins de DNS (Cloudflare, Route 53) se automatiza la renovación.",
+      "examples": [
+        {
+          "description": "Con el plugin de Cloudflare",
+          "code": "sudo certbot certonly --dns-cloudflare --dns-cloudflare-credentials /root/.secrets/cloudflare.ini -d ejemplo.cl -d '*.ejemplo.cl'"
+        },
+        {
+          "description": "Instalar el plugin",
+          "code": "sudo apt install -y python3-certbot-dns-cloudflare"
+        },
+        {
+          "description": "Verificar el registro TXT",
+          "code": "dig +short TXT _acme-challenge.ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "tls",
+        "certbot",
+        "wildcard",
+        "dns-01"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El modo --manual NO renueva solo: sin un plugin o un hook de autenticación la renovación fallará. El archivo de credenciales debe tener chmod 600."
+    },
+    {
+      "title": "Renovación automática y simulacro",
+      "command": "sudo certbot renew --dry-run",
+      "section": "TLS y certificados",
+      "topic": "Certbot",
+      "description": "Simula la renovación de todos los certificados sin emitir nada. Debe pasar siempre: si falla hoy, fallará el día del vencimiento.",
+      "examples": [
+        {
+          "description": "Renovación real (la ejecuta el timer de systemd o cron)",
+          "code": "sudo certbot renew"
+        },
+        {
+          "description": "Ver el temporizador de renovación",
+          "code": "systemctl list-timers | grep certbot"
+        },
+        {
+          "description": "Recargar el servidor tras renovar",
+          "code": "sudo certbot renew --deploy-hook 'systemctl reload nginx'"
+        },
+        {
+          "description": "Cron como respaldo",
+          "code": "0 3 * * * certbot renew --quiet --deploy-hook 'systemctl reload nginx'"
+        }
+      ],
+      "tags": [
+        "tls",
+        "certbot",
+        "renew",
+        "dry-run",
+        "renovacion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Los certificados duran 90 días (y Let's Encrypt acorta progresivamente la vida útil): la renovación automática es obligatoria. Si usas el plugin nginx/apache, el recargado es automático; con webroot/standalone añade --deploy-hook. Standalone falla si Nginx ocupa el puerto 80."
+    },
+    {
+      "title": "Listar, revocar y eliminar certificados",
+      "command": "sudo certbot certificates",
+      "section": "TLS y certificados",
+      "topic": "Certbot",
+      "description": "Muestra los certificados gestionados por certbot, sus dominios y fechas de expiración.",
+      "examples": [
+        {
+          "description": "Expandir con otro dominio",
+          "code": "sudo certbot --nginx --expand -d ejemplo.cl -d www.ejemplo.cl -d app.ejemplo.cl"
+        },
+        {
+          "description": "Revocar y borrar",
+          "code": "sudo certbot revoke --cert-name ejemplo.cl --delete-after-revoke"
+        },
+        {
+          "description": "Borrar sin revocar",
+          "code": "sudo certbot delete --cert-name ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "tls",
+        "certbot",
+        "certificates",
+        "revocar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Inspeccionar un certificado remoto con openssl s_client",
+      "command": "openssl s_client -connect ejemplo.cl:443 -servername ejemplo.cl </dev/null 2>/dev/null | openssl x509 -noout -dates -subject -issuer",
+      "section": "TLS y certificados",
+      "topic": "OpenSSL",
+      "description": "Se conecta al servidor, obtiene su certificado y muestra fechas, sujeto y emisor. -servername envía SNI, imprescindible con varios sitios en una misma IP.",
+      "examples": [
+        {
+          "description": "Cadena completa",
+          "code": "openssl s_client -connect ejemplo.cl:443 -servername ejemplo.cl -showcerts </dev/null"
+        },
+        {
+          "description": "Solo la fecha de expiración",
+          "code": "echo | openssl s_client -connect ejemplo.cl:443 -servername ejemplo.cl 2>/dev/null | openssl x509 -noout -enddate"
+        },
+        {
+          "description": "Forzar TLS 1.2 para probar compatibilidad",
+          "code": "openssl s_client -connect ejemplo.cl:443 -servername ejemplo.cl -tls1_2 </dev/null"
+        },
+        {
+          "description": "Verificar días restantes",
+          "code": "echo | openssl s_client -connect ejemplo.cl:443 -servername ejemplo.cl 2>/dev/null | openssl x509 -noout -checkend 1209600 && echo 'vigente 14+ días' || echo 'vence pronto'"
+        }
+      ],
+      "tags": [
+        "tls",
+        "openssl",
+        "s_client",
+        "certificado",
+        "sni"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Sin -servername puedes ver el certificado equivocado (el por defecto del servidor). </dev/null evita que s_client se quede esperando entrada."
+    },
+    {
+      "title": "Leer certificados locales con openssl x509",
+      "command": "openssl x509 -in /etc/letsencrypt/live/ejemplo.cl/fullchain.pem -noout -dates -subject -ext subjectAltName",
+      "section": "TLS y certificados",
+      "topic": "OpenSSL",
+      "description": "Examina un archivo de certificado: fechas, dominios (SAN) y emisor. Útil para auditar qué dominios cubre.",
+      "examples": [
+        {
+          "description": "Huella SHA-256",
+          "code": "openssl x509 -in cert.pem -noout -fingerprint -sha256"
+        },
+        {
+          "description": "Comprobar que clave y certificado coinciden",
+          "code": "diff <(openssl x509 -in cert.pem -noout -pubkey) <(openssl pkey -in clave.pem -pubout) && echo coinciden"
+        },
+        {
+          "description": "Verificar cadena contra una CA",
+          "code": "openssl verify -CAfile ca.pem cert.pem"
+        }
+      ],
+      "tags": [
+        "tls",
+        "openssl",
+        "x509",
+        "certificado",
+        "san"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Generar CSR y certificado autofirmado",
+      "command": "openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout dev.key -out dev.crt -subj \"/CN=localhost\" -addext \"subjectAltName=DNS:localhost,IP:127.0.0.1\"",
+      "section": "TLS y certificados",
+      "topic": "OpenSSL",
+      "description": "Crea un certificado autofirmado para desarrollo local. Para producción se genera un CSR y se envía a una CA.",
+      "examples": [
+        {
+          "description": "Generar clave y CSR",
+          "code": "openssl req -new -newkey rsa:2048 -nodes -keyout ejemplo.key -out ejemplo.csr -subj \"/C=CL/O=Mi Empresa/CN=ejemplo.cl\""
+        },
+        {
+          "description": "Ver el contenido de un CSR",
+          "code": "openssl req -in ejemplo.csr -noout -text"
+        },
+        {
+          "description": "Clave ECDSA (más ligera)",
+          "code": "openssl ecparam -genkey -name prime256v1 -noout -out ec.key"
+        }
+      ],
+      "tags": [
+        "tls",
+        "openssl",
+        "csr",
+        "autofirmado"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Los navegadores exigen el campo subjectAltName; un certificado solo con CN suele fallar. Para desarrollo local, mkcert crea una CA local de confianza y evita las advertencias. Protege las claves privadas con chmod 600."
+    },
+    {
+      "title": "Configuración TLS recomendada en Nginx",
+      "command": "listen 443 ssl;\nhttp2 on;\nssl_certificate /etc/letsencrypt/live/ejemplo.cl/fullchain.pem;\nssl_certificate_key /etc/letsencrypt/live/ejemplo.cl/privkey.pem;\nssl_protocols TLSv1.2 TLSv1.3;\nssl_session_cache shared:SSL:10m;\nssl_session_timeout 1d;",
+      "section": "TLS y certificados",
+      "topic": "Configuración",
+      "description": "Configuración moderna: solo TLS 1.2 y 1.3, caché de sesiones y HTTP/2. En versiones de Nginx anteriores a 1.25.1 http2 se indica como parámetro de listen.",
+      "examples": [
+        {
+          "description": "Versiones antiguas de Nginx",
+          "code": "listen 443 ssl http2;"
+        },
+        {
+          "description": "Probar la configuración TLS desde fuera con nmap",
+          "code": "nmap --script ssl-enum-ciphers -p 443 ejemplo.cl"
+        },
+        {
+          "description": "Probar con testssl.sh",
+          "code": "./testssl.sh --quiet ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "tls",
+        "nginx",
+        "ssl",
+        "http2",
+        "configuracion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Certbot incluye /etc/letsencrypt/options-ssl-nginx.conf con una base segura que se mantiene actualizada. Revisa la calificación con SSL Labs o testssl.sh periódicamente."
+    },
+    {
+      "title": "OCSP, HSTS y verificación de la cadena",
+      "command": "curl -vI https://ejemplo.cl 2>&1 | grep -E 'SSL connection|subject|expire date|issuer'",
+      "section": "TLS y certificados",
+      "topic": "Configuración",
+      "description": "Verificación rápida de la conexión TLS desde curl, mostrando protocolo negociado y datos del certificado.",
+      "examples": [
+        {
+          "description": "Ver el certificado intermedio (cadena incompleta es un fallo común)",
+          "code": "openssl s_client -connect ejemplo.cl:443 -servername ejemplo.cl -showcerts </dev/null | grep -E '^ [0-9] s:|i:'"
+        },
+        {
+          "description": "Verificar HSTS",
+          "code": "curl -sI https://ejemplo.cl | grep -i strict-transport-security"
+        }
+      ],
+      "tags": [
+        "tls",
+        "curl",
+        "hsts",
+        "cadena",
+        "ocsp"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Si el navegador funciona pero curl o apps móviles fallan, probablemente falta el certificado intermedio: usa fullchain.pem, no cert.pem."
+    },
+    {
+      "title": "Cabeceras y estado con curl -I",
+      "command": "curl -I https://ejemplo.cl",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "curl",
+      "description": "Envía una petición HEAD y muestra solo las cabeceras. Rápido para comprobar código de estado, redirecciones y caché.",
+      "examples": [
+        {
+          "description": "Seguir redirecciones",
+          "code": "curl -IL http://ejemplo.cl"
+        },
+        {
+          "description": "Solo el código de estado",
+          "code": "curl -s -o /dev/null -w '%{http_code}\\n' https://ejemplo.cl"
+        },
+        {
+          "description": "GET con cabeceras (algunas apps no responden bien a HEAD)",
+          "code": "curl -s -D - -o /dev/null https://ejemplo.cl"
+        },
+        {
+          "description": "Ignorar un certificado inválido (solo diagnóstico)",
+          "code": "curl -kI https://192.0.2.10"
+        }
+      ],
+      "tags": [
+        "curl",
+        "http",
+        "cabeceras",
+        "estado"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Algunos servidores responden distinto a HEAD y GET. -k desactiva la verificación TLS: úsalo solo para diagnosticar, nunca en scripts de producción."
+    },
+    {
+      "title": "Depuración detallada con curl -v",
+      "command": "curl -v https://ejemplo.cl/api/salud",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "curl",
+      "description": "Muestra la conexión completa: resolución DNS, negociación TLS, cabeceras enviadas y recibidas.",
+      "examples": [
+        {
+          "description": "Con cabeceras y método personalizados",
+          "code": "curl -v -X POST https://ejemplo.cl/api/items -H 'Content-Type: application/json' -d '{\"nombre\":\"x\"}'"
+        },
+        {
+          "description": "Con token Bearer",
+          "code": "curl -sS -H \"Authorization: Bearer $TOKEN\" https://ejemplo.cl/api/me"
+        },
+        {
+          "description": "Solo la traza TLS y HTTP, más compacta",
+          "code": "curl --trace-ascii - https://ejemplo.cl | head -50"
+        }
+      ],
+      "tags": [
+        "curl",
+        "http",
+        "debug",
+        "verbose"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ]
+    },
+    {
+      "title": "Probar un dominio antes de cambiar el DNS con --resolve",
+      "command": "curl --resolve ejemplo.cl:443:203.0.113.10 https://ejemplo.cl",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "curl",
+      "description": "Fuerza que el dominio resuelva a una IP concreta solo para esa petición, manteniendo SNI y Host correctos. Ideal para validar una migración sin tocar el DNS.",
+      "examples": [
+        {
+          "description": "HTTP al servidor nuevo",
+          "code": "curl -I --resolve ejemplo.cl:80:203.0.113.10 http://ejemplo.cl"
+        },
+        {
+          "description": "Con encabezado Host sin TLS",
+          "code": "curl -I -H 'Host: ejemplo.cl' http://203.0.113.10"
+        },
+        {
+          "description": "Cambiar el /etc/hosts temporalmente",
+          "code": "echo '203.0.113.10 ejemplo.cl' | sudo tee -a /etc/hosts"
+        }
+      ],
+      "tags": [
+        "curl",
+        "resolve",
+        "migracion",
+        "dns"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con --resolve el certificado se valida contra el nombre correcto; con una IP directa y -k no pruebas el certificado real. Limpia /etc/hosts al terminar."
+    },
+    {
+      "title": "Medir tiempos de respuesta con curl -w",
+      "command": "curl -o /dev/null -s -w 'dns=%{time_namelookup} conexion=%{time_connect} tls=%{time_appconnect} ttfb=%{time_starttransfer} total=%{time_total}\\n' https://ejemplo.cl",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "curl",
+      "description": "Descompone el tiempo de una petición: DNS, conexión TCP, TLS, primer byte y total. Sirve para ubicar en qué fase se pierde el tiempo.",
+      "examples": [
+        {
+          "description": "Repetir 5 veces",
+          "code": "for i in 1 2 3 4 5; do curl -o /dev/null -s -w '%{time_total}\\n' https://ejemplo.cl; done"
+        },
+        {
+          "description": "Con un archivo de formato reutilizable",
+          "code": "curl -o /dev/null -s -w '@curl-format.txt' https://ejemplo.cl"
+        },
+        {
+          "description": "Tamaño y velocidad",
+          "code": "curl -o /dev/null -s -w 'tamaño=%{size_download} velocidad=%{speed_download}\\n' https://ejemplo.cl/archivo.zip"
+        }
+      ],
+      "tags": [
+        "curl",
+        "rendimiento",
+        "tiempos",
+        "ttfb"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "ttfb alto con tls bajo apunta a la app o al backend; dns alto, a la resolución; connect alto, a la red o al firewall. En PowerShell usa curl.exe (curl es un alias de Invoke-WebRequest)."
+    },
+    {
+      "title": "curl en scripts: fallar ante errores y reintentos",
+      "command": "curl -fsS --retry 3 --retry-delay 2 --max-time 10 https://ejemplo.cl/salud",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "curl",
+      "description": "Combinación robusta para healthchecks y descargas: -f falla ante HTTP 4xx/5xx, -s silencia, -S aun muestra errores, y se reintenta con límite de tiempo.",
+      "examples": [
+        {
+          "description": "Healthcheck con aviso",
+          "code": "curl -fsS --max-time 10 https://ejemplo.cl/salud >/dev/null || echo 'CAIDO' | mail -s 'ejemplo.cl caído' ops@ejemplo.cl"
+        },
+        {
+          "description": "Descargar y seguir redirecciones",
+          "code": "curl -fsSL -o archivo.tgz https://ejemplo.cl/descarga"
+        },
+        {
+          "description": "Subir un archivo",
+          "code": "curl -fsS -F 'archivo=@informe.pdf' https://ejemplo.cl/api/subir"
+        }
+      ],
+      "tags": [
+        "curl",
+        "scripting",
+        "healthcheck",
+        "reintentos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Sin -f curl devuelve código 0 aunque el servidor responda 500. No uses curl | bash sin revisar el script antes."
+    },
+    {
+      "title": "Peticiones legibles con HTTPie",
+      "command": "http GET https://ejemplo.cl/api/items",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "HTTPie",
+      "description": "HTTPie ('http') es un cliente HTTP con sintaxis simple y salida coloreada. Cómodo para probar APIs a mano.",
+      "examples": [
+        {
+          "description": "POST con JSON",
+          "code": "http POST https://ejemplo.cl/api/items nombre=lapiz precio:=1500"
+        },
+        {
+          "description": "Con cabecera de autenticación",
+          "code": "http GET https://ejemplo.cl/api/me Authorization:\"Bearer $TOKEN\""
+        },
+        {
+          "description": "Solo cabeceras",
+          "code": "http --headers https://ejemplo.cl"
+        },
+        {
+          "description": "Instalación",
+          "code": "pipx install httpie"
+        }
+      ],
+      "tags": [
+        "httpie",
+        "http",
+        "api",
+        "cliente"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Con = envía texto y := envía JSON crudo (números, booleanos). En scripts no interactivos añade --ignore-stdin."
+    },
+    {
+      "title": "Prueba de carga con ab (ApacheBench)",
+      "command": "ab -n 1000 -c 50 https://ejemplo.cl/",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "Carga",
+      "description": "Envía 1000 peticiones con 50 concurrentes y reporta peticiones por segundo y latencias. Rápido pero limitado (HTTP/1.0, un solo hilo).",
+      "examples": [
+        {
+          "description": "Con keep-alive",
+          "code": "ab -k -n 2000 -c 100 https://ejemplo.cl/"
+        },
+        {
+          "description": "POST con datos",
+          "code": "ab -n 200 -c 10 -p datos.json -T application/json https://ejemplo.cl/api/items"
+        },
+        {
+          "description": "Instalación",
+          "code": "sudo apt install -y apache2-utils   # AlmaLinux: sudo dnf install -y httpd-tools"
+        }
+      ],
+      "tags": [
+        "ab",
+        "apachebench",
+        "carga",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Hazlo contra tu propio entorno de pruebas, nunca contra un sitio ajeno. Para medir bien, ejecútalo desde otra máquina para que no compita por CPU con el servidor."
+    },
+    {
+      "title": "Pruebas de carga con hey y wrk",
+      "command": "hey -n 2000 -c 50 https://ejemplo.cl/api/salud",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "Carga",
+      "description": "hey es un generador de carga moderno en Go con histograma de latencias. wrk es más potente con scripts Lua.",
+      "examples": [
+        {
+          "description": "hey durante 30 segundos",
+          "code": "hey -z 30s -c 50 https://ejemplo.cl/"
+        },
+        {
+          "description": "wrk con 4 hilos y 100 conexiones",
+          "code": "wrk -t4 -c100 -d30s --latency https://ejemplo.cl/"
+        },
+        {
+          "description": "Con k6 para escenarios",
+          "code": "k6 run --vus 50 --duration 30s prueba.js"
+        }
+      ],
+      "tags": [
+        "hey",
+        "wrk",
+        "k6",
+        "carga",
+        "rendimiento"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Interpreta p95 y p99, no solo el promedio. Una prueba que satura el generador (CPU de tu laptop) da resultados falsos."
+    },
+    {
+      "title": "Consultas DNS con dig",
+      "command": "dig ejemplo.cl +short",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "DNS",
+      "description": "dig consulta registros DNS. +short deja solo la respuesta. Imprescindible para verificar que un dominio apunta donde corresponde.",
+      "syntax": "dig [@servidor] dominio [tipo] [+opciones]",
+      "examples": [
+        {
+          "description": "Registros A, MX y TXT",
+          "code": "dig ejemplo.cl A +short && dig ejemplo.cl MX +short && dig ejemplo.cl TXT +short"
+        },
+        {
+          "description": "Preguntar a un DNS concreto (propagación)",
+          "code": "dig @8.8.8.8 ejemplo.cl +short"
+        },
+        {
+          "description": "Seguir la delegación desde la raíz",
+          "code": "dig +trace ejemplo.cl"
+        },
+        {
+          "description": "Consulta inversa",
+          "code": "dig -x 203.0.113.10 +short"
+        }
+      ],
+      "tags": [
+        "dig",
+        "dns",
+        "dominios",
+        "registros"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Tras cambiar DNS, compara respuestas de distintos resolvers (8.8.8.8, 1.1.1.1) y revisa el TTL. dig viene en bind-utils (AlmaLinux) y dnsutils (Ubuntu)."
+    },
+    {
+      "title": "nslookup y otras comprobaciones de dominio",
+      "command": "nslookup ejemplo.cl 1.1.1.1",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "DNS",
+      "description": "Alternativa a dig, disponible también en Windows. Útil para comprobaciones rápidas desde cualquier sistema.",
+      "examples": [
+        {
+          "description": "Registros MX",
+          "code": "nslookup -type=MX ejemplo.cl"
+        },
+        {
+          "description": "Quién es el servidor de nombres autoritativo",
+          "code": "dig NS ejemplo.cl +short"
+        },
+        {
+          "description": "Información WHOIS (vencimiento)",
+          "code": "whois ejemplo.cl | grep -iE 'expir|registrar|name server'"
+        },
+        {
+          "description": "Resolución local con systemd-resolved",
+          "code": "resolvectl query ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "nslookup",
+        "dns",
+        "whois",
+        "resolvectl"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ]
+    },
+    {
+      "title": "Comprobar quién escucha y conectividad de puertos",
+      "command": "sudo ss -tulpn | grep -E ':80|:443'",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "Red",
+      "description": "Lista los sockets en escucha con su proceso. Confirma que Nginx/Apache/Caddy realmente atienden los puertos 80 y 443.",
+      "examples": [
+        {
+          "description": "Probar un puerto remoto sin instalar nada",
+          "code": "timeout 3 bash -c '</dev/tcp/ejemplo.cl/443' && echo abierto || echo cerrado"
+        },
+        {
+          "description": "Con nc",
+          "code": "nc -zv ejemplo.cl 443"
+        },
+        {
+          "description": "Ruta de red hasta el servidor",
+          "code": "mtr -rw -c 10 ejemplo.cl"
+        },
+        {
+          "description": "Desde fuera: ¿está abierto el puerto?",
+          "code": "nmap -p 80,443 ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "ss",
+        "nc",
+        "mtr",
+        "nmap",
+        "puertos",
+        "conectividad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Si ss muestra el puerto en escucha pero desde fuera no abre, el bloqueo está en el firewall del SO (ufw/firewalld) o del proveedor (grupo de seguridad, firewall del panel). nmap solo contra tus propios servidores."
+    },
+    {
+      "title": "Checklist de un sitio que no carga",
+      "command": "curl -sI https://ejemplo.cl | head -1",
+      "section": "Pruebas HTTP y diagnóstico",
+      "topic": "Diagnóstico",
+      "description": "Orden lógico para diagnosticar: DNS, puerto, certificado, servidor web, aplicación. Detenerte en el primer paso que falle.",
+      "examples": [
+        {
+          "description": "1) DNS",
+          "code": "dig +short ejemplo.cl"
+        },
+        {
+          "description": "2) Puertos y servicio web",
+          "code": "sudo ss -tulpn | grep -E ':80|:443' && sudo systemctl is-active nginx"
+        },
+        {
+          "description": "3) Certificado",
+          "code": "echo | openssl s_client -connect ejemplo.cl:443 -servername ejemplo.cl 2>/dev/null | openssl x509 -noout -enddate"
+        },
+        {
+          "description": "4) Aplicación detrás del proxy",
+          "code": "curl -sI http://127.0.0.1:8000 | head -1 && sudo tail -n 30 /var/log/nginx/error.log"
+        }
+      ],
+      "tags": [
+        "web",
+        "diagnostico",
+        "checklist",
+        "sitio-caido"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "En el VPS con AlmaLinux + Traefik, revisa también los contenedores: docker ps y docker logs traefik. Un 404 'page not found' de Traefik significa que no hay router que coincida con el Host."
+    }
+  ]
+}

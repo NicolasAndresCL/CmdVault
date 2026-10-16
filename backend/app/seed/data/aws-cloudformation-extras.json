@@ -1,0 +1,238 @@
+{
+  "category": {
+    "slug": "aws",
+    "name": "AWS",
+    "icon": "cloud_circle",
+    "order": 12,
+    "description": "AWS CLI v2: identidad, EC2, S3, redes, bases de datos, contenedores, serverless, monitoreo y costos."
+  },
+  "commands": [
+    {
+      "title": "Desplegar con aws cloudformation deploy",
+      "command": "aws cloudformation deploy --template-file plantilla.yaml --stack-name tienda-prod --parameter-overrides Entorno=prod --capabilities CAPABILITY_NAMED_IAM",
+      "section": "Monitoreo y costos",
+      "topic": "CloudFormation",
+      "description": "Crea o actualiza una pila usando un change set. Es el comando recomendado para despliegues repetibles desde CI/CD.",
+      "examples": [
+        {
+          "description": "Solo crear el change set para revisarlo",
+          "code": "aws cloudformation deploy --template-file plantilla.yaml --stack-name tienda-prod --no-execute-changeset"
+        },
+        {
+          "description": "No fallar si no hay cambios",
+          "code": "aws cloudformation deploy --template-file plantilla.yaml --stack-name tienda-prod --no-fail-on-empty-changeset"
+        },
+        {
+          "description": "Con etiquetas",
+          "code": "aws cloudformation deploy --template-file plantilla.yaml --stack-name tienda-prod --tags Proyecto=tienda Entorno=prod"
+        }
+      ],
+      "tags": [
+        "aws",
+        "cloudformation",
+        "deploy",
+        "iac",
+        "stack"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "CAPABILITY_IAM o CAPABILITY_NAMED_IAM es obligatorio si la plantilla crea roles. Revisa el change set antes de aplicar cambios que reemplacen recursos (pueden borrar datos). Si la pila queda en ROLLBACK_COMPLETE hay que eliminarla antes de reintentar."
+    },
+    {
+      "title": "Ver estado de pilas y sus salidas",
+      "command": "aws cloudformation describe-stacks --stack-name tienda-prod --query \"Stacks[0].[StackStatus,Outputs]\"",
+      "section": "Monitoreo y costos",
+      "topic": "CloudFormation",
+      "description": "Consulta el estado de la pila y los valores de salida (URLs, ARNs) que otras herramientas necesitan.",
+      "examples": [
+        {
+          "description": "Listar pilas existentes",
+          "code": "aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE --query \"StackSummaries[].[StackName,StackStatus]\" --output table"
+        },
+        {
+          "description": "Recursos de una pila",
+          "code": "aws cloudformation list-stack-resources --stack-name tienda-prod --query \"StackResourceSummaries[].[LogicalResourceId,ResourceType,ResourceStatus]\" --output table"
+        },
+        {
+          "description": "Valor de una salida concreta",
+          "code": "aws cloudformation describe-stacks --stack-name tienda-prod --query \"Stacks[0].Outputs[?OutputKey=='UrlSitio'].OutputValue\" --output text"
+        }
+      ],
+      "tags": [
+        "aws",
+        "cloudformation",
+        "describe-stacks",
+        "outputs"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Depurar un despliegue fallido",
+      "command": "aws cloudformation describe-stack-events --stack-name tienda-prod --query \"StackEvents[?contains(ResourceStatus,'FAILED')].[LogicalResourceId,ResourceStatusReason]\" --output table",
+      "section": "Monitoreo y costos",
+      "topic": "CloudFormation",
+      "description": "Muestra los eventos que fallaron y su motivo. La causa raíz suele estar en el primer evento FAILED cronológico.",
+      "examples": [
+        {
+          "description": "Seguir los últimos eventos",
+          "code": "aws cloudformation describe-stack-events --stack-name tienda-prod --max-items 10 --query \"StackEvents[].[Timestamp,LogicalResourceId,ResourceStatus]\" --output table"
+        },
+        {
+          "description": "Validar la plantilla antes de desplegar",
+          "code": "aws cloudformation validate-template --template-body file://plantilla.yaml"
+        },
+        {
+          "description": "Detectar deriva",
+          "code": "aws cloudformation detect-stack-drift --stack-name tienda-prod"
+        }
+      ],
+      "tags": [
+        "aws",
+        "cloudformation",
+        "eventos",
+        "debug",
+        "drift"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Eliminar una pila",
+      "command": "aws cloudformation delete-stack --stack-name tienda-prod",
+      "section": "Monitoreo y costos",
+      "topic": "CloudFormation",
+      "description": "Borra la pila y sus recursos. Operación destructiva: S3 no vacíos o recursos con DeletionPolicy Retain pueden bloquear o sobrevivir.",
+      "examples": [
+        {
+          "description": "Esperar a que termine",
+          "code": "aws cloudformation wait stack-delete-complete --stack-name tienda-prod"
+        },
+        {
+          "description": "Habilitar protección contra eliminación",
+          "code": "aws cloudformation update-termination-protection --enable-termination-protection --stack-name tienda-prod"
+        }
+      ],
+      "tags": [
+        "aws",
+        "cloudformation",
+        "delete-stack",
+        "eliminar"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Si el borrado falla (DELETE_FAILED), mira el motivo: suele ser un bucket con objetos. Activa la protección contra terminación en pilas de producción."
+    },
+    {
+      "title": "Regiones disponibles y comparar regiones",
+      "command": "aws ec2 describe-regions --query \"Regions[].RegionName\" --output text",
+      "section": "Configuración e identidad",
+      "topic": "Configuración",
+      "description": "Lista las regiones habilitadas en la cuenta. Algunas regiones nuevas deben activarse antes de usarlas.",
+      "examples": [
+        {
+          "description": "Incluir regiones deshabilitadas",
+          "code": "aws ec2 describe-regions --all-regions --query \"Regions[].[RegionName,OptInStatus]\" --output table"
+        },
+        {
+          "description": "Zonas de una región concreta",
+          "code": "aws ec2 describe-availability-zones --region sa-east-1 --query \"AvailabilityZones[].ZoneName\" --output text"
+        }
+      ],
+      "tags": [
+        "aws",
+        "regiones",
+        "zonas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Backup de carpeta a S3 con cron",
+      "command": "0 3 * * * aws s3 sync /var/backups s3://mi-bucket/vps-backups/ --storage-class STANDARD_IA --only-show-errors",
+      "section": "Almacenamiento (S3)",
+      "topic": "Automatización",
+      "description": "Entrada de crontab que sube diariamente los backups locales del VPS a S3. Complementa el respaldo local y protege ante la pérdida del servidor.",
+      "examples": [
+        {
+          "description": "Usar un perfil específico en cron (el entorno de cron es mínimo)",
+          "code": "0 3 * * * AWS_PROFILE=backup /usr/local/bin/aws s3 sync /var/backups s3://mi-bucket/vps-backups/ --only-show-errors"
+        },
+        {
+          "description": "Verificar la última subida",
+          "code": "aws s3 ls s3://mi-bucket/vps-backups/ --recursive | sort | tail -3"
+        },
+        {
+          "description": "Política IAM mínima: solo escribir en el prefijo",
+          "code": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:PutObject\",\"s3:ListBucket\"],\"Resource\":[\"arn:aws:s3:::mi-bucket\",\"arn:aws:s3:::mi-bucket/vps-backups/*\"]}]}"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "backup",
+        "cron",
+        "vps"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En cron usa la ruta absoluta del binario (which aws). Crea un usuario IAM exclusivo con la política mínima; si la clave se filtra, no podrá borrar ni leer otros datos. Activa versionado para proteger el backup de ransomware."
+    },
+    {
+      "title": "Subir con --exclude, --include y metadatos",
+      "command": "aws s3 cp ./public s3://mi-bucket/ --recursive --exclude \"*\" --include \"*.css\" --include \"*.js\" --content-type text/plain",
+      "section": "Almacenamiento (S3)",
+      "topic": "Objetos",
+      "description": "Los filtros --exclude/--include se evalúan en orden: el último que coincide gana. Permiten subir solo cierto tipo de archivos o asignar metadatos específicos.",
+      "examples": [
+        {
+          "description": "Subir imágenes con caché larga",
+          "code": "aws s3 cp ./public/img s3://mi-bucket/img/ --recursive --cache-control \"max-age=31536000\""
+        },
+        {
+          "description": "Tipo de contenido explícito",
+          "code": "aws s3 cp robots.txt s3://mi-bucket/robots.txt --content-type text/plain"
+        },
+        {
+          "description": "Copiar entre buckets",
+          "code": "aws s3 sync s3://origen/ s3://destino/ --source-region sa-east-1 --region us-east-1"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "include",
+        "exclude",
+        "metadatos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "Primero --exclude \"*\" y luego los --include: si inviertes el orden, el exclude gana. El CLI deduce el Content-Type por la extensión; revisa que .js, .css y .svg lleguen bien."
+    }
+  ]
+}

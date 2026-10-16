@@ -1,0 +1,662 @@
+{
+  "category": {
+    "slug": "aws",
+    "name": "AWS",
+    "icon": "cloud_circle",
+    "order": 12,
+    "description": "AWS CLI v2: identidad, EC2, S3, redes, bases de datos, contenedores, serverless, monitoreo y costos."
+  },
+  "commands": [
+    {
+      "title": "Métricas con get-metric-statistics",
+      "command": "aws cloudwatch get-metric-statistics --namespace AWS/EC2 --metric-name CPUUtilization --dimensions Name=InstanceId,Value=i-0abc123def4567890 --start-time $(date -u -d '1 hour ago' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 300 --statistics Average",
+      "section": "Monitoreo y costos",
+      "topic": "CloudWatch",
+      "description": "Consulta una métrica de CloudWatch en un rango de tiempo. Es la forma de ver CPU, red o disco sin entrar a la consola.",
+      "examples": [
+        {
+          "description": "Salida resumida en tabla",
+          "code": "aws cloudwatch get-metric-statistics --namespace AWS/EC2 --metric-name CPUUtilization --dimensions Name=InstanceId,Value=i-0abc123def4567890 --start-time $(date -u -d '1 hour ago' +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 300 --statistics Average Maximum --query \"sort_by(Datapoints,&Timestamp)[].[Timestamp,Average,Maximum]\" --output table"
+        },
+        {
+          "description": "Listar métricas disponibles de un servicio",
+          "code": "aws cloudwatch list-metrics --namespace AWS/RDS"
+        },
+        {
+          "description": "En macOS el date es distinto (BSD)",
+          "code": "aws cloudwatch get-metric-statistics --namespace AWS/EC2 --metric-name CPUUtilization --dimensions Name=InstanceId,Value=i-0abc123def4567890 --start-time $(date -u -v-1H +%FT%TZ) --end-time $(date -u +%FT%TZ) --period 300 --statistics Average"
+        }
+      ],
+      "tags": [
+        "aws",
+        "cloudwatch",
+        "metricas",
+        "cpu"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "El período debe ser múltiplo de 60 s (y 300 s para métricas básicas de EC2). Memoria y disco no existen por defecto: requieren el CloudWatch Agent. date -d es sintaxis GNU (Linux)."
+    },
+    {
+      "title": "Crear alarmas con put-metric-alarm",
+      "command": "aws cloudwatch put-metric-alarm --alarm-name cpu-alta-web01 --namespace AWS/EC2 --metric-name CPUUtilization --dimensions Name=InstanceId,Value=i-0abc123def4567890 --statistic Average --period 300 --evaluation-periods 2 --threshold 80 --comparison-operator GreaterThanThreshold --alarm-actions arn:aws:sns:sa-east-1:123456789012:alertas",
+      "section": "Monitoreo y costos",
+      "topic": "CloudWatch",
+      "description": "Dispara una acción (por ejemplo un tema SNS) cuando la métrica supera el umbral durante varios períodos seguidos.",
+      "examples": [
+        {
+          "description": "Ver alarmas en estado ALARM",
+          "code": "aws cloudwatch describe-alarms --state-value ALARM --query \"MetricAlarms[].[AlarmName,StateReason]\" --output table"
+        },
+        {
+          "description": "Probar una alarma forzando el estado",
+          "code": "aws cloudwatch set-alarm-state --alarm-name cpu-alta-web01 --state-value ALARM --state-reason \"prueba\""
+        },
+        {
+          "description": "Eliminar alarmas",
+          "code": "aws cloudwatch delete-alarms --alarm-names cpu-alta-web01"
+        }
+      ],
+      "tags": [
+        "aws",
+        "cloudwatch",
+        "alarma",
+        "sns",
+        "alertas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Define --treat-missing-data (por ejemplo notBreaching) o una instancia detenida generará alarmas en INSUFFICIENT_DATA. Usa evaluation-periods ≥ 2 para evitar falsos positivos por picos."
+    },
+    {
+      "title": "Auditoría con CloudTrail lookup-events",
+      "command": "aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=TerminateInstances --max-results 10",
+      "section": "Monitoreo y costos",
+      "topic": "Auditoría",
+      "description": "Busca quién hizo qué en la cuenta durante los últimos 90 días. Imprescindible tras un cambio inesperado.",
+      "examples": [
+        {
+          "description": "Eventos de un usuario",
+          "code": "aws cloudtrail lookup-events --lookup-attributes AttributeKey=Username,AttributeValue=nico --max-results 20"
+        },
+        {
+          "description": "Con tabla resumida",
+          "code": "aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=DeleteBucket --query \"Events[].[EventTime,Username,EventName]\" --output table"
+        },
+        {
+          "description": "Intentos de inicio de sesión en consola",
+          "code": "aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=ConsoleLogin --max-results 10"
+        }
+      ],
+      "tags": [
+        "aws",
+        "cloudtrail",
+        "auditoria",
+        "seguridad",
+        "eventos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "lookup-events solo cubre eventos de administración de los últimos 90 días y una región a la vez. Para retención larga crea un trail que guarde en S3."
+    },
+    {
+      "title": "Costos por servicio con Cost Explorer",
+      "command": "aws ce get-cost-and-usage --time-period Start=2026-10-01,End=2026-10-16 --granularity MONTHLY --metrics UnblendedCost --group-by Type=DIMENSION,Key=SERVICE",
+      "section": "Monitoreo y costos",
+      "topic": "Costos",
+      "description": "Muestra el gasto del período agrupado por servicio. Cada llamada a la API de Cost Explorer cuesta unos centavos.",
+      "examples": [
+        {
+          "description": "Solo el total del mes",
+          "code": "aws ce get-cost-and-usage --time-period Start=2026-10-01,End=2026-10-16 --granularity MONTHLY --metrics UnblendedCost --query \"ResultsByTime[].Total.UnblendedCost.Amount\" --output text"
+        },
+        {
+          "description": "Costo diario",
+          "code": "aws ce get-cost-and-usage --time-period Start=2026-10-01,End=2026-10-16 --granularity DAILY --metrics UnblendedCost --query \"ResultsByTime[].[TimePeriod.Start,Total.UnblendedCost.Amount]\" --output table"
+        },
+        {
+          "description": "Por tag de proyecto",
+          "code": "aws ce get-cost-and-usage --time-period Start=2026-10-01,End=2026-10-16 --granularity MONTHLY --metrics UnblendedCost --group-by Type=TAG,Key=Proyecto"
+        }
+      ],
+      "tags": [
+        "aws",
+        "costos",
+        "cost-explorer",
+        "finops"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "La fecha End es exclusiva. Cost Explorer solo está en us-east-1 (el CLI lo enruta solo). Etiqueta recursos con tags y actívalos como 'cost allocation tags' para poder agrupar por ellos."
+    },
+    {
+      "title": "Previsión de gasto con get-cost-forecast",
+      "command": "aws ce get-cost-forecast --time-period Start=2026-10-17,End=2026-11-01 --metric UNBLENDED_COST --granularity MONTHLY",
+      "section": "Monitoreo y costos",
+      "topic": "Costos",
+      "description": "Estima el gasto futuro según el consumo histórico. Útil para anticipar sorpresas antes de fin de mes.",
+      "examples": [
+        {
+          "description": "Solo el monto total previsto",
+          "code": "aws ce get-cost-forecast --time-period Start=2026-10-17,End=2026-11-01 --metric UNBLENDED_COST --granularity MONTHLY --query Total.Amount --output text"
+        },
+        {
+          "description": "Con intervalo de predicción del 80 %",
+          "code": "aws ce get-cost-forecast --time-period Start=2026-10-17,End=2026-11-01 --metric UNBLENDED_COST --granularity MONTHLY --prediction-interval-level 80"
+        }
+      ],
+      "tags": [
+        "aws",
+        "costos",
+        "forecast",
+        "prevision"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Presupuestos con alertas (AWS Budgets)",
+      "command": "aws budgets create-budget --account-id 123456789012 --budget file://presupuesto.json --notifications-with-subscribers file://notificaciones.json",
+      "section": "Monitoreo y costos",
+      "topic": "Costos",
+      "description": "Define un presupuesto mensual y avisa por correo o SNS al cruzar un umbral. Evita facturas inesperadas por recursos olvidados.",
+      "examples": [
+        {
+          "description": "Contenido mínimo de presupuesto.json",
+          "code": "{\"BudgetName\":\"mensual-50usd\",\"BudgetLimit\":{\"Amount\":\"50\",\"Unit\":\"USD\"},\"TimeUnit\":\"MONTHLY\",\"BudgetType\":\"COST\"}"
+        },
+        {
+          "description": "Listar presupuestos",
+          "code": "aws budgets describe-budgets --account-id 123456789012"
+        },
+        {
+          "description": "Eliminar",
+          "code": "aws budgets delete-budget --account-id 123456789012 --budget-name mensual-50usd"
+        }
+      ],
+      "tags": [
+        "aws",
+        "budgets",
+        "presupuesto",
+        "alertas",
+        "finops"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Configura alertas reales al 50, 80 y 100 % (y por pronóstico). Un presupuesto solo avisa, no detiene recursos. Los primeros presupuestos suelen ser gratis, revisa cuotas actuales."
+    },
+    {
+      "title": "Encontrar recursos huérfanos que cuestan dinero",
+      "command": "aws ec2 describe-volumes --filters Name=status,Values=available --query \"Volumes[].[VolumeId,Size,CreateTime]\" --output table",
+      "section": "Monitoreo y costos",
+      "topic": "Costos",
+      "description": "Los volúmenes EBS 'available' (sin instancia), las IP elásticas sin asociar y los snapshots antiguos siguen cobrando. Una revisión mensual ahorra dinero.",
+      "examples": [
+        {
+          "description": "IP elásticas sin asociar",
+          "code": "aws ec2 describe-addresses --query \"Addresses[?AssociationId==null].[PublicIp,AllocationId]\" --output table"
+        },
+        {
+          "description": "Instancias detenidas",
+          "code": "aws ec2 describe-instances --filters Name=instance-state-name,Values=stopped --query \"Reservations[].Instances[].[InstanceId,LaunchTime]\" --output table"
+        },
+        {
+          "description": "NAT gateways activos (cobran por hora)",
+          "code": "aws ec2 describe-nat-gateways --filter Name=state,Values=available --query \"NatGateways[].[NatGatewayId,VpcId]\" --output table"
+        },
+        {
+          "description": "Todos los recursos con un tag",
+          "code": "aws resourcegroupstaggingapi get-resources --tag-filters Key=Proyecto,Values=piloto --query \"ResourceTagMappingList[].ResourceARN\""
+        }
+      ],
+      "tags": [
+        "aws",
+        "costos",
+        "huerfanos",
+        "limpieza"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Repite la revisión en cada región que uses. Antes de borrar un volumen 'available' crea un snapshot si hay duda de su contenido."
+    },
+    {
+      "title": "Exportar credenciales temporales como variables",
+      "command": "aws configure export-credentials --profile produccion --format env",
+      "section": "Configuración e identidad",
+      "topic": "Configuración",
+      "description": "Imprime las credenciales resueltas del perfil (incluido SSO) como variables de entorno. Útil para herramientas que no entienden perfiles SSO, como Terraform antiguo o docker.",
+      "examples": [
+        {
+          "description": "Cargarlas en la sesión",
+          "code": "eval \"$(aws configure export-credentials --profile produccion --format env)\""
+        },
+        {
+          "description": "Formato para ~/.aws/credentials",
+          "code": "aws configure export-credentials --profile produccion --format process"
+        }
+      ],
+      "tags": [
+        "aws",
+        "credenciales",
+        "sso",
+        "variables",
+        "entorno"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Disponible en versiones recientes del CLI v2. Las credenciales caducan; vuelve a ejecutarlo tras aws sso login. No las pegues en logs."
+    },
+    {
+      "title": "Paginación de resultados: --max-items y --page-size",
+      "command": "aws s3api list-objects-v2 --bucket mi-bucket --max-items 100",
+      "section": "Configuración e identidad",
+      "topic": "Configuración",
+      "description": "El CLI pagina automáticamente. --max-items limita el total devuelto y entrega un NextToken para continuar; --page-size cambia el tamaño de cada petición a la API.",
+      "examples": [
+        {
+          "description": "Continuar desde el token",
+          "code": "aws s3api list-objects-v2 --bucket mi-bucket --max-items 100 --starting-token <NextToken>"
+        },
+        {
+          "description": "Reducir el tamaño de página si hay timeouts",
+          "code": "aws s3api list-objects-v2 --bucket mi-bucket --page-size 200"
+        },
+        {
+          "description": "Desactivar la paginación del CLI",
+          "code": "aws ec2 describe-instances --no-paginate"
+        }
+      ],
+      "tags": [
+        "aws",
+        "paginacion",
+        "max-items",
+        "starting-token"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "No confundas --max-items (límite del CLI) con --max-keys / --max-results (límite de la API). Si usas --query, la consulta se aplica a CADA página."
+    },
+    {
+      "title": "Simular permisos de IAM",
+      "command": "aws iam simulate-principal-policy --policy-source-arn arn:aws:iam::123456789012:user/nico --action-names s3:GetObject ec2:TerminateInstances",
+      "section": "Configuración e identidad",
+      "topic": "Identidad",
+      "description": "Comprueba si un usuario o rol tendría permiso para ciertas acciones, sin ejecutarlas. Ayuda a depurar errores AccessDenied.",
+      "examples": [
+        {
+          "description": "Resumen de decisiones",
+          "code": "aws iam simulate-principal-policy --policy-source-arn arn:aws:iam::123456789012:user/nico --action-names s3:GetObject --query \"EvaluationResults[].[EvalActionName,EvalDecision]\" --output table"
+        },
+        {
+          "description": "Decodificar un mensaje de error de autorización",
+          "code": "aws sts decode-authorization-message --encoded-message <mensaje-codificado> --query DecodedMessage --output text"
+        }
+      ],
+      "tags": [
+        "aws",
+        "iam",
+        "simulate",
+        "permisos",
+        "accessdenied"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "MFA: sesión temporal con get-session-token",
+      "command": "aws sts get-session-token --serial-number arn:aws:iam::123456789012:mfa/nico --token-code 123456 --duration-seconds 3600",
+      "section": "Configuración e identidad",
+      "topic": "Identidad",
+      "description": "Obtiene credenciales temporales validando un código MFA. Necesario cuando las políticas exigen MFA para ciertas acciones.",
+      "examples": [
+        {
+          "description": "Exportar el resultado con jq",
+          "code": "aws sts get-session-token --serial-number arn:aws:iam::123456789012:mfa/nico --token-code 123456 | jq -r '.Credentials | \"export AWS_ACCESS_KEY_ID=\\(.AccessKeyId) AWS_SECRET_ACCESS_KEY=\\(.SecretAccessKey) AWS_SESSION_TOKEN=\\(.SessionToken)\"'"
+        },
+        {
+          "description": "Perfil que asume un rol con MFA (en ~/.aws/config)",
+          "code": "[profile admin]\nrole_arn = arn:aws:iam::123456789012:role/Admin\nsource_profile = base\nmfa_serial = arn:aws:iam::123456789012:mfa/nico"
+        }
+      ],
+      "tags": [
+        "aws",
+        "mfa",
+        "sts",
+        "sesion",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Instancias Spot",
+      "command": "aws ec2 run-instances --image-id ami-0123456789abcdef0 --instance-type t3.large --instance-market-options 'MarketType=spot' --count 1",
+      "section": "Cómputo (EC2)",
+      "topic": "Instancias",
+      "description": "Capacidad sobrante de AWS con gran descuento, pero que puede ser interrumpida con 2 minutos de aviso. Buena para trabajos tolerantes a fallos.",
+      "examples": [
+        {
+          "description": "Precios Spot recientes",
+          "code": "aws ec2 describe-spot-price-history --instance-types t3.large --product-descriptions \"Linux/UNIX\" --max-items 5"
+        },
+        {
+          "description": "Tipos disponibles con sus vCPU y memoria",
+          "code": "aws ec2 describe-instance-types --filters \"Name=memory-info.size-in-mib,Values=8192\" --query \"InstanceTypes[].[InstanceType,VCpuInfo.DefaultVCpus]\" --output table"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "spot",
+        "descuento",
+        "costos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "No uses Spot para bases de datos ni servicios sin tolerancia a interrupciones. Gestiona la reacción al aviso de interrupción (metadatos instance-action)."
+    },
+    {
+      "title": "Auto Scaling Groups",
+      "command": "aws autoscaling describe-auto-scaling-groups --query \"AutoScalingGroups[].[AutoScalingGroupName,DesiredCapacity,MinSize,MaxSize]\" --output table",
+      "section": "Cómputo (EC2)",
+      "topic": "Instancias",
+      "description": "Un grupo de Auto Scaling mantiene el número de instancias deseado y las reemplaza si fallan, además de escalar con la carga.",
+      "examples": [
+        {
+          "description": "Cambiar capacidad deseada",
+          "code": "aws autoscaling set-desired-capacity --auto-scaling-group-name web-asg --desired-capacity 3"
+        },
+        {
+          "description": "Actualizar límites",
+          "code": "aws autoscaling update-auto-scaling-group --auto-scaling-group-name web-asg --min-size 2 --max-size 6"
+        },
+        {
+          "description": "Reemplazo gradual de instancias",
+          "code": "aws autoscaling start-instance-refresh --auto-scaling-group-name web-asg --preferences '{\"MinHealthyPercentage\":90}'"
+        }
+      ],
+      "tags": [
+        "aws",
+        "autoscaling",
+        "asg",
+        "escalado"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Auditar grupos de seguridad abiertos al mundo",
+      "command": "aws ec2 describe-security-groups --filters Name=ip-permission.cidr,Values=0.0.0.0/0 --query \"SecurityGroups[].[GroupId,GroupName]\" --output table",
+      "section": "Cómputo (EC2)",
+      "topic": "Seguridad",
+      "description": "Encuentra grupos de seguridad con reglas abiertas a Internet. Revisa especialmente los puertos 22, 3389 y los de bases de datos.",
+      "examples": [
+        {
+          "description": "Reglas SSH abiertas",
+          "code": "aws ec2 describe-security-groups --filters Name=ip-permission.from-port,Values=22 Name=ip-permission.cidr,Values=0.0.0.0/0 --query \"SecurityGroups[].GroupId\""
+        },
+        {
+          "description": "Quitar la regla peligrosa",
+          "code": "aws ec2 revoke-security-group-ingress --group-id sg-0abc123 --protocol tcp --port 22 --cidr 0.0.0.0/0"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "seguridad",
+        "auditoria",
+        "sg"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Lightsail: VPS simples de AWS",
+      "command": "aws lightsail get-instances --query \"instances[].[name,state.name,publicIpAddress]\" --output table",
+      "section": "Cómputo (EC2)",
+      "topic": "Instancias",
+      "description": "Lightsail ofrece VPS con precio fijo mensual, similares a un HostGator o DigitalOcean. Sirve cuando EC2 es excesivo.",
+      "examples": [
+        {
+          "description": "Imágenes y planes disponibles",
+          "code": "aws lightsail get-blueprints --query \"blueprints[].blueprintId\" --output text | tr '\\t' '\\n' | grep -i -E 'ubuntu|alma'"
+        },
+        {
+          "description": "Planes (bundles)",
+          "code": "aws lightsail get-bundles --query \"bundles[].[bundleId,price,ramSizeInGb]\" --output table"
+        },
+        {
+          "description": "Abrir un puerto",
+          "code": "aws lightsail open-instance-public-ports --instance-name web --port-info fromPort=443,toPort=443,protocol=TCP"
+        }
+      ],
+      "tags": [
+        "aws",
+        "lightsail",
+        "vps",
+        "precio-fijo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Verifica los blueprintId y bundleId vigentes con get-blueprints y get-bundles antes de crear instancias: cambian con el tiempo. La transferencia de datos incluida es limitada según el plan."
+    },
+    {
+      "title": "Metadatos de un objeto con head-object",
+      "command": "aws s3api head-object --bucket mi-bucket --key informes/ventas.pdf",
+      "section": "Almacenamiento (S3)",
+      "topic": "Objetos",
+      "description": "Devuelve tamaño, tipo de contenido, ETag, clase de almacenamiento y fecha, sin descargar el objeto.",
+      "examples": [
+        {
+          "description": "Solo el tamaño",
+          "code": "aws s3api head-object --bucket mi-bucket --key informes/ventas.pdf --query ContentLength"
+        },
+        {
+          "description": "Comprobar si existe (código de salida)",
+          "code": "aws s3api head-object --bucket mi-bucket --key informes/ventas.pdf >/dev/null 2>&1 && echo existe || echo no existe"
+        },
+        {
+          "description": "Mover un objeto",
+          "code": "aws s3 mv s3://mi-bucket/tmp/a.txt s3://mi-bucket/final/a.txt"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3api",
+        "head-object",
+        "metadatos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "S3 compatible: Cloudflare R2, MinIO y otros",
+      "command": "aws s3 ls --endpoint-url https://<account_id>.r2.cloudflarestorage.com",
+      "section": "Almacenamiento (S3)",
+      "topic": "Objetos",
+      "description": "Con --endpoint-url el mismo CLI sirve para cualquier almacenamiento compatible con S3: R2, MinIO, DigitalOcean Spaces, Hetzner Object Storage.",
+      "examples": [
+        {
+          "description": "Subir a MinIO local",
+          "code": "aws s3 cp backup.tar.gz s3://backups/ --endpoint-url http://localhost:9000"
+        },
+        {
+          "description": "Perfil dedicado con sus claves",
+          "code": "aws configure --profile r2"
+        },
+        {
+          "description": "Sync con R2",
+          "code": "aws s3 sync ./dist s3://mi-sitio/ --endpoint-url https://<account_id>.r2.cloudflarestorage.com --profile r2"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "compatible",
+        "r2",
+        "minio",
+        "endpoint-url"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Cada proveedor usa sus propias claves: crea un perfil separado y pásalo con --profile. En R2 la región es 'auto'. Algunas funciones avanzadas de S3 (versionado, lifecycle) pueden diferir."
+    },
+    {
+      "title": "Limpiar subidas multipart incompletas",
+      "command": "aws s3api list-multipart-uploads --bucket mi-bucket",
+      "section": "Almacenamiento (S3)",
+      "topic": "Objetos",
+      "description": "Las subidas multipart abortadas dejan partes ocultas que se siguen cobrando. Se listan y se cancelan, o se limpian con una regla de ciclo de vida.",
+      "examples": [
+        {
+          "description": "Abortar una subida",
+          "code": "aws s3api abort-multipart-upload --bucket mi-bucket --key backups/grande.tar --upload-id <upload-id>"
+        },
+        {
+          "description": "Regla de ciclo de vida para limpiarlas",
+          "code": "{\"Rules\":[{\"ID\":\"abortar-multipart\",\"Status\":\"Enabled\",\"Filter\":{},\"AbortIncompleteMultipartUpload\":{\"DaysAfterInitiation\":7}}]}"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3api",
+        "multipart",
+        "limpieza",
+        "costos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "URL de función Lambda",
+      "command": "aws lambda create-function-url-config --function-name procesar-pedido --auth-type AWS_IAM",
+      "section": "Serverless y mensajería",
+      "topic": "Lambda",
+      "description": "Da un endpoint HTTPS directo a la función, sin API Gateway. Con AWS_IAM exige firma; con NONE es público.",
+      "examples": [
+        {
+          "description": "Ver la URL",
+          "code": "aws lambda get-function-url-config --function-name procesar-pedido --query FunctionUrl --output text"
+        },
+        {
+          "description": "Cambiar variables de entorno",
+          "code": "aws lambda update-function-configuration --function-name procesar-pedido --environment \"Variables={ENTORNO=prod,LOG_LEVEL=info}\""
+        },
+        {
+          "description": "Aumentar memoria y timeout",
+          "code": "aws lambda update-function-configuration --function-name procesar-pedido --memory-size 512 --timeout 30"
+        }
+      ],
+      "tags": [
+        "aws",
+        "lambda",
+        "function-url",
+        "configuracion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ],
+      "notes": "update-function-configuration reemplaza TODAS las variables de entorno con las indicadas. Con --auth-type NONE además debes añadir un permiso público (add-permission): úsalo solo para endpoints realmente públicos."
+    },
+    {
+      "title": "Ejecutar una máquina de estados",
+      "command": "aws stepfunctions start-execution --state-machine-arn arn:aws:states:sa-east-1:123456789012:stateMachine:flujo-pedidos --input '{\"pedido\":42}'",
+      "section": "Serverless y mensajería",
+      "topic": "Step Functions",
+      "description": "Step Functions orquesta flujos entre servicios. start-execution lanza una ejecución; describe-execution consulta su estado.",
+      "examples": [
+        {
+          "description": "Estado de una ejecución",
+          "code": "aws stepfunctions describe-execution --execution-arn <arn-ejecucion> --query status"
+        },
+        {
+          "description": "Listar ejecuciones fallidas",
+          "code": "aws stepfunctions list-executions --state-machine-arn arn:aws:states:sa-east-1:123456789012:stateMachine:flujo-pedidos --status-filter FAILED"
+        }
+      ],
+      "tags": [
+        "aws",
+        "stepfunctions",
+        "orquestacion",
+        "flujos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Cloud"
+      ]
+    }
+  ]
+}

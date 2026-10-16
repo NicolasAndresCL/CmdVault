@@ -1,0 +1,972 @@
+{
+  "category": {
+    "slug": "vps",
+    "name": "VPS y producción",
+    "icon": "dns",
+    "order": 15,
+    "description": "Operar un servidor en producción: hardening, SSH, despliegue, servicios, backups, monitoreo y mantenimiento."
+  },
+  "commands": [
+    {
+      "title": "Primer login al VPS y reconocimiento",
+      "command": "ssh root@203.0.113.10",
+      "section": "Primer acceso y hardening",
+      "topic": "Primer acceso",
+      "description": "Primer acceso con las credenciales que entrega el proveedor. Lo primero es reconocer el sistema y actualizarlo antes de hacer nada más.",
+      "syntax": "ssh [-p PUERTO] usuario@host",
+      "examples": [
+        {
+          "description": "Qué sistema y versión es",
+          "code": "cat /etc/os-release && uname -r"
+        },
+        {
+          "description": "Recursos disponibles",
+          "code": "nproc && free -h && df -h /"
+        },
+        {
+          "description": "Qué escucha ya en la red",
+          "code": "ss -tulpn"
+        },
+        {
+          "description": "Primer acceso con puerto no estándar",
+          "code": "ssh -p 2222 root@203.0.113.10"
+        }
+      ],
+      "tags": [
+        "vps",
+        "ssh",
+        "primer-acceso",
+        "reconocimiento"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Cambia la contraseña de root si te la enviaron por correo y no la reutilices. El objetivo del primer día es: usuario no-root con clave SSH, root y contraseñas desactivados, firewall mínimo y actualizaciones automáticas. En el VPS HostGator con AlmaLinux 9 el flujo es el mismo, pero con dnf y firewalld."
+    },
+    {
+      "title": "Actualizar el sistema el primer día",
+      "command": "sudo apt update && sudo apt full-upgrade -y",
+      "section": "Primer acceso y hardening",
+      "topic": "Primer acceso",
+      "description": "Instala todas las actualizaciones pendientes. Una imagen recién creada suele tener paquetes con vulnerabilidades corregidas después de generarla.",
+      "examples": [
+        {
+          "description": "AlmaLinux 9",
+          "code": "sudo dnf upgrade -y"
+        },
+        {
+          "description": "Ver si hace falta reiniciar (Ubuntu)",
+          "code": "[ -f /var/run/reboot-required ] && cat /var/run/reboot-required"
+        },
+        {
+          "description": "Ver si hace falta reiniciar (AlmaLinux)",
+          "code": "sudo dnf needs-restarting -r"
+        },
+        {
+          "description": "Reiniciar",
+          "code": "sudo reboot"
+        }
+      ],
+      "tags": [
+        "vps",
+        "actualizar",
+        "apt",
+        "dnf",
+        "upgrade"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si actualizas el kernel, reinicia para usarlo (uname -r mostrará el nuevo). Hazlo con una segunda sesión SSH abierta cuando toques SSH o el firewall."
+    },
+    {
+      "title": "Crear usuario deploy con sudo (Ubuntu)",
+      "command": "sudo adduser deploy && sudo usermod -aG sudo deploy",
+      "section": "Primer acceso y hardening",
+      "topic": "Usuarios",
+      "description": "Crea un usuario normal para operar el servidor y le da permisos de administrador. Evita trabajar como root.",
+      "examples": [
+        {
+          "description": "AlmaLinux: grupo wheel",
+          "code": "sudo useradd -m -s /bin/bash deploy && sudo passwd deploy && sudo usermod -aG wheel deploy"
+        },
+        {
+          "description": "Verificar los grupos",
+          "code": "id deploy"
+        },
+        {
+          "description": "Probar sudo",
+          "code": "su - deploy -c 'sudo whoami'"
+        }
+      ],
+      "tags": [
+        "vps",
+        "usuario",
+        "deploy",
+        "sudo",
+        "wheel"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En Ubuntu el grupo de administradores es sudo; en AlmaLinux/RHEL es wheel. Prueba el login y sudo del nuevo usuario ANTES de deshabilitar root. Para ejecutar Docker sin sudo: sudo usermod -aG docker deploy (equivale a dar root: úsalo con criterio)."
+    },
+    {
+      "title": "sudo sin contraseña para un usuario de despliegue",
+      "command": "echo 'deploy ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/deploy && sudo chmod 440 /etc/sudoers.d/deploy",
+      "section": "Primer acceso y hardening",
+      "topic": "Usuarios",
+      "description": "Permite a un usuario automatizado usar sudo sin teclear la contraseña. Útil para despliegues desde CI, con riesgo si la clave se compromete.",
+      "examples": [
+        {
+          "description": "Validar la sintaxis antes de salir",
+          "code": "sudo visudo -cf /etc/sudoers.d/deploy"
+        },
+        {
+          "description": "Limitar a comandos concretos",
+          "code": "echo 'deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart miapp, /usr/bin/systemctl reload nginx' | sudo tee /etc/sudoers.d/deploy-limitado"
+        },
+        {
+          "description": "Ver los permisos de sudo de un usuario",
+          "code": "sudo -l -U deploy"
+        }
+      ],
+      "tags": [
+        "vps",
+        "sudo",
+        "sudoers",
+        "nopasswd"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Un error de sintaxis en sudoers te deja sin sudo: usa siempre visudo -c (o edita con sudo visudo -f). Prefiere permitir solo los comandos necesarios en vez de ALL."
+    },
+    {
+      "title": "Nombre del host y zona horaria",
+      "command": "sudo hostnamectl set-hostname vps-prod-01",
+      "section": "Primer acceso y hardening",
+      "topic": "Sistema",
+      "description": "Fija el nombre del servidor, útil para logs y alertas. La zona horaria afecta a cron y logs.",
+      "examples": [
+        {
+          "description": "Zona horaria de Chile",
+          "code": "sudo timedatectl set-timezone America/Santiago"
+        },
+        {
+          "description": "Ver el estado de hora y sincronización",
+          "code": "timedatectl"
+        },
+        {
+          "description": "Habilitar sincronización NTP",
+          "code": "sudo timedatectl set-ntp true"
+        },
+        {
+          "description": "Ver el nombre actual",
+          "code": "hostnamectl"
+        }
+      ],
+      "tags": [
+        "vps",
+        "hostnamectl",
+        "timedatectl",
+        "hora"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Muchos equipos mantienen los servidores en UTC para uniformar logs; si usas America/Santiago, recuerda que cron seguirá la hora local con cambios de horario de verano. En AlmaLinux la sincronización la hace chronyd (chronyc tracking)."
+    },
+    {
+      "title": "Firewall con ufw (Ubuntu): solo 22, 80 y 443",
+      "command": "sudo ufw default deny incoming && sudo ufw default allow outgoing && sudo ufw allow OpenSSH && sudo ufw allow 80/tcp && sudo ufw allow 443/tcp && sudo ufw enable",
+      "section": "Primer acceso y hardening",
+      "topic": "Firewall",
+      "description": "Política mínima: niega todo lo entrante y permite SSH, HTTP y HTTPS. ufw es la interfaz sencilla de iptables/nftables en Ubuntu.",
+      "examples": [
+        {
+          "description": "Estado detallado",
+          "code": "sudo ufw status verbose"
+        },
+        {
+          "description": "Limitar intentos de SSH (anti fuerza bruta básica)",
+          "code": "sudo ufw limit OpenSSH"
+        },
+        {
+          "description": "Permitir un puerto solo desde una IP",
+          "code": "sudo ufw allow from 203.0.113.10 to any port 5432 proto tcp"
+        },
+        {
+          "description": "Borrar una regla",
+          "code": "sudo ufw delete allow 80/tcp"
+        }
+      ],
+      "tags": [
+        "vps",
+        "ufw",
+        "firewall",
+        "ubuntu"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "PERMITE SSH ANTES de ufw enable o te quedas fuera. Si cambiaste el puerto de SSH, permite ese puerto. TRAMPA: los puertos publicados por Docker (-p 8080:80) se abren saltándose ufw; publica en 127.0.0.1:8080:80 o usa la cadena DOCKER-USER."
+    },
+    {
+      "title": "Firewall con firewalld (AlmaLinux): solo 22, 80 y 443",
+      "command": "sudo firewall-cmd --permanent --add-service=ssh --add-service=http --add-service=https && sudo firewall-cmd --reload",
+      "section": "Primer acceso y hardening",
+      "topic": "Firewall",
+      "description": "firewalld usa zonas y servicios. Con --permanent la regla sobrevive a reinicios; hace falta --reload para activarla.",
+      "examples": [
+        {
+          "description": "Ver lo que está permitido",
+          "code": "sudo firewall-cmd --list-all"
+        },
+        {
+          "description": "Abrir un puerto concreto",
+          "code": "sudo firewall-cmd --permanent --add-port=8443/tcp && sudo firewall-cmd --reload"
+        },
+        {
+          "description": "Quitar un servicio",
+          "code": "sudo firewall-cmd --permanent --remove-service=cockpit && sudo firewall-cmd --reload"
+        },
+        {
+          "description": "Restringir una regla a una IP (rich rule)",
+          "code": "sudo firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source address=203.0.113.10 port port=5432 protocol=tcp accept' && sudo firewall-cmd --reload"
+        }
+      ],
+      "tags": [
+        "vps",
+        "firewalld",
+        "firewall",
+        "almalinux"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux conviene quitar cockpit si no lo usas. Docker crea sus propias reglas y los puertos publicados quedan accesibles aunque firewalld no los permita (ver zona docker): publica a 127.0.0.1 los servicios que no deban ser públicos, y deja que Traefik sea el único en 80/443."
+    },
+    {
+      "title": "Comprobar qué está expuesto realmente",
+      "command": "sudo ss -tulpn",
+      "section": "Primer acceso y hardening",
+      "topic": "Firewall",
+      "description": "Lista cada puerto en escucha con su proceso. Lo que escucha en 0.0.0.0 o [::] es accesible desde fuera si el firewall lo permite.",
+      "examples": [
+        {
+          "description": "Solo los que escuchan en todas las interfaces",
+          "code": "sudo ss -tulpn | grep -E '0\\.0\\.0\\.0|\\[::\\]'"
+        },
+        {
+          "description": "Auditar desde otra máquina",
+          "code": "nmap -Pn -p- --min-rate 1000 203.0.113.10"
+        },
+        {
+          "description": "Puertos publicados por contenedores",
+          "code": "docker ps --format 'table {{.Names}}\\t{{.Ports}}'"
+        }
+      ],
+      "tags": [
+        "vps",
+        "puertos",
+        "ss",
+        "nmap",
+        "auditoria"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Escanea siempre tus propios servidores y desde fuera de la red del VPS. Si ves 3306, 5432, 27017 o 5678 abiertos al mundo, ciérralos: bases de datos y paneles no deben ser públicos."
+    },
+    {
+      "title": "Fail2ban: instalar y ver el estado",
+      "command": "sudo fail2ban-client status sshd",
+      "section": "Primer acceso y hardening",
+      "topic": "Protección",
+      "description": "Fail2ban bloquea IP que fallan repetidamente al autenticarse. status muestra cuántas están baneadas ahora.",
+      "examples": [
+        {
+          "description": "Instalar en Ubuntu",
+          "code": "sudo apt install -y fail2ban"
+        },
+        {
+          "description": "Instalar en AlmaLinux (EPEL)",
+          "code": "sudo dnf install -y epel-release && sudo dnf install -y fail2ban && sudo systemctl enable --now fail2ban"
+        },
+        {
+          "description": "Desbanear una IP",
+          "code": "sudo fail2ban-client set sshd unbanip 203.0.113.50"
+        },
+        {
+          "description": "Estado general",
+          "code": "sudo fail2ban-client status"
+        }
+      ],
+      "tags": [
+        "vps",
+        "fail2ban",
+        "seguridad",
+        "ssh",
+        "bloqueo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux 9 usa backend systemd y banaction con firewalld. Si te banean a ti mismo por probar contraseñas, desbanéate con unbanip desde otra IP o la consola web del proveedor."
+    },
+    {
+      "title": "Configurar fail2ban con jail.local",
+      "command": "[sshd]\nenabled = true\nport = ssh\nmaxretry = 4\nfindtime = 10m\nbantime = 1h\nignoreip = 127.0.0.1/8 203.0.113.10",
+      "section": "Primer acceso y hardening",
+      "topic": "Protección",
+      "description": "Archivo /etc/fail2ban/jail.local con tu configuración (no edites jail.conf, se sobrescribe en actualizaciones). ignoreip evita bloquearte.",
+      "examples": [
+        {
+          "description": "Aplicar",
+          "code": "sudo systemctl restart fail2ban"
+        },
+        {
+          "description": "Ver los últimos baneos",
+          "code": "sudo grep 'Ban' /var/log/fail2ban.log | tail"
+        },
+        {
+          "description": "Ban de reincidentes (recidive)",
+          "code": "[recidive]\nenabled = true\nbantime = 1w"
+        }
+      ],
+      "tags": [
+        "vps",
+        "fail2ban",
+        "jail",
+        "configuracion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si el sistema usa journald sin /var/log/auth.log (AlmaLinux), añade backend = systemd en la jail. Con autenticación solo por clave SSH, fail2ban reduce ruido en logs más que riesgo real."
+    },
+    {
+      "title": "Actualizaciones automáticas de seguridad en Ubuntu",
+      "command": "sudo apt install -y unattended-upgrades && sudo dpkg-reconfigure -plow unattended-upgrades",
+      "section": "Primer acceso y hardening",
+      "topic": "Actualizaciones",
+      "description": "Instala y activa las actualizaciones de seguridad automáticas. El servidor se mantiene parchado sin intervención.",
+      "examples": [
+        {
+          "description": "Simulación",
+          "code": "sudo unattended-upgrade --dry-run --debug"
+        },
+        {
+          "description": "Ver el registro",
+          "code": "sudo tail -n 30 /var/log/unattended-upgrades/unattended-upgrades.log"
+        },
+        {
+          "description": "Reinicio automático nocturno si hace falta (en /etc/apt/apt.conf.d/50unattended-upgrades)",
+          "code": "Unattended-Upgrade::Automatic-Reboot \"true\";\nUnattended-Upgrade::Automatic-Reboot-Time \"04:00\";"
+        }
+      ],
+      "tags": [
+        "vps",
+        "unattended-upgrades",
+        "ubuntu",
+        "actualizaciones"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Por defecto solo aplica parches de seguridad. Si activas reinicio automático, asegura que tus servicios arranquen solos (enable --now o restart: unless-stopped en Docker)."
+    },
+    {
+      "title": "Actualizaciones automáticas en AlmaLinux con dnf-automatic",
+      "command": "sudo dnf install -y dnf-automatic && sudo systemctl enable --now dnf-automatic-install.timer",
+      "section": "Primer acceso y hardening",
+      "topic": "Actualizaciones",
+      "description": "dnf-automatic descarga e instala actualizaciones según un temporizador de systemd. Se configura en /etc/dnf/automatic.conf.",
+      "examples": [
+        {
+          "description": "Configuración mínima: solo seguridad",
+          "code": "[commands]\nupgrade_type = security\napply_updates = yes"
+        },
+        {
+          "description": "Ver cuándo corre",
+          "code": "systemctl list-timers | grep dnf"
+        },
+        {
+          "description": "Ver qué actualizaciones de seguridad hay",
+          "code": "sudo dnf updateinfo list security"
+        }
+      ],
+      "tags": [
+        "vps",
+        "dnf-automatic",
+        "almalinux",
+        "actualizaciones"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con apply_updates = yes se instalan sin preguntar: los cambios de Docker o del kernel pueden requerir reiniciar. Excluye paquetes críticos si temes cambios de versión mayor (exclude=docker-ce* en la configuración de dnf)."
+    },
+    {
+      "title": "Crear memoria swap en un VPS pequeño",
+      "command": "sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile",
+      "section": "Primer acceso y hardening",
+      "topic": "Sistema",
+      "description": "Un archivo de intercambio evita que el OOM killer mate procesos cuando la RAM se agota en VPS de 1-2 GB, algo frecuente al ejecutar n8n, Docker y una base de datos.",
+      "examples": [
+        {
+          "description": "Hacerlo permanente",
+          "code": "echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab"
+        },
+        {
+          "description": "Reducir el uso agresivo del swap",
+          "code": "echo 'vm.swappiness=10' | sudo tee /etc/sysctl.d/99-swappiness.conf && sudo sysctl --system"
+        },
+        {
+          "description": "Verificar",
+          "code": "swapon --show && free -h"
+        },
+        {
+          "description": "Si fallocate falla (XFS/otros), usar dd",
+          "code": "sudo dd if=/dev/zero of=/swapfile bs=1M count=2048 status=progress"
+        }
+      ],
+      "tags": [
+        "vps",
+        "swap",
+        "fallocate",
+        "memoria",
+        "oom"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux (XFS) fallocate puede producir un archivo con huecos que swapon rechaza: usa dd. El swap en disco es lento: es un colchón, no sustituto de RAM. Algunos VPS (OpenVZ) no permiten swap."
+    },
+    {
+      "title": "Verificar SELinux y AppArmor",
+      "command": "getenforce",
+      "section": "Primer acceso y hardening",
+      "topic": "Sistema",
+      "description": "AlmaLinux trae SELinux en modo Enforcing; Ubuntu usa AppArmor. Entender cuál está activo evita desactivarlos por error ante un 'permission denied'.",
+      "examples": [
+        {
+          "description": "Estado completo de SELinux",
+          "code": "sestatus"
+        },
+        {
+          "description": "Ver bloqueos recientes de SELinux",
+          "code": "sudo ausearch -m avc -ts recent"
+        },
+        {
+          "description": "Estado de AppArmor (Ubuntu)",
+          "code": "sudo aa-status"
+        },
+        {
+          "description": "Modo permisivo temporal para diagnosticar",
+          "code": "sudo setenforce 0"
+        }
+      ],
+      "tags": [
+        "vps",
+        "selinux",
+        "apparmor",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "setenforce 0 es solo para diagnóstico y se pierde al reiniciar: si desaparece el error, el problema era SELinux y debes arreglarlo con booleanos o contextos, no dejarlo apagado. Instala policycoreutils-python-utils para semanage."
+    },
+    {
+      "title": "Desactivar servicios innecesarios",
+      "command": "sudo systemctl disable --now cockpit.socket",
+      "section": "Primer acceso y hardening",
+      "topic": "Sistema",
+      "description": "Cada servicio en escucha es superficie de ataque. Revisa qué corre y apaga lo que no uses.",
+      "examples": [
+        {
+          "description": "Servicios activos",
+          "code": "systemctl list-units --type=service --state=running"
+        },
+        {
+          "description": "Servicios habilitados al arranque",
+          "code": "systemctl list-unit-files --state=enabled --type=service"
+        },
+        {
+          "description": "Impedir que un servicio vuelva a arrancar",
+          "code": "sudo systemctl mask postfix"
+        }
+      ],
+      "tags": [
+        "vps",
+        "systemctl",
+        "servicios",
+        "hardening"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Generar una clave SSH ed25519",
+      "command": "ssh-keygen -t ed25519 -C \"nico@laptop\"",
+      "section": "Usuarios y SSH",
+      "topic": "Claves",
+      "description": "Crea un par de claves moderno y compacto. La privada se queda en tu equipo y la pública se instala en los servidores.",
+      "examples": [
+        {
+          "description": "Con nombre de archivo específico",
+          "code": "ssh-keygen -t ed25519 -f ~/.ssh/id_vps_prod -C \"vps-prod\""
+        },
+        {
+          "description": "Ver la huella",
+          "code": "ssh-keygen -lf ~/.ssh/id_ed25519.pub"
+        },
+        {
+          "description": "Cambiar o añadir passphrase",
+          "code": "ssh-keygen -p -f ~/.ssh/id_ed25519"
+        },
+        {
+          "description": "En Windows PowerShell",
+          "code": "ssh-keygen -t ed25519 -C \"nico@windows\""
+        }
+      ],
+      "tags": [
+        "ssh",
+        "keygen",
+        "ed25519",
+        "claves"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Protege la clave privada con passphrase. No compartas nunca el archivo sin .pub. ed25519 está soportado en OpenSSH moderno (Ubuntu 22+/AlmaLinux 9)."
+    },
+    {
+      "title": "Instalar la clave en el servidor con ssh-copy-id",
+      "command": "ssh-copy-id -i ~/.ssh/id_ed25519.pub deploy@203.0.113.10",
+      "section": "Usuarios y SSH",
+      "topic": "Claves",
+      "description": "Añade tu clave pública a ~/.ssh/authorized_keys del servidor con los permisos correctos y luego permite entrar sin contraseña.",
+      "examples": [
+        {
+          "description": "Con puerto distinto",
+          "code": "ssh-copy-id -p 2222 -i ~/.ssh/id_ed25519.pub deploy@203.0.113.10"
+        },
+        {
+          "description": "Hacerlo a mano (Windows sin ssh-copy-id)",
+          "code": "type $env:USERPROFILE\\.ssh\\id_ed25519.pub | ssh deploy@203.0.113.10 \"mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys\""
+        },
+        {
+          "description": "Probar que entra por clave",
+          "code": "ssh -o PasswordAuthentication=no -o PubkeyAuthentication=yes deploy@203.0.113.10"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "ssh-copy-id",
+        "authorized_keys"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si sigue pidiendo contraseña revisa permisos: ~/.ssh a 700, authorized_keys a 600 y que el home no sea escribible por otros. En AlmaLinux/SELinux tras crear a mano ejecuta restorecon -Rv ~/.ssh."
+    },
+    {
+      "title": "Endurecer sshd: sin root ni contraseñas",
+      "command": "sudo nano /etc/ssh/sshd_config.d/10-hardening.conf",
+      "section": "Usuarios y SSH",
+      "topic": "sshd",
+      "description": "Desactiva el login de root y por contraseña, dejando solo claves. Es la medida de seguridad más importante de un VPS.",
+      "examples": [
+        {
+          "description": "Contenido del archivo",
+          "code": "PermitRootLogin no\nPasswordAuthentication no\nKbdInteractiveAuthentication no\nPubkeyAuthentication yes\nMaxAuthTries 3\nAllowUsers deploy"
+        },
+        {
+          "description": "Validar la sintaxis ANTES de reiniciar",
+          "code": "sudo sshd -t"
+        },
+        {
+          "description": "Aplicar (Ubuntu)",
+          "code": "sudo systemctl reload ssh"
+        },
+        {
+          "description": "Aplicar (AlmaLinux)",
+          "code": "sudo systemctl reload sshd"
+        }
+      ],
+      "tags": [
+        "vps",
+        "sshd",
+        "hardening",
+        "permitrootlogin",
+        "passwordauthentication"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "NO CIERRES tu sesión actual: abre una segunda terminal y comprueba que entras por clave ANTES de cerrar la primera; si algo falla aún tendrás la sesión original para corregirlo. El servicio es ssh en Ubuntu y sshd en AlmaLinux. En algunas imágenes cloud hay un 50-cloud-init.conf que activa PasswordAuthentication: los archivos de sshd_config.d se leen por orden y gana el primero, así que nombra el tuyo con un prefijo menor (10-)."
+    },
+    {
+      "title": "Ver la configuración efectiva de sshd",
+      "command": "sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication|port|allowusers'",
+      "section": "Usuarios y SSH",
+      "topic": "sshd",
+      "description": "sshd -T muestra los valores realmente aplicados tras combinar todos los archivos, evitando la duda de qué directiva gana.",
+      "examples": [
+        {
+          "description": "Probar la configuración con otro archivo",
+          "code": "sudo sshd -t -f /etc/ssh/sshd_config"
+        },
+        {
+          "description": "Ver intentos fallidos recientes",
+          "code": "sudo journalctl -u ssh -u sshd --since '1 hour ago' | grep -i 'failed'"
+        },
+        {
+          "description": "Último acceso de usuarios",
+          "code": "last -n 15"
+        }
+      ],
+      "tags": [
+        "vps",
+        "sshd",
+        "configuracion",
+        "auditoria"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Cambiar el puerto de SSH (y SELinux)",
+      "command": "Port 2222",
+      "section": "Usuarios y SSH",
+      "topic": "sshd",
+      "description": "Cambiar el puerto reduce el ruido de escaneos automáticos, pero NO es una medida de seguridad real. Si lo haces, ábrelo antes en el firewall.",
+      "examples": [
+        {
+          "description": "Abrir el nuevo puerto en ufw",
+          "code": "sudo ufw allow 2222/tcp"
+        },
+        {
+          "description": "Abrir el nuevo puerto en firewalld",
+          "code": "sudo firewall-cmd --permanent --add-port=2222/tcp && sudo firewall-cmd --reload"
+        },
+        {
+          "description": "Autorizar el puerto en SELinux (AlmaLinux)",
+          "code": "sudo semanage port -a -t ssh_port_t -p tcp 2222"
+        },
+        {
+          "description": "Conectar",
+          "code": "ssh -p 2222 deploy@203.0.113.10"
+        }
+      ],
+      "tags": [
+        "vps",
+        "ssh",
+        "puerto",
+        "selinux",
+        "semanage"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux sin el semanage, sshd no arranca en el puerto nuevo (SELinux lo bloquea). En Ubuntu 22.10+ el socket-activation de ssh puede ignorar Port: revisa ssh.socket. Mantén la sesión original abierta mientras pruebas."
+    },
+    {
+      "title": "Archivo ~/.ssh/config: alias de servidores",
+      "command": "Host vps\n    HostName 203.0.113.10\n    User deploy\n    Port 22\n    IdentityFile ~/.ssh/id_vps_prod\n    ServerAliveInterval 30",
+      "section": "Usuarios y SSH",
+      "topic": "Cliente",
+      "description": "Define alias para conectarte con 'ssh vps' en vez de recordar usuario, IP, puerto y clave. También lo usan scp, rsync y Git.",
+      "examples": [
+        {
+          "description": "Conectar con el alias",
+          "code": "ssh vps"
+        },
+        {
+          "description": "Copiar con el alias",
+          "code": "scp ./build.tar.gz vps:/tmp/"
+        },
+        {
+          "description": "Usar solo la clave indicada",
+          "code": "IdentitiesOnly yes"
+        },
+        {
+          "description": "Probar qué configuración aplica a un alias",
+          "code": "ssh -G vps | head -20"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "config",
+        "alias",
+        "identityfile"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "IdentitiesOnly yes evita que el agente pruebe todas tus claves (el servidor puede cortar por exceso de intentos). En Windows el archivo está en C:\\Users\\<usuario>\\.ssh\\config."
+    },
+    {
+      "title": "Saltar por un bastión con ProxyJump",
+      "command": "ssh -J deploy@bastion.ejemplo.cl deploy@10.0.0.20",
+      "section": "Usuarios y SSH",
+      "topic": "Cliente",
+      "description": "Conecta a un servidor privado pasando por un servidor intermedio, sin guardar claves en el bastión.",
+      "examples": [
+        {
+          "description": "Configurado en ~/.ssh/config",
+          "code": "Host interno\n    HostName 10.0.0.20\n    User deploy\n    ProxyJump deploy@bastion.ejemplo.cl"
+        },
+        {
+          "description": "Copiar archivos a través del bastión",
+          "code": "scp -J deploy@bastion.ejemplo.cl ./app.tgz deploy@10.0.0.20:/tmp/"
+        },
+        {
+          "description": "Varios saltos",
+          "code": "ssh -J saltoA,saltoB destino"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "proxyjump",
+        "bastion",
+        "bastión"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Túnel local: acceder a un servicio privado del VPS",
+      "command": "ssh -N -L 5432:127.0.0.1:5432 deploy@203.0.113.10",
+      "section": "Usuarios y SSH",
+      "topic": "Túneles",
+      "description": "Redirige un puerto de tu máquina al VPS. Permite usar tu cliente local contra una base de datos que solo escucha en localhost del servidor, sin exponerla.",
+      "examples": [
+        {
+          "description": "Panel web interno (por ejemplo n8n en 5678)",
+          "code": "ssh -N -L 5678:127.0.0.1:5678 vps"
+        },
+        {
+          "description": "En segundo plano",
+          "code": "ssh -f -N -L 5432:127.0.0.1:5432 vps"
+        },
+        {
+          "description": "Hacia otro host de la red privada del VPS",
+          "code": "ssh -N -L 3307:db.interna:3306 vps"
+        },
+        {
+          "description": "Cerrar el túnel en segundo plano",
+          "code": "pkill -f 'ssh -f -N -L 5432'"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "tunel",
+        "-L",
+        "puerto-local",
+        "base-datos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "-N no abre shell, solo túnel. Es la forma segura de administrar bases de datos en producción en lugar de abrir el puerto al mundo. Si el puerto local ya está en uso, elige otro (por ejemplo 15432)."
+    },
+    {
+      "title": "Túnel inverso y proxy SOCKS",
+      "command": "ssh -N -R 8080:127.0.0.1:3000 deploy@203.0.113.10",
+      "section": "Usuarios y SSH",
+      "topic": "Túneles",
+      "description": "-R expone un puerto de tu máquina en el servidor remoto (útil para demos o webhooks en desarrollo). -D crea un proxy SOCKS local que sale por el VPS.",
+      "examples": [
+        {
+          "description": "Proxy SOCKS5 en el puerto 1080",
+          "code": "ssh -N -D 1080 vps"
+        },
+        {
+          "description": "Usarlo con curl",
+          "code": "curl --socks5-hostname 127.0.0.1:1080 https://ifconfig.me"
+        },
+        {
+          "description": "Permitir que el puerto remoto escuche en todas las interfaces (requiere GatewayPorts)",
+          "code": "# en sshd_config del servidor:\nGatewayPorts clientspecified"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "tunel",
+        "-R",
+        "-D",
+        "socks"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Por defecto el puerto remoto del -R solo escucha en localhost del servidor. Los túneles inversos pueden saltarse tu firewall: úsalos con consciencia. El proxy -D permite probar tu sitio desde la IP del VPS."
+    },
+    {
+      "title": "ssh-agent: cargar claves una vez",
+      "command": "eval \"$(ssh-agent -s)\" && ssh-add ~/.ssh/id_ed25519",
+      "section": "Usuarios y SSH",
+      "topic": "Cliente",
+      "description": "El agente guarda la clave descifrada en memoria para no escribir la passphrase en cada conexión.",
+      "examples": [
+        {
+          "description": "Listar claves cargadas",
+          "code": "ssh-add -l"
+        },
+        {
+          "description": "Reenviar el agente a un servidor (con cuidado)",
+          "code": "ssh -A vps"
+        },
+        {
+          "description": "PowerShell: iniciar el servicio del agente de Windows",
+          "code": "Get-Service ssh-agent | Set-Service -StartupType Automatic; Start-Service ssh-agent; ssh-add $env:USERPROFILE\\.ssh\\id_ed25519"
+        },
+        {
+          "description": "Quitar todas las claves",
+          "code": "ssh-add -D"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "ssh-agent",
+        "ssh-add",
+        "passphrase"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Evita ssh -A hacia servidores no confiables: quien sea root allí puede usar tu agente. Prefiere ProxyJump, que no necesita reenviar el agente."
+    },
+    {
+      "title": "Quién entró al servidor: last, lastb y who",
+      "command": "last -n 20",
+      "section": "Usuarios y SSH",
+      "topic": "Auditoría",
+      "description": "Historial de accesos exitosos. lastb muestra los intentos fallidos y who las sesiones abiertas ahora.",
+      "examples": [
+        {
+          "description": "Intentos fallidos",
+          "code": "sudo lastb -n 20"
+        },
+        {
+          "description": "Sesiones activas",
+          "code": "who -a"
+        },
+        {
+          "description": "IP con más intentos fallidos",
+          "code": "sudo journalctl -u ssh -u sshd --since today | grep 'Failed password' | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn | head"
+        },
+        {
+          "description": "Desconectar a un usuario",
+          "code": "sudo pkill -KILL -u usuario"
+        }
+      ],
+      "tags": [
+        "vps",
+        "last",
+        "lastb",
+        "auditoria",
+        "acceso"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Una avalancha de fallos es normal en Internet; lo preocupante es un login exitoso desde una IP desconocida. Con autenticación solo por clave, los intentos con contraseña fallarán siempre."
+    },
+    {
+      "title": "Rotar o revocar una clave SSH",
+      "command": "sed -i '/nico@laptop-viejo/d' ~/.ssh/authorized_keys",
+      "section": "Usuarios y SSH",
+      "topic": "Claves",
+      "description": "Eliminar una clave pública de authorized_keys revoca su acceso. Hazlo al perder un equipo o al terminar la colaboración de alguien.",
+      "examples": [
+        {
+          "description": "Ver las claves autorizadas con su huella",
+          "code": "ssh-keygen -lf ~/.ssh/authorized_keys"
+        },
+        {
+          "description": "Restringir una clave a un solo comando (despliegues)",
+          "code": "command=\"/usr/local/bin/deploy.sh\",no-port-forwarding,no-pty ssh-ed25519 AAAA... ci-deploy"
+        },
+        {
+          "description": "Verificar permisos",
+          "code": "ls -ld ~/.ssh && ls -l ~/.ssh/authorized_keys"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "authorized_keys",
+        "revocar",
+        "rotacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Usa una clave dedicada por persona y por CI (no compartidas) para poder revocar con precisión. Añade un comentario descriptivo a cada clave."
+    }
+  ]
+}

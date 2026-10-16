@@ -1,0 +1,276 @@
+{
+  "category": {
+    "slug": "mysql",
+    "name": "MySQL",
+    "icon": "table_chart",
+    "order": 9,
+    "description": "MySQL y MariaDB desde la terminal: cliente, consultas, usuarios, backups, rendimiento y operación en producción."
+  },
+  "commands": [
+    {
+      "title": "Crear usuario con CREATE USER",
+      "command": "CREATE USER 'app'@'10.0.%' IDENTIFIED BY '<contraseña>';",
+      "section": "Usuarios y permisos",
+      "topic": "Usuarios",
+      "description": "Crea una cuenta restringida a un origen (host o red). En MySQL la identidad es usuario@host: 'app'@'localhost' y 'app'@'%' son cuentas distintas.",
+      "examples": [
+        {
+          "description": "Usuario solo local",
+          "code": "CREATE USER 'app'@'localhost' IDENTIFIED BY '<contraseña>';"
+        },
+        {
+          "description": "Con caducidad de contraseña y límite de conexiones (MySQL 8)",
+          "code": "CREATE USER 'rep'@'10.0.0.%' IDENTIFIED BY '<contraseña>' PASSWORD EXPIRE INTERVAL 180 DAY WITH MAX_USER_CONNECTIONS 20;"
+        },
+        {
+          "description": "Exigir TLS para esa cuenta",
+          "code": "CREATE USER 'ext'@'%' IDENTIFIED BY '<contraseña>' REQUIRE SSL;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "usuarios",
+        "create-user",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Evita '%' salvo que haya firewall: es una cuenta accesible desde cualquier IP. Desde MySQL 8 ya no se puede crear un usuario con GRANT ... IDENTIFIED BY; hay que usar CREATE USER antes. MariaDB sí tiene CREATE USER ... IDENTIFIED VIA y roles propios."
+    },
+    {
+      "title": "Plugin de autenticación: caching_sha2_password",
+      "command": "CREATE USER 'app'@'%' IDENTIFIED WITH caching_sha2_password BY '<contraseña>';",
+      "section": "Usuarios y permisos",
+      "topic": "Usuarios",
+      "description": "caching_sha2_password es el plugin por defecto desde MySQL 8.0. mysql_native_password está deshabilitado por defecto en 8.4 y eliminado en MySQL 9.",
+      "examples": [
+        {
+          "description": "Cambiar un usuario antiguo a caching_sha2_password",
+          "code": "ALTER USER 'app'@'%' IDENTIFIED WITH caching_sha2_password BY '<contraseña>';"
+        },
+        {
+          "description": "Ver qué plugin usa cada cuenta",
+          "code": "SELECT user, host, plugin FROM mysql.user;"
+        },
+        {
+          "description": "Habilitar mysql_native_password en 8.4 (solo si un cliente viejo lo exige), en my.cnf",
+          "code": "[mysqld]\nmysql_native_password=ON"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "autenticacion",
+        "caching_sha2_password",
+        "mysql_native_password"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Error típico 'Authentication plugin caching_sha2_password cannot be loaded' o 'Client does not support authentication protocol': el cliente/driver es viejo. Actualiza el driver antes que degradar el plugin. MariaDB sigue usando mysql_native_password por defecto y no tiene caching_sha2_password en su servidor."
+    },
+    {
+      "title": "Dar permisos con GRANT",
+      "command": "GRANT SELECT, INSERT, UPDATE, DELETE ON tienda.* TO 'app'@'10.0.%';",
+      "section": "Usuarios y permisos",
+      "topic": "Usuarios",
+      "description": "Concede privilegios al nivel adecuado (global, base, tabla o columna). Aplica el principio de mínimo privilegio: la aplicación no necesita DROP ni GRANT.",
+      "examples": [
+        {
+          "description": "Solo lectura para un usuario de reportes",
+          "code": "GRANT SELECT ON tienda.* TO 'reportes'@'10.0.%';"
+        },
+        {
+          "description": "Permisos sobre una tabla concreta",
+          "code": "GRANT SELECT, UPDATE ON tienda.inventario TO 'bodega'@'localhost';"
+        },
+        {
+          "description": "Usuario de migraciones con DDL",
+          "code": "GRANT ALL PRIVILEGES ON tienda.* TO 'migrador'@'10.0.0.5';"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "grant",
+        "permisos",
+        "privilegios"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "ALL PRIVILEGES sobre *.* convierte la cuenta en root: nunca para apps. En MySQL 8 los cambios con GRANT/REVOKE surten efecto sin FLUSH PRIVILEGES; ese comando solo hace falta si editas mysql.* directamente (no lo hagas)."
+    },
+    {
+      "title": "Ver permisos con SHOW GRANTS",
+      "command": "SHOW GRANTS FOR 'app'@'10.0.%';",
+      "section": "Usuarios y permisos",
+      "topic": "Usuarios",
+      "description": "Muestra los GRANT activos de una cuenta. Sin argumentos muestra los del usuario actual.",
+      "examples": [
+        {
+          "description": "Permisos del usuario actual",
+          "code": "SHOW GRANTS;"
+        },
+        {
+          "description": "Listar todas las cuentas y su host",
+          "code": "SELECT user, host, account_locked, password_expired FROM mysql.user ORDER BY user;"
+        },
+        {
+          "description": "Comprobar quién soy realmente",
+          "code": "SELECT CURRENT_USER(), USER();"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "show",
+        "grants",
+        "auditoria"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "USER() es con quién te conectaste; CURRENT_USER() es la cuenta con la que MySQL te autenticó, la que de verdad aplica permisos. Pueden diferir cuando hay comodines de host."
+    },
+    {
+      "title": "Quitar permisos con REVOKE",
+      "command": "REVOKE DELETE ON tienda.* FROM 'app'@'10.0.%';",
+      "section": "Usuarios y permisos",
+      "topic": "Usuarios",
+      "description": "Retira privilegios concedidos antes. El usuario sigue existiendo; solo pierde esos permisos.",
+      "examples": [
+        {
+          "description": "Quitar todos los privilegios de una base",
+          "code": "REVOKE ALL PRIVILEGES ON tienda.* FROM 'app'@'10.0.%';"
+        },
+        {
+          "description": "Eliminar la cuenta por completo",
+          "code": "DROP USER 'app'@'10.0.%';"
+        },
+        {
+          "description": "Bloquear una cuenta sin borrarla (MySQL 8)",
+          "code": "ALTER USER 'app'@'10.0.%' ACCOUNT LOCK;"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "revoke",
+        "drop-user",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Las sesiones ya abiertas conservan los permisos antiguos hasta reconectar (los cambios a nivel base/tabla aplican en la siguiente sentencia, los globales en la siguiente conexión). Mata las conexiones con KILL si es urgente."
+    },
+    {
+      "title": "Cambiar contraseña de un usuario",
+      "command": "ALTER USER 'app'@'10.0.%' IDENTIFIED BY '<contraseña_nueva>';",
+      "section": "Usuarios y permisos",
+      "topic": "Usuarios",
+      "description": "Cambia la clave de una cuenta de forma portable entre versiones recientes. SET PASSWORD también funciona pero ALTER USER es la forma recomendada.",
+      "examples": [
+        {
+          "description": "Cambiar la propia contraseña",
+          "code": "ALTER USER USER() IDENTIFIED BY '<contraseña_nueva>';"
+        },
+        {
+          "description": "Forzar cambio en el próximo login",
+          "code": "ALTER USER 'app'@'10.0.%' PASSWORD EXPIRE;"
+        },
+        {
+          "description": "Desde la shell con mysqladmin",
+          "code": "mysqladmin -u root -p password '<contraseña_nueva>'"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "password",
+        "alter-user",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con mysqladmin la clave nueva queda en el historial y la lista de procesos; mejor ALTER USER interactivo. Recuerda actualizar el .env o secreto de la aplicación en el mismo despliegue."
+    },
+    {
+      "title": "Roles de MySQL 8 y MariaDB",
+      "command": "CREATE ROLE 'lectura'; GRANT SELECT ON tienda.* TO 'lectura'; GRANT 'lectura' TO 'ana'@'localhost';",
+      "section": "Usuarios y permisos",
+      "topic": "Roles",
+      "description": "Agrupa permisos en un rol y se lo asigna a varios usuarios. Simplifica la administración cuando hay muchos usuarios con los mismos privilegios.",
+      "examples": [
+        {
+          "description": "Activar el rol por defecto al conectar",
+          "code": "SET DEFAULT ROLE 'lectura' TO 'ana'@'localhost';"
+        },
+        {
+          "description": "Ver roles activos en la sesión",
+          "code": "SELECT CURRENT_ROLE();"
+        },
+        {
+          "description": "Ver qué trae un rol",
+          "code": "SHOW GRANTS FOR 'lectura';"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "roles",
+        "permisos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En MySQL los roles no se activan solos: sin SET DEFAULT ROLE (o activate_all_roles_on_login=ON) el usuario parece no tener permisos. En MariaDB la sintaxis es SET DEFAULT ROLE lectura FOR ana@localhost."
+    },
+    {
+      "title": "Recuperar acceso root olvidado",
+      "command": "mysqld --skip-grant-tables --skip-networking &",
+      "section": "Usuarios y permisos",
+      "topic": "Usuarios",
+      "description": "Arranca el servidor sin cargar las tablas de permisos para poder restablecer la contraseña de root. Es el procedimiento de emergencia estándar.",
+      "examples": [
+        {
+          "description": "Entrar sin contraseña (solo local) y recargar permisos",
+          "code": "mysql -u root"
+        },
+        {
+          "description": "Dentro del cliente: cargar permisos y cambiar clave",
+          "code": "FLUSH PRIVILEGES;\nALTER USER 'root'@'localhost' IDENTIFIED BY '<contraseña_nueva>';"
+        },
+        {
+          "description": "Con systemd: detener el servicio antes del procedimiento",
+          "code": "sudo systemctl stop mysqld"
+        }
+      ],
+      "tags": [
+        "mysql",
+        "root",
+        "recuperacion",
+        "skip-grant-tables"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con --skip-grant-tables cualquiera puede entrar sin clave: --skip-networking es obligatorio. Al terminar, detén ese proceso y arranca el servicio normal. En MariaDB el binario es mariadbd y el servicio 'mariadb'."
+    }
+  ]
+}

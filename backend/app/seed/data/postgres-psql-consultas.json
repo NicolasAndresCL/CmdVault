@@ -1,0 +1,897 @@
+{
+  "category": {
+    "slug": "postgres",
+    "name": "PostgreSQL",
+    "icon": "storage",
+    "order": 10,
+    "description": "PostgreSQL desde psql: esquema, roles, backups con pg_dump, diagnóstico de rendimiento y administración en producción."
+  },
+  "commands": [
+    {
+      "title": "Conectar con psql",
+      "command": "psql -h localhost -U app -d tienda",
+      "section": "psql y conexión",
+      "topic": "Conexión",
+      "description": "Abre el cliente interactivo de PostgreSQL contra un host, usuario y base concretos. Sin -d usa una base con el nombre del usuario.",
+      "syntax": "psql [-h HOST] [-p PUERTO] [-U USUARIO] [-d BASE]",
+      "examples": [
+        {
+          "description": "Puerto no estándar",
+          "code": "psql -h 127.0.0.1 -p 5433 -U app -d tienda"
+        },
+        {
+          "description": "Usando URI de conexión",
+          "code": "psql \"postgresql://app@db.ejemplo.cl:5432/tienda?sslmode=require\""
+        },
+        {
+          "description": "Ejecutar una sentencia y salir",
+          "code": "psql -U app -d tienda -c \"SELECT version();\""
+        },
+        {
+          "description": "Como postgres local vía socket (Ubuntu/AlmaLinux)",
+          "code": "sudo -u postgres psql"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "conexion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Sin -h psql usa el socket Unix y la autenticación 'peer' (el usuario del SO debe coincidir con el rol): por eso 'sudo -u postgres psql' funciona sin clave. Con -h localhost usa TCP y pide contraseña."
+    },
+    {
+      "title": "Archivo ~/.pgpass para contraseñas",
+      "command": "echo 'db.ejemplo.cl:5432:tienda:app:<contraseña>' >> ~/.pgpass && chmod 600 ~/.pgpass",
+      "section": "psql y conexión",
+      "topic": "Conexión",
+      "description": "Guarda credenciales en una línea host:puerto:base:usuario:clave que psql, pg_dump y pg_restore leen automáticamente. Debe tener permisos 0600 o se ignora.",
+      "examples": [
+        {
+          "description": "Aceptar cualquier base con comodín",
+          "code": "localhost:5432:*:app:<contraseña>"
+        },
+        {
+          "description": "Usar un archivo alternativo",
+          "code": "PGPASSFILE=/etc/app/pgpass psql -h db -U app -d tienda"
+        },
+        {
+          "description": "Comprobar que no pide clave",
+          "code": "psql -h db.ejemplo.cl -U app -d tienda -w -c \"SELECT 1\""
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pgpass",
+        "credenciales",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si los permisos no son 0600, psql ignora el archivo en silencio (solo avisa en Windows con otra ruta: %APPDATA%\\postgresql\\pgpass.conf). -w evita el prompt y falla si no hay clave: ideal en scripts."
+    },
+    {
+      "title": "Variables de entorno PG*",
+      "command": "export PGHOST=db.ejemplo.cl PGUSER=app PGDATABASE=tienda PGSSLMODE=require",
+      "section": "psql y conexión",
+      "topic": "Conexión",
+      "description": "libpq lee variables PGHOST, PGPORT, PGUSER, PGDATABASE y PGSSLMODE; todas las herramientas (psql, pg_dump, pg_isready) las respetan.",
+      "examples": [
+        {
+          "description": "Con ellas, conectar sin argumentos",
+          "code": "psql"
+        },
+        {
+          "description": "Contraseña por variable (solo para scripts efímeros)",
+          "code": "PGPASSWORD=$DB_PASSWORD psql -h db -U app -d tienda -c \"SELECT 1\""
+        },
+        {
+          "description": "Ver qué variables PG* están definidas",
+          "code": "env | grep ^PG"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "variables-entorno",
+        "pgpassword"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "ADVERTENCIA: PGPASSWORD es visible en /proc/<pid>/environ y puede filtrarse en logs de CI; la documentación oficial lo desaconseja. Prefiere ~/.pgpass o un servicio (pg_service.conf)."
+    },
+    {
+      "title": "Comprobar disponibilidad con pg_isready",
+      "command": "pg_isready -h localhost -p 5432",
+      "section": "psql y conexión",
+      "topic": "Conexión",
+      "description": "Comprueba si el servidor acepta conexiones sin autenticarse. Devuelve 0 si está listo; útil en healthchecks y scripts de arranque.",
+      "examples": [
+        {
+          "description": "Con usuario y base (ideal para healthchecks Docker)",
+          "code": "pg_isready -U app -d tienda"
+        },
+        {
+          "description": "Esperar hasta que esté listo",
+          "code": "until pg_isready -h db -q; do sleep 1; done; echo listo"
+        },
+        {
+          "description": "Dentro de un contenedor",
+          "code": "docker exec postgres pg_isready -U postgres"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "pg_isready",
+        "healthcheck"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Códigos de salida: 0 acepta conexiones, 1 rechaza (arrancando), 2 sin respuesta, 3 sin intento (parámetros inválidos). Que acepte conexiones no garantiza que la aplicación tenga permisos."
+    },
+    {
+      "title": "Navegar bases y esquemas",
+      "command": "\\l",
+      "section": "psql y conexión",
+      "topic": "Metacomandos",
+      "description": "Metacomandos de psql para explorar el servidor. Empiezan con barra invertida y no llevan punto y coma.",
+      "examples": [
+        {
+          "description": "Conectarse a otra base",
+          "code": "\\c tienda"
+        },
+        {
+          "description": "Listar esquemas",
+          "code": "\\dn"
+        },
+        {
+          "description": "Información de la conexión actual",
+          "code": "\\conninfo"
+        },
+        {
+          "description": "Listar bases con tamaño",
+          "code": "\\l+"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "metacomandos",
+        "bases"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "\\c cierra la conexión actual y abre otra, por lo que las variables de sesión se pierden. Salir: \\q (o Ctrl+D). Ayuda: \\? (metacomandos) y \\h CREATE TABLE (sintaxis SQL)."
+    },
+    {
+      "title": "Listar y describir tablas",
+      "command": "\\dt",
+      "section": "psql y conexión",
+      "topic": "Metacomandos",
+      "description": "\\dt lista tablas del esquema en curso; \\d NOMBRE describe columnas, índices, claves y triggers; el sufijo + añade tamaño y descripción.",
+      "examples": [
+        {
+          "description": "Tablas de todos los esquemas",
+          "code": "\\dt *.*"
+        },
+        {
+          "description": "Describir una tabla con detalle",
+          "code": "\\d+ usuarios"
+        },
+        {
+          "description": "Solo tablas del esquema ventas",
+          "code": "\\dt ventas.*"
+        },
+        {
+          "description": "Tablas con su tamaño",
+          "code": "\\dt+"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "describe",
+        "tablas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "\\d+ muestra ocupación (tamaño de tabla y de TOAST). Para listar vistas es \\dv, índices \\di, secuencias \\ds. Se admiten patrones: \\dt ven*."
+    },
+    {
+      "title": "Listar roles, funciones y extensiones",
+      "command": "\\du",
+      "section": "psql y conexión",
+      "topic": "Metacomandos",
+      "description": "Metacomandos de administración: roles, funciones, extensiones instaladas, tipos y permisos.",
+      "examples": [
+        {
+          "description": "Extensiones instaladas",
+          "code": "\\dx"
+        },
+        {
+          "description": "Funciones de un esquema",
+          "code": "\\df public.*"
+        },
+        {
+          "description": "Permisos de tablas (ACL)",
+          "code": "\\dp"
+        },
+        {
+          "description": "Tablespaces",
+          "code": "\\db"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "roles",
+        "extensiones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "\\du+ añade descripciones y membresías. \\dx lista versiones de extensiones; si una extensión está desactualizada tras pg_upgrade ejecuta ALTER EXTENSION nombre UPDATE."
+    },
+    {
+      "title": "Salida expandida y tiempos",
+      "command": "\\x auto",
+      "section": "psql y conexión",
+      "topic": "Metacomandos",
+      "description": "\\x cambia la salida a formato vertical (por registro); 'auto' lo hace solo cuando la fila no cabe. \\timing muestra cuánto tarda cada sentencia.",
+      "examples": [
+        {
+          "description": "Activar el temporizador",
+          "code": "\\timing on"
+        },
+        {
+          "description": "Redirigir salida a un archivo",
+          "code": "\\o resultado.txt"
+        },
+        {
+          "description": "Mostrar NULL de forma visible",
+          "code": "\\pset null '∅'"
+        },
+        {
+          "description": "Formato CSV en pantalla",
+          "code": "\\pset format csv"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "x",
+        "timing",
+        "formato"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Los ajustes valen para la sesión; para fijarlos siempre ponlos en ~/.psqlrc. \\o sin argumentos restablece la salida estándar."
+    },
+    {
+      "title": "Editar y ejecutar consultas desde archivos",
+      "command": "\\e",
+      "section": "psql y conexión",
+      "topic": "Metacomandos",
+      "description": "\\e abre el editor ($EDITOR) con la consulta actual; \\i ejecuta un archivo SQL; \\ir lo hace relativo al script en curso.",
+      "examples": [
+        {
+          "description": "Ejecutar un archivo",
+          "code": "\\i /ruta/esquema.sql"
+        },
+        {
+          "description": "Editar una función existente",
+          "code": "\\ef public.mi_funcion"
+        },
+        {
+          "description": "Repetir una consulta cada 5 segundos",
+          "code": "SELECT count(*) FROM pg_stat_activity;\n\\watch 5"
+        },
+        {
+          "description": "Ejecutar archivo desde shell abortando al primer error",
+          "code": "psql -v ON_ERROR_STOP=1 -U app -d tienda -f esquema.sql"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "editar",
+        "archivo",
+        "watch"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "psql -f continúa tras un error por defecto; ON_ERROR_STOP=1 es imprescindible en migraciones y despliegues. Añade --single-transaction (-1) para que todo el script sea atómico."
+    },
+    {
+      "title": "Variables de psql y \\gset",
+      "command": "\\set ambiente 'produccion'",
+      "section": "psql y conexión",
+      "topic": "Metacomandos",
+      "description": "psql tiene variables propias que se interpolan con :nombre. \\gset guarda en variables el resultado de una consulta de una fila.",
+      "examples": [
+        {
+          "description": "Usar la variable en una consulta",
+          "code": "SELECT * FROM config WHERE ambiente = :'ambiente';"
+        },
+        {
+          "description": "Guardar el resultado de una consulta",
+          "code": "SELECT count(*) AS total FROM usuarios \\gset\n\\echo Hay :total usuarios"
+        },
+        {
+          "description": "Pasar variable desde la shell",
+          "code": "psql -v dias=30 -d tienda -c \"SELECT * FROM ventas WHERE fecha > now() - (:dias || ' days')::interval\""
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "variables",
+        "gset"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": ":'var' cita el valor como literal (seguro) y :\"var\" como identificador. Interpolar sin comillas permite inyección: úsalo solo con valores propios."
+    },
+    {
+      "title": "Configurar ~/.psqlrc",
+      "command": "\\set QUIET 1\n\\pset null '∅'\n\\x auto\n\\timing on\n\\set HISTFILE ~/.psql_history- :DBNAME\n\\set PROMPT1 '%n@%/%R%# '\n\\set QUIET 0",
+      "section": "psql y conexión",
+      "topic": "Metacomandos",
+      "description": "Archivo que psql ejecuta al iniciar: fija formato, historial por base y prompt. Hace el trabajo diario más cómodo y reduce errores.",
+      "examples": [
+        {
+          "description": "Un prompt que avisa de producción",
+          "code": "\\set PROMPT1 '%[%033[1;31m%]PROD%[%033[0m%] %n@%/%R%# '"
+        },
+        {
+          "description": "Omitir ~/.psqlrc puntualmente",
+          "code": "psql -X -d tienda"
+        },
+        {
+          "description": "Historial sin duplicados",
+          "code": "\\set HISTCONTROL ignoredups"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "psql",
+        "psqlrc",
+        "configuracion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Usa -X en scripts automáticos: un .psqlrc con \\timing o \\x rompe la salida que parsean. %R muestra el estado de la sentencia y %# '#' si eres superusuario."
+    },
+    {
+      "title": "Importar y exportar CSV con \\copy",
+      "command": "\\copy clientes (nombre, email, ciudad) FROM 'clientes.csv' WITH (FORMAT csv, HEADER true)",
+      "section": "psql y conexión",
+      "topic": "Metacomandos",
+      "description": "\\copy lee o escribe archivos desde el cliente (tu máquina), sin necesitar permisos de superusuario en el servidor. Es la forma habitual de cargar y exportar CSV.",
+      "examples": [
+        {
+          "description": "Exportar una consulta a CSV",
+          "code": "\\copy (SELECT * FROM ventas WHERE fecha >= '2026-01-01') TO 'ventas_2026.csv' WITH (FORMAT csv, HEADER true)"
+        },
+        {
+          "description": "Todo desde la shell",
+          "code": "psql -d tienda -c \"\\copy clientes TO 'clientes.csv' CSV HEADER\""
+        },
+        {
+          "description": "Cargar con otra codificación",
+          "code": "\\copy clientes FROM 'latin.csv' WITH (FORMAT csv, HEADER true, ENCODING 'LATIN1')"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "copy",
+        "csv",
+        "importar",
+        "exportar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "COPY (sin barra) lee en el SERVIDOR y exige rol pg_read_server_files o superusuario; \\copy no. En contenedores el archivo debe estar dentro del contenedor o usar stdin: docker exec -i postgres psql -U postgres -d tienda -c \"\\copy t FROM STDIN CSV HEADER\" < datos.csv."
+    },
+    {
+      "title": "Crear y borrar bases con createdb y dropdb",
+      "command": "createdb -U postgres -O app -E UTF8 tienda",
+      "section": "Consultas y esquema",
+      "topic": "Bases de datos",
+      "description": "Utilidades de shell para crear y borrar bases. -O define el dueño y -E la codificación.",
+      "examples": [
+        {
+          "description": "Con plantilla template0 y locale concreto",
+          "code": "createdb -U postgres -T template0 -E UTF8 --locale=es_CL.UTF-8 tienda"
+        },
+        {
+          "description": "Borrar una base",
+          "code": "dropdb -U postgres --if-exists tienda_pruebas"
+        },
+        {
+          "description": "Equivalente en SQL",
+          "code": "CREATE DATABASE tienda OWNER app ENCODING 'UTF8';"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "createdb",
+        "dropdb",
+        "base"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Cambiar el locale exige template0. DROP DATABASE falla si hay conexiones: PG 13+ permite DROP DATABASE tienda WITH (FORCE). En el contenedor oficial el locale por defecto es en_US.utf8 y es_CL no existe sin instalarlo."
+    },
+    {
+      "title": "Crear esquemas y organizar objetos",
+      "command": "CREATE SCHEMA ventas AUTHORIZATION app;",
+      "section": "Consultas y esquema",
+      "topic": "Esquema",
+      "description": "Los esquemas son espacios de nombres dentro de una base. Permiten separar módulos y controlar permisos por esquema.",
+      "examples": [
+        {
+          "description": "Cambiar el search_path de un rol",
+          "code": "ALTER ROLE app SET search_path = ventas, public;"
+        },
+        {
+          "description": "Ver el search_path actual",
+          "code": "SHOW search_path;"
+        },
+        {
+          "description": "Mover una tabla a otro esquema",
+          "code": "ALTER TABLE public.pedidos SET SCHEMA ventas;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "esquema",
+        "schema",
+        "search_path"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Desde PG 15 el esquema public ya no permite CREATE a cualquiera. Si una tabla 'no existe' pero la ves en \\dt, casi siempre es un search_path distinto."
+    },
+    {
+      "title": "Crear tablas con tipos modernos",
+      "command": "CREATE TABLE usuarios (\n  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  email text NOT NULL UNIQUE,\n  creado_en timestamptz NOT NULL DEFAULT now()\n);",
+      "section": "Consultas y esquema",
+      "topic": "Esquema",
+      "description": "Tabla con identidad autoincremental (preferible a serial), texto sin límite y timestamp con zona horaria.",
+      "examples": [
+        {
+          "description": "Con UUID generado en el servidor",
+          "code": "CREATE TABLE sesiones (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  usuario_id bigint NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE\n);"
+        },
+        {
+          "description": "Con JSONB y restricción",
+          "code": "CREATE TABLE eventos (\n  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  datos jsonb NOT NULL,\n  CHECK (jsonb_typeof(datos) = 'object')\n);"
+        },
+        {
+          "description": "Copiar estructura incluyendo índices",
+          "code": "CREATE TABLE usuarios_copia (LIKE usuarios INCLUDING ALL);"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "create",
+        "table",
+        "identity",
+        "uuid",
+        "jsonb"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "gen_random_uuid() es nativo desde PG 13 (sin extensión). Usa timestamptz y no timestamp para evitar sorpresas con zonas horarias. text y varchar rinden igual en PostgreSQL."
+    },
+    {
+      "title": "Modificar tablas con ALTER TABLE",
+      "command": "ALTER TABLE usuarios ADD COLUMN telefono text;",
+      "section": "Consultas y esquema",
+      "topic": "Esquema",
+      "description": "Añade, cambia o elimina columnas y restricciones. Muchos cambios toman un lock exclusivo breve: cuida el orden en producción.",
+      "examples": [
+        {
+          "description": "Agregar columna NOT NULL con default (rápido desde PG 11)",
+          "code": "ALTER TABLE usuarios ADD COLUMN activo boolean NOT NULL DEFAULT true;"
+        },
+        {
+          "description": "Añadir restricción sin bloquear escrituras",
+          "code": "ALTER TABLE ventas ADD CONSTRAINT ventas_total_pos CHECK (total >= 0) NOT VALID;\nALTER TABLE ventas VALIDATE CONSTRAINT ventas_total_pos;"
+        },
+        {
+          "description": "Cambiar el tipo de una columna",
+          "code": "ALTER TABLE ventas ALTER COLUMN total TYPE numeric(14,2);"
+        },
+        {
+          "description": "Fijar un timeout de lock para no congelar la aplicación",
+          "code": "SET lock_timeout = '3s';"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "alter",
+        "table",
+        "migraciones",
+        "lock"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "ALTER ... TYPE suele reescribir la tabla entera con lock exclusivo. El patrón NOT VALID + VALIDATE evita bloquear escrituras. Siempre fija lock_timeout antes de un ALTER en producción: si no consigue el lock se cae en vez de formar cola detrás de él."
+    },
+    {
+      "title": "Crear índices sin bloquear: CONCURRENTLY",
+      "command": "CREATE INDEX CONCURRENTLY idx_ventas_fecha ON ventas (fecha);",
+      "section": "Consultas y esquema",
+      "topic": "Índices",
+      "description": "Construye el índice sin bloquear escrituras. Es la forma correcta de agregar índices en tablas vivas.",
+      "examples": [
+        {
+          "description": "Índice parcial (solo filas relevantes)",
+          "code": "CREATE INDEX CONCURRENTLY idx_pedidos_pendientes ON pedidos (creado_en) WHERE estado = 'pendiente';"
+        },
+        {
+          "description": "Índice único concurrente",
+          "code": "CREATE UNIQUE INDEX CONCURRENTLY uq_usuarios_email ON usuarios (lower(email));"
+        },
+        {
+          "description": "Borrar sin bloqueo",
+          "code": "DROP INDEX CONCURRENTLY idx_ventas_fecha;"
+        },
+        {
+          "description": "Revisar índices inválidos tras un fallo",
+          "code": "SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "index",
+        "concurrently"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "CONCURRENTLY no puede ir dentro de una transacción (ni en muchas herramientas de migración que envuelven todo en BEGIN). Si falla deja un índice INVALID que debes borrar a mano. Tarda más que la versión normal."
+    },
+    {
+      "title": "Índices GIN, trigram y búsqueda de texto",
+      "command": "CREATE EXTENSION IF NOT EXISTS pg_trgm;\nCREATE INDEX CONCURRENTLY idx_clientes_nombre_trgm ON clientes USING gin (nombre gin_trgm_ops);",
+      "section": "Consultas y esquema",
+      "topic": "Índices",
+      "description": "Los índices GIN aceleran JSONB, arrays y búsqueda de texto. Con pg_trgm permiten buscar con LIKE '%texto%' e ILIKE sin escaneo completo.",
+      "examples": [
+        {
+          "description": "Índice GIN sobre JSONB",
+          "code": "CREATE INDEX CONCURRENTLY idx_eventos_datos ON eventos USING gin (datos jsonb_path_ops);"
+        },
+        {
+          "description": "Buscar documentos JSONB que contienen un fragmento",
+          "code": "SELECT * FROM eventos WHERE datos @> '{\"tipo\":\"login\"}';"
+        },
+        {
+          "description": "Búsqueda de texto completo en español",
+          "code": "SELECT * FROM articulos WHERE to_tsvector('spanish', cuerpo) @@ plainto_tsquery('spanish', 'despliegue docker');"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "gin",
+        "pg_trgm",
+        "jsonb",
+        "texto"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "pg_trgm es un módulo contrib: en Ubuntu/Debian los módulos contrib ya vienen en el paquete principal postgresql-NN; en AlmaLinux instala postgresql-contrib. Crear la extensión exige ser superusuario o que la extensión esté marcada como trusted."
+    },
+    {
+      "title": "Instalar y listar extensiones",
+      "command": "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;",
+      "section": "Consultas y esquema",
+      "topic": "Extensiones",
+      "description": "Activa una extensión dentro de la base actual. Algunas (como pg_stat_statements) requieren además cargarla en shared_preload_libraries y reiniciar.",
+      "examples": [
+        {
+          "description": "Listar disponibles",
+          "code": "SELECT name, default_version, installed_version FROM pg_available_extensions ORDER BY name;"
+        },
+        {
+          "description": "Actualizar una extensión",
+          "code": "ALTER EXTENSION pg_trgm UPDATE;"
+        },
+        {
+          "description": "Extensiones comunes",
+          "code": "CREATE EXTENSION IF NOT EXISTS pgcrypto;\nCREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "extensiones",
+        "create-extension"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "CREATE EXTENSION es por base de datos, no por servidor. Para pg_stat_statements añade shared_preload_libraries='pg_stat_statements' en postgresql.conf y REINICIA (reload no basta). gen_random_uuid() hace innecesario uuid-ossp en la mayoría de casos."
+    },
+    {
+      "title": "SELECT útil: paginación, CTE y ventanas",
+      "command": "WITH diario AS (\n  SELECT date_trunc('day', creado_en) AS dia, count(*) AS n FROM usuarios GROUP BY 1\n)\nSELECT dia, n, sum(n) OVER (ORDER BY dia) AS acumulado FROM diario ORDER BY dia DESC LIMIT 14;",
+      "section": "Consultas y esquema",
+      "topic": "Consultas",
+      "description": "Ejemplo con CTE (WITH) y función de ventana. PostgreSQL destaca por su SQL expresivo: DISTINCT ON, FILTER, LATERAL y más.",
+      "examples": [
+        {
+          "description": "Última fila por grupo con DISTINCT ON",
+          "code": "SELECT DISTINCT ON (cliente_id) cliente_id, fecha, total FROM ventas ORDER BY cliente_id, fecha DESC;"
+        },
+        {
+          "description": "Conteo condicional con FILTER",
+          "code": "SELECT count(*) FILTER (WHERE estado='ok') AS ok, count(*) FILTER (WHERE estado='error') AS error FROM trabajos;"
+        },
+        {
+          "description": "Paginación por clave",
+          "code": "SELECT * FROM ventas WHERE id < 5000 ORDER BY id DESC LIMIT 50;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "select",
+        "cte",
+        "window",
+        "distinct-on"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ]
+    },
+    {
+      "title": "INSERT con RETURNING y upsert",
+      "command": "INSERT INTO usuarios (email) VALUES ('ana@ejemplo.cl') RETURNING id;",
+      "section": "Consultas y esquema",
+      "topic": "Consultas",
+      "description": "RETURNING devuelve datos de las filas afectadas sin otra consulta. ON CONFLICT implementa el upsert.",
+      "examples": [
+        {
+          "description": "Upsert por clave única",
+          "code": "INSERT INTO conteos (clave, n) VALUES ('visitas', 1)\nON CONFLICT (clave) DO UPDATE SET n = conteos.n + 1;"
+        },
+        {
+          "description": "Ignorar duplicados",
+          "code": "INSERT INTO suscriptores (email) VALUES ('ana@ejemplo.cl') ON CONFLICT DO NOTHING;"
+        },
+        {
+          "description": "UPDATE con RETURNING",
+          "code": "UPDATE trabajos SET estado = 'tomado' WHERE id = (SELECT id FROM trabajos WHERE estado='pendiente' ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *;"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "insert",
+        "returning",
+        "upsert",
+        "on-conflict"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "FOR UPDATE SKIP LOCKED convierte una tabla en una cola de trabajos segura con varios workers. ON CONFLICT requiere un índice único sobre las columnas indicadas."
+    },
+    {
+      "title": "Transacciones y rollback seguro",
+      "command": "BEGIN;\nDELETE FROM sesiones WHERE expira < now();\nSELECT count(*) FROM sesiones;\nROLLBACK;",
+      "section": "Consultas y esquema",
+      "topic": "Consultas",
+      "description": "Las transacciones permiten probar cambios destructivos y revertirlos. En PostgreSQL incluso el DDL es transaccional.",
+      "examples": [
+        {
+          "description": "Confirmar",
+          "code": "COMMIT;"
+        },
+        {
+          "description": "Punto de guardado",
+          "code": "BEGIN;\nSAVEPOINT antes;\nUPDATE ventas SET total = 0;\nROLLBACK TO antes;\nCOMMIT;"
+        },
+        {
+          "description": "Migración atómica desde shell",
+          "code": "psql -1 -v ON_ERROR_STOP=1 -d tienda -f migracion.sql"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "transaccion",
+        "begin",
+        "rollback"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Una transacción abierta y olvidada bloquea VACUUM y retiene bloqueos: busca 'idle in transaction' en pg_stat_activity. Configura idle_in_transaction_session_timeout en producción."
+    },
+    {
+      "title": "Tamaño de bases y tablas",
+      "command": "SELECT pg_size_pretty(pg_database_size('tienda'));",
+      "section": "Consultas y esquema",
+      "topic": "Consultas",
+      "description": "Funciones de tamaño legibles. pg_total_relation_size incluye índices y TOAST; pg_relation_size solo la tabla.",
+      "examples": [
+        {
+          "description": "Tablas más grandes con índices",
+          "code": "SELECT relname, pg_size_pretty(pg_total_relation_size(oid)) AS total FROM pg_class WHERE relkind='r' AND relnamespace='public'::regnamespace ORDER BY pg_total_relation_size(oid) DESC LIMIT 10;"
+        },
+        {
+          "description": "Tamaño de todas las bases",
+          "code": "SELECT datname, pg_size_pretty(pg_database_size(datname)) FROM pg_database ORDER BY pg_database_size(datname) DESC;"
+        },
+        {
+          "description": "Tamaño de un índice",
+          "code": "SELECT pg_size_pretty(pg_relation_size('idx_ventas_fecha'));"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "tamaño",
+        "pg_size_pretty"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Explorar el catálogo del sistema",
+      "command": "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema') ORDER BY 1,2;",
+      "section": "Consultas y esquema",
+      "topic": "Consultas",
+      "description": "information_schema es la vista estándar del catálogo; los pg_catalog.* son más completos y específicos de PostgreSQL.",
+      "examples": [
+        {
+          "description": "Columnas de una tabla",
+          "code": "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name='usuarios' ORDER BY ordinal_position;"
+        },
+        {
+          "description": "Claves foráneas de una tabla",
+          "code": "SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'pedidos'::regclass AND contype='f';"
+        },
+        {
+          "description": "Definición de una vista o función",
+          "code": "SELECT pg_get_viewdef('v_ventas_mes'::regclass, true);"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "catalogo",
+        "information_schema",
+        "pg_catalog"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Fechas y zonas horarias",
+      "command": "SELECT now(), now() AT TIME ZONE 'America/Santiago', date_trunc('month', now());",
+      "section": "Consultas y esquema",
+      "topic": "Consultas",
+      "description": "Funciones de fecha de uso diario. timestamptz se guarda en UTC y se muestra en la zona de la sesión.",
+      "examples": [
+        {
+          "description": "Rango de últimos 7 días",
+          "code": "SELECT * FROM ventas WHERE fecha >= now() - interval '7 days';"
+        },
+        {
+          "description": "Fijar zona horaria de la sesión",
+          "code": "SET TIME ZONE 'America/Santiago';"
+        },
+        {
+          "description": "Fijarla para un rol de aplicación",
+          "code": "ALTER ROLE app SET timezone = 'America/Santiago';"
+        }
+      ],
+      "tags": [
+        "postgres",
+        "fechas",
+        "timezone",
+        "timestamptz"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    }
+  ]
+}
