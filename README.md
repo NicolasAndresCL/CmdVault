@@ -1,20 +1,24 @@
-# CmdVault — biblioteca personal de comandos DevOps · SRE · Fullstack
+# CmdVault — biblioteca personal para dominar la terminal: DevOps · SRE · Fullstack
 
 [![CI](https://github.com/NicolasAndresCL/CmdVault/actions/workflows/ci.yml/badge.svg)](https://github.com/NicolasAndresCL/CmdVault/actions/workflows/ci.yml)
-![Versión](https://img.shields.io/badge/versi%C3%B3n-1.0.0-blue)
+![Versión](https://img.shields.io/badge/versi%C3%B3n-1.0.1-blue)
 ![Python](https://img.shields.io/badge/python-3.14-3776AB)
 
 | | |
 |---|---|
-| **Versión** | 1.0.0 |
+| **Versión** | 1.0.1 |
 | **Fecha** | 16 de octubre de 2026 |
 | **Autor** | [Nicolás Andrés Cano Leal](#autor) |
 
 Biblioteca de consulta para un roadmap **DevOps → SRE → Arquitecto Fullstack (IA, Cloud, Software)**:
-**826 comandos y 2.090 ejemplos** sobre 8 entornos. Cada comando trae descripción, sintaxis, ejemplos de
-uso común, notas con trampas reales (Ubuntu vs AlmaLinux, PowerShell 5.1 vs 7, Helm 4, `use_lockfile` de
-Terraform…), nivel, tags y la ruta del roadmap a la que pertenece. Incluye además mis **12 skills de
-ingeniería** —los estándares con los que trabajo— como documentación navegable.
+**1.498 comandos y 4.078 ejemplos** sobre **18 entornos**, pensados para usar la terminal en todo, en
+desarrollo y en producción (sitios web, servidores y VPS). Cada comando trae descripción, sintaxis, ejemplos
+de uso común, notas con trampas reales (Ubuntu vs AlmaLinux, PowerShell 5.1 vs 7, Helm 4, `use_lockfile` de
+Terraform, el volumen de Postgres 18…), nivel, tags y la ruta del roadmap a la que pertenece. Incluye además
+mis **12 skills de ingeniería** —los estándares con los que trabajo— como documentación navegable.
+
+El propio repositorio aplica lo que documenta: se **aprovisiona con Terraform**, se **configura y despliega
+con Ansible** y se **verifica con Jenkins** y GitHub Actions.
 
 | Entorno | Secciones | Comandos |
 |---|---|---|
@@ -26,12 +30,25 @@ ingeniería** —los estándares con los que trabajo— como documentación nave
 | Kubernetes | kubectl básico · Workloads · Redes y servicios · Configuración y secretos · Troubleshooting · Helm · Clúster y contexto | 116 |
 | Terraform | Flujo básico · Estado · Módulos y workspaces · HCL · Calidad y CI | 79 |
 | Ansible | Ad-hoc · Playbooks · Inventario · Roles y Galaxy · Vault y secretos · Calidad y depuración | 78 |
+| MySQL | Cliente y conexión · Consultas y esquema · Usuarios y permisos · Backup y restauración · Administración y rendimiento · Docker y producción | 71 |
+| PostgreSQL | psql y conexión · Consultas y esquema · Roles y permisos · Backup y restauración · Rendimiento y diagnóstico · Administración y producción | 76 |
+| MongoDB | mongosh y conexión · CRUD y consultas · Índices y agregación · Usuarios y seguridad · Backup y herramientas · Administración y producción | 56 |
+| AWS | Configuración e identidad · Cómputo (EC2) · Almacenamiento (S3) · Redes y DNS · Bases de datos y contenedores · Serverless y mensajería · Monitoreo y costos | 90 |
+| Cloud | Google Cloud (gcloud) · Azure (az) · DigitalOcean (doctl) · Cloudflare (wrangler) · Hetzner (hcloud) | 73 |
+| Servidores web | Nginx · Apache · Caddy · TLS y certificados · Pruebas HTTP y diagnóstico | 75 |
+| VPS y producción | Primer acceso y hardening · Usuarios y SSH · Despliegue · Servicios y procesos · Backups · Monitoreo y logs · Mantenimiento | 71 |
+| Claude | Claude Code (sesiones, automatización, permisos, MCP/plugins/agentes, dentro de la sesión) · API con curl · CLI ant · SDK Python | 63 |
+| Git y GitHub | Configuración · Día a día · Ramas y merge · Rebase e historial · Remotos · Deshacer y recuperar · Inspección y búsqueda · Avanzado · GitHub CLI (gh) | 57 |
+| Terminal | Atajos y shell · Búsqueda moderna · JSON y YAML · tmux · Vim y nano · Scripting robusto · Productividad | 40 |
+| **Total** | | **1.498** |
 
 - **Frontend**: NiceGUI 3 (puerto 8090) con tres temas: **Dark**, **Luffy · Quinta Marcha** y
   **Eren · Titán Fundador**.
 - **Backend**: FastAPI con SQLAlchemy 2 (`Mapped[]`), Pydantic v2 y psycopg v3.
 - **Persistencia**: PostgreSQL 18 (comandos, favoritos, comandos propios y skills).
 - **Todo dockerizado** con Compose.
+- **Infraestructura como código**: Terraform (VPS en AWS con estado remoto en S3), Ansible (Ubuntu y
+  AlmaLinux) y un `Jenkinsfile` para el Jenkins local.
 
 Los JSON de `backend/app/seed/data/` son la **única fuente de verdad** del contenido: se validan contra un
 contrato estricto y se vuelcan a la base de datos en cada arranque, sin pisar favoritos ni los comandos que
@@ -42,11 +59,23 @@ agregues desde la interfaz.
 ```
 CmdVault/
 ├── .github/                  # CI (workflows/ci.yml), Dependabot, plantillas de issue/PR
+├── Jenkinsfile               # mismo pipeline para el Jenkins local + deploy con Ansible (con aprobación)
 ├── docker-compose.yml        # db (postgres:18-alpine) + backend + frontend, encadenados por healthcheck
 ├── .env.example              # plantilla de variables (copiar a .env)
 ├── scripts/
 │   ├── verificar.sh          # los mismos jobs que el CI, en el mismo orden
-│   └── smoke.sh              # healthchecks + render de las 23 rutas contra el stack levantado
+│   ├── lint-iac.sh           # Terraform fmt/validate, tflint, Trivy y ansible-lint en contenedores
+│   └── smoke.sh              # healthchecks + render de 33 rutas (una por entorno) contra el stack
+├── infra/
+│   ├── terraform/
+│   │   ├── modules/vps/      # EC2 Ubuntu 24.04 + IP elástica + security group (SSH solo admin), IMDSv2
+│   │   └── envs/prod/        # backend S3 con use_lockfile, lockfile multiplataforma, *.example
+│   └── ansible/
+│       ├── playbooks/site.yml        # common -> docker -> cmdvault
+│       ├── roles/common/     # paquetes, usuario deploy, sshd endurecido, ufw/firewalld, fail2ban
+│       ├── roles/docker/     # Docker Engine del repo oficial (deb822 / docker-ce.repo)
+│       ├── roles/cmdvault/   # git clone, .env desde Vault, compose up --wait, chequeo de /healthz
+│       └── group_vars/cmdvault/      # vars.yml + vault.yml.example (secretos con ansible-vault)
 ├── backend/
 │   ├── Dockerfile            # multi-stage, no-root (UID 1000), HEALTHCHECK a /healthz
 │   ├── requirements.txt · requirements-dev.txt
@@ -63,7 +92,7 @@ CmdVault/
 │   │       ├── loader.py     #   lectura y fusión de JSON + skills (puro, sin BD)
 │   │       ├── sync.py       #   sincronización idempotente con la BD
 │   │       ├── validate.py   #   validador para CI: contrato + títulos duplicados
-│   │       ├── data/         #   37 JSON con los 826 comandos
+│   │       ├── data/         #   69 JSON con los 1.498 comandos
 │   │       └── skills/       #   12 SKILL.md de ingeniería
 │   └── tests/                # pytest: lógica pura, seed, API (TestClient); SQLite o Postgres
 └── frontend/
@@ -91,7 +120,8 @@ cp .env.example .env
 # Reemplaza POSTGRES_PASSWORD, API_KEY y STORAGE_SECRET (Compose se niega a arrancar sin ellos):
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 docker compose up -d --build --wait   # espera a que los 3 servicios estén healthy
-./scripts/smoke.sh                    # opcional: comprueba las 23 rutas
+./scripts/smoke.sh                    # opcional: comprueba 33 rutas, una por entorno
+docker compose down                   # al terminar de probar: bájalo (los datos se conservan)
 ```
 
 | Servicio | URL |
@@ -128,6 +158,54 @@ cd frontend
 $env:API_KEY="dev-key-0123456789abc"; $env:STORAGE_SECRET="dev-secret-0123456789"; $env:PORT="8090"
 ..\env\Scripts\python -m app.main   # http://localhost:8090
 ```
+
+## Desplegar en un VPS (Terraform + Ansible + Jenkins)
+
+Tres capas, cada una con una sola responsabilidad: **Terraform** crea la máquina, **Ansible** la deja lista
+y despliega, y **Jenkins** (o tú, desde la terminal) orquesta con aprobación humana.
+
+**1. Infraestructura (AWS) — `infra/terraform/envs/prod`**
+
+```bash
+cd infra/terraform/envs/prod
+cp backend.hcl.example backend.hcl                 # bucket S3 del estado (con versionado y cifrado)
+cp terraform.tfvars.example terraform.tfvars       # tu llave pública y tu IP /32
+terraform init -backend-config=backend.hcl
+terraform plan -out=tfplan                         # revisar línea por línea antes de aplicar
+terraform apply tfplan
+terraform output -raw inventario_ansible           # bloque listo para el inventario de Ansible
+```
+
+Crea una EC2 Ubuntu 24.04 (`t3.small`, gp3 cifrado, IMDSv2 obligatorio) con IP elástica. El security group
+solo deja entrar SSH desde los CIDR de `cidr_admin_ssh` (sin default, y `0.0.0.0/0` se rechaza en la
+validación) y HTTP/HTTPS públicos. Si ya tienes un VPS (p. ej. AlmaLinux en HostGator), sáltate este paso.
+
+**2. Configuración y despliegue — `infra/ansible`**
+
+```bash
+cd infra/ansible
+cp inventory/hosts.yml.example inventory/hosts.yml
+cp group_vars/cmdvault/vault.yml.example group_vars/cmdvault/vault.yml   # poner secretos reales
+ansible-vault encrypt group_vars/cmdvault/vault.yml
+ansible-galaxy collection install -r requirements.yml -p ./collections
+ansible-playbook playbooks/site.yml --ask-vault-pass                        # todo
+ansible-playbook playbooks/site.yml --tags deploy --ask-vault-pass -e cmdvault_version=v1.0.1  # solo redeploy
+```
+
+| Rol | Qué hace (Ubuntu y AlmaLinux) |
+|---|---|
+| `common` | Paquetes base, zona horaria, usuario `deploy` con llave SSH, `sshd` endurecido (validado con `sshd -t` antes de escribir), ufw o firewalld con 22/80/443, fail2ban y actualizaciones automáticas |
+| `docker` | Docker Engine y el plugin Compose desde el repositorio oficial (deb822 en Ubuntu, `docker-ce.repo` en AlmaLinux) |
+| `cmdvault` | `git clone` de la versión pedida, `.env` generado desde Vault (`0600`, `no_log`), `docker compose up --wait` y comprobación de `/healthz` de la API y la UI |
+
+En producción la UI queda en el puerto 80 y la API solo en `127.0.0.1:8000`.
+
+**3. Pipeline — `Jenkinsfile`**
+
+Para el Jenkins local tal como está (sin el plugin Docker Pipeline): cada paso corre en un contenedor
+efímero con `docker run --rm --volumes-from` y reproduce el CI de GitHub. Con `DEPLOY=true` en `main`, pide
+aprobación (`input`) y ejecuta el playbook con las credenciales del credential store (`cmdvault-vps-ssh`,
+`cmdvault-vault-pass`, `cmdvault-inventory`, `cmdvault-vault-vars`, `cmdvault-known-hosts`).
 
 ## Endpoints
 
@@ -167,7 +245,8 @@ Los errores de dominio salen con el mismo contrato:
 - **Buscador global** en la cabecera, con filtros combinables:
   `tag:redes level:avanzado` · `cat:kubernetes "rollout"` · `section:almalinux firewall`.
 - **Tarjeta de comando**: botón para copiar, favorito y una sección desplegable con sintaxis, ejemplos
-  resaltados según el lenguaje (bash, PowerShell, batch, Groovy, HCL, YAML, Dockerfile), notas, tags y roadmap.
+  resaltados según el lenguaje (bash, PowerShell, batch, SQL, JavaScript de mongosh, Nginx, Apache, Groovy,
+  HCL, YAML, Dockerfile, Python), notas, tags y roadmap.
 - **Mis skills de ingeniería**, en Markdown.
 - **Nuevo comando**: formulario con ejemplos dinámicos; los comandos propios se pueden borrar.
 - **Selector de tema** guardado por usuario.
@@ -209,14 +288,19 @@ Las skills se copian desde `~/.claude/skills/*/SKILL.md` a `backend/app/seed/ski
 Reproduce los jobs de [`.github/workflows/ci.yml`](.github/workflows/ci.yml) en el mismo orden, con el
 mismo ejecutable `pytest` que el CI, y sale con código ≠ 0 si algo falla:
 
-1. **lint**: `ruff check` y `ruff format --check` de backend y frontend, validación del contenido y
-   hadolint de ambos Dockerfiles.
-2. **test-backend**: 30 tests sobre SQLite en memoria, cobertura ≥ 90 % (actual 97 %).
-3. **test-postgres**: la misma suite contra un Postgres 18 desechable.
-4. **test-frontend**: 23 tests, cobertura ≥ 80 % (actual 89 %).
-5. **build**: `docker compose up --build --wait` en un proyecto aparte (`cmdvault-verificar`, puertos
-   18000/18090, secretos efímeros), `smoke.sh` (23 rutas, incluida la de cada entorno) y `down -v`, también
-   si algo falla. No toca tu stack ni tus datos.
+1. **lint**: `ruff check` y `ruff format --check` de backend y frontend, validación del contenido,
+   hadolint de ambos Dockerfiles y que ningún `.sh` esté en git sin bit de ejecución.
+2. **iac** (`scripts/lint-iac.sh`): `terraform fmt -check` y `validate`, tflint (ruleset AWS), Trivy
+   (HIGH/CRITICAL) y `ansible-playbook --syntax-check` + `ansible-lint` con el perfil **production**.
+3. **test-backend**: 30 tests sobre SQLite en memoria, cobertura ≥ 90 % (actual 97 %).
+4. **test-postgres**: la misma suite contra un Postgres 18 desechable.
+5. **test-frontend**: 35 tests, cobertura ≥ 80 % (actual 90 %).
+6. **build**: `docker compose up --build --wait` en un proyecto aparte (`cmdvault-verificar`, puertos
+   18000/18090, secretos efímeros), `smoke.sh` (33 rutas, una por cada entorno que la API declara) y
+   `down -v`, también si algo falla. No toca tu stack ni tus datos.
+
+El `Jenkinsfile` corre los mismos pasos (lint, IaC, tests en paralelo con Postgres como sidecar, build y
+smoke en un proyecto `cmdvault-ci-<build>` que siempre se baja en `post`).
 
 Los tests del backend usan SQLite en memoria salvo que el entorno traiga `TEST_DATABASE_URL` (así corre
 el job `test-postgres`).
@@ -245,6 +329,21 @@ el job `test-postgres`).
 - **Contenedores endurecidos.** Usuario no-root con UID numérico (listo para `runAsNonRoot`), sin `apt-get`
   (healthcheck en Python), backend con sistema de archivos de solo lectura y `tmpfs` en `/tmp`, y
   `no-new-privileges` en ambos servicios.
+- **Un script de IaC para tres pipelines.** GitHub Actions, Jenkins y `verificar.sh` llaman al mismo
+  `lint-iac.sh`, con versiones de Terraform, tflint, Trivy y Ansible fijadas en un solo lugar. Todo en
+  contenedores `--rm`: nada que instalar en Windows (donde Ansible no corre como nodo de control).
+- **Jenkins sin plugins nuevos.** El controller no tiene Docker Pipeline y su `JENKINS_HOME` es un volumen
+  nombrado, así que `docker run -v $WORKSPACE` apuntaría a una ruta inexistente en el host. `--volumes-from`
+  hereda los volúmenes del controller y el contenedor del paso ve el mismo workspace.
+- **Terraform crea, Ansible configura.** Sin `user_data`: la máquina nace vacía y el mismo playbook sirve
+  para la EC2 y para un VPS existente. Estado en S3 con `use_lockfile` (DynamoDB está deprecado), lockfile
+  con hashes para Linux, Windows y macOS, SSH nunca abierto a `0.0.0.0/0` y salida solo por 80/443 (la
+  excepción de Trivy está justificada en el código).
+- **Secretos solo donde corresponde.** `.env` del servidor generado por Ansible desde Vault con `no_log`;
+  en Jenkins todo pasa por el credential store, y el deploy verifica la host key contra un `known_hosts`
+  conocido, nunca con `StrictHostKeyChecking=no`.
+- **Lo que se levanta para probar, se baja.** Todo stack de prueba (verificación local, Jenkins, CI) usa
+  proyecto y puertos propios y se baja con `down -v` en un `trap` o en `post { always }`.
 
 ## Autor
 
@@ -255,4 +354,4 @@ Backend Engineer → SRE | Python · Django · Kubernetes · Terraform · CI/CD
 - Portafolio: [nicolasandrescl.github.io](https://nicolasandrescl.github.io/)
 - Correo: [nicolas.cano.leal@gmail.com](mailto:nicolas.cano.leal@gmail.com)
 
-CmdVault v1.0.0 · 16 de octubre de 2026
+CmdVault v1.0.1 · 16 de octubre de 2026
