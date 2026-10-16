@@ -15,6 +15,11 @@ paso "lint: ruff + formato + contrato del seed"
 "$PY" -m ruff check backend frontend
 "$PY" -m ruff format --check backend frontend
 (cd backend && "$PY" -m app.seed.validate)
+# En Windows (core.filemode=false) un .sh nuevo entra como 100644 y en el runner Linux da
+# "Permission denied"; Git Bash lo ejecuta igual, así que solo se ve mirando el índice.
+if git ls-files -s -- '*.sh' | grep -v '^100755'; then
+  echo "Scripts sin bit de ejecución en git: git update-index --chmod=+x <archivo>"; exit 1
+fi
 
 paso "test-backend (SQLite, cobertura >= 90)"
 (cd backend && "$PYTEST" -rs --cov --cov-fail-under=90 -q)
