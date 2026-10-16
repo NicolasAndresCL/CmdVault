@@ -1,0 +1,23 @@
+[project]
+name = "cmdvault-frontend"
+version = "1.0.0"
+requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["app"]
+# Las vistas NiceGUI se validan con el smoke test de render (scripts/smoke.sh), no con unitarios.
+omit = ["app/main.py", "app/pages.py", "app/layout.py", "app/components.py"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "BLE"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/layout.py" = ["E501"]  # CSS embebido
