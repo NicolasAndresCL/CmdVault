@@ -1,0 +1,860 @@
+{
+  "category": {
+    "slug": "jenkins",
+    "name": "Jenkins",
+    "icon": "engineering",
+    "order": 4,
+    "description": "CI/CD con Jenkins: pipelines declarativos, CLI, Jenkins en Docker y administración."
+  },
+  "commands": [
+    {
+      "title": "Descargar y autenticar la CLI de Jenkins",
+      "command": "java -jar jenkins-cli.jar",
+      "section": "CLI",
+      "topic": "Jenkins CLI",
+      "description": "La CLI oficial se descarga desde el propio controller y se autentica con usuario y API token.",
+      "syntax": "java -jar jenkins-cli.jar -s URL -auth usuario:token <comando>",
+      "examples": [
+        {
+          "description": "Descargar el jar desde el controller",
+          "code": "curl -fsSLO http://localhost:8080/jnlpJars/jenkins-cli.jar"
+        },
+        {
+          "description": "Probar la autenticación",
+          "code": "java -jar jenkins-cli.jar -s http://localhost:8080/ -auth nicolas:11a2b3c4d5e6f7 who-am-i"
+        },
+        {
+          "description": "Usar variables de entorno en vez de flags",
+          "code": "export JENKINS_URL=http://localhost:8080/\nexport JENKINS_USER_ID=nicolas\nexport JENKINS_API_TOKEN=11a2b3c4d5e6f7\njava -jar jenkins-cli.jar who-am-i"
+        },
+        {
+          "description": "Ver todos los comandos disponibles",
+          "code": "java -jar jenkins-cli.jar help"
+        }
+      ],
+      "tags": [
+        "cli",
+        "autenticación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "El API token se genera en Usuario → Security → API Token. Detrás de un proxy que no soporte HTTP full-duplex agrega -webSocket."
+    },
+    {
+      "title": "Lanzar builds desde la CLI",
+      "command": "jenkins-cli build",
+      "section": "CLI",
+      "topic": "Jenkins CLI",
+      "description": "Dispara un job, opcionalmente con parámetros, esperando que termine y mostrando su consola.",
+      "syntax": "build JOB [-p CLAVE=valor] [-s] [-v] [-f]",
+      "examples": [
+        {
+          "description": "Lanzar y esperar el resultado",
+          "code": "java -jar jenkins-cli.jar build api-deploy -s"
+        },
+        {
+          "description": "Con parámetros, siguiendo la consola",
+          "code": "java -jar jenkins-cli.jar build api-deploy -p ENTORNO=staging -p VERSION=1.4.2 -s -v"
+        },
+        {
+          "description": "Job dentro de una carpeta o rama multibranch",
+          "code": "java -jar jenkins-cli.jar build 'backend/api/main' -s"
+        }
+      ],
+      "tags": [
+        "cli",
+        "builds"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Con -s el código de salida refleja el resultado del build, ideal para encadenar en scripts."
+    },
+    {
+      "title": "Ver la consola de un build",
+      "command": "jenkins-cli console",
+      "section": "CLI",
+      "topic": "Jenkins CLI",
+      "description": "Muestra la salida de consola de un build, el último por defecto, y puede seguirla en vivo.",
+      "examples": [
+        {
+          "description": "Seguir el último build",
+          "code": "java -jar jenkins-cli.jar console api-deploy -f"
+        },
+        {
+          "description": "Últimas 100 líneas de un build concreto",
+          "code": "java -jar jenkins-cli.jar console api-deploy 57 -n 100"
+        }
+      ],
+      "tags": [
+        "cli",
+        "logs"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Listar y gestionar jobs",
+      "command": "jenkins-cli list-jobs",
+      "section": "CLI",
+      "topic": "Jenkins CLI",
+      "description": "Lista jobs y permite exportar, crear, habilitar o deshabilitar su configuración XML.",
+      "examples": [
+        {
+          "description": "Listar jobs de una carpeta",
+          "code": "java -jar jenkins-cli.jar list-jobs backend"
+        },
+        {
+          "description": "Exportar la configuración de un job",
+          "code": "java -jar jenkins-cli.jar get-job api-deploy > api-deploy.xml"
+        },
+        {
+          "description": "Crear un job a partir del XML",
+          "code": "java -jar jenkins-cli.jar create-job api-deploy-copia < api-deploy.xml"
+        },
+        {
+          "description": "Deshabilitar un job",
+          "code": "java -jar jenkins-cli.jar disable-job api-deploy"
+        }
+      ],
+      "tags": [
+        "cli",
+        "jobs"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Gestionar plugins desde la CLI",
+      "command": "jenkins-cli install-plugin",
+      "section": "CLI",
+      "topic": "Jenkins CLI",
+      "description": "Instala, lista y actualiza plugins sin entrar a la interfaz web.",
+      "examples": [
+        {
+          "description": "Instalar varios plugins y reiniciar",
+          "code": "java -jar jenkins-cli.jar install-plugin git workflow-aggregator docker-workflow configuration-as-code -restart"
+        },
+        {
+          "description": "Instalar una versión concreta",
+          "code": "java -jar jenkins-cli.jar install-plugin git:5.5.2 -deploy"
+        },
+        {
+          "description": "Listar plugins con actualizaciones pendientes",
+          "code": "java -jar jenkins-cli.jar list-plugins | grep ')$'"
+        }
+      ],
+      "tags": [
+        "cli",
+        "plugins"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "En contenedores es mejor fijar los plugins en la imagen con jenkins-plugin-cli y plugins.txt que instalarlos en caliente."
+    },
+    {
+      "title": "Reiniciar Jenkins de forma segura",
+      "command": "jenkins-cli safe-restart",
+      "section": "CLI",
+      "topic": "Jenkins CLI",
+      "description": "Espera a que terminen los builds en curso, no inicia nuevos y luego reinicia. quiet-down solo deja de aceptar builds.",
+      "examples": [
+        {
+          "description": "Reinicio seguro",
+          "code": "java -jar jenkins-cli.jar safe-restart"
+        },
+        {
+          "description": "Preparar mantenimiento sin reiniciar",
+          "code": "java -jar jenkins-cli.jar quiet-down\n# ... mantenimiento ...\njava -jar jenkins-cli.jar cancel-quiet-down"
+        },
+        {
+          "description": "Recargar la configuración desde disco",
+          "code": "java -jar jenkins-cli.jar reload-configuration"
+        }
+      ],
+      "tags": [
+        "cli",
+        "mantenimiento",
+        "reinicio"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ejecutar Groovy desde la CLI",
+      "command": "jenkins-cli groovy =",
+      "section": "CLI",
+      "topic": "Jenkins CLI",
+      "description": "Ejecuta un script Groovy en el controller (como la Script Console) leyendo el código desde la entrada estándar.",
+      "examples": [
+        {
+          "description": "Ejecutar un script local",
+          "code": "java -jar jenkins-cli.jar groovy = < scripts/listar-plugins.groovy"
+        },
+        {
+          "description": "Script en línea",
+          "code": "echo 'println Jenkins.instance.numExecutors' | java -jar jenkins-cli.jar groovy ="
+        }
+      ],
+      "tags": [
+        "cli",
+        "groovy",
+        "automatización"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Requiere permiso Overall/Administer: tiene acceso total al controller."
+    },
+    {
+      "title": "Levantar Jenkins en Docker",
+      "command": "docker run jenkins/jenkins:lts-jdk21",
+      "section": "Docker",
+      "topic": "Instalación y contenedores",
+      "description": "Ejecuta el controller oficial con un volumen nombrado para JENKINS_HOME, de modo que la configuración y los jobs sobreviven a recrear el contenedor.",
+      "examples": [
+        {
+          "description": "Controller con volumen nombrado",
+          "code": "docker volume create jenkins_home\ndocker run -d --name jenkins --restart unless-stopped \\\n  -p 8080:8080 -p 50000:50000 \\\n  -v jenkins_home:/var/jenkins_home \\\n  jenkins/jenkins:lts-jdk21"
+        },
+        {
+          "description": "Ver el arranque",
+          "code": "docker logs -f jenkins"
+        }
+      ],
+      "tags": [
+        "docker",
+        "instalación",
+        "controller"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "El puerto 50000 solo es necesario para agentes inbound por TCP. En Docker Desktop (Windows/macOS) un volumen nombrado es mucho más rápido que un bind mount para JENKINS_HOME. El primer arranque puede tardar uno o dos minutos."
+    },
+    {
+      "title": "Contraseña inicial de administrador",
+      "command": "cat /var/jenkins_home/secrets/initialAdminPassword",
+      "section": "Docker",
+      "topic": "Instalación y contenedores",
+      "description": "El asistente de instalación pide una contraseña generada en el primer arranque; se lee desde el contenedor o desde los logs.",
+      "examples": [
+        {
+          "description": "Leerla desde el contenedor",
+          "code": "docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword"
+        },
+        {
+          "description": "Buscarla en los logs",
+          "code": "docker logs jenkins 2>&1 | grep -A 2 'Please use the following password'"
+        }
+      ],
+      "tags": [
+        "docker",
+        "instalación",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Jenkins con Docker Compose",
+      "command": "docker compose up -d",
+      "section": "Docker",
+      "topic": "Instalación y contenedores",
+      "description": "Define el controller y sus volúmenes en un compose.yaml versionable y reproducible.",
+      "examples": [
+        {
+          "description": "compose.yaml",
+          "code": "services:\n  jenkins:\n    image: jenkins/jenkins:lts-jdk21\n    container_name: jenkins\n    restart: unless-stopped\n    ports:\n      - \"8080:8080\"\n      - \"50000:50000\"\n    environment:\n      JAVA_OPTS: \"-Duser.timezone=America/Santiago\"\n    volumes:\n      - jenkins_home:/var/jenkins_home\n\nvolumes:\n  jenkins_home:"
+        },
+        {
+          "description": "Levantar y ver estado",
+          "code": "docker compose up -d\ndocker compose ps\ndocker compose logs -f jenkins"
+        }
+      ],
+      "tags": [
+        "docker",
+        "compose",
+        "instalación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Imagen propia con plugins fijados",
+      "command": "jenkins-plugin-cli -f plugins.txt",
+      "section": "Docker",
+      "topic": "Instalación y contenedores",
+      "description": "Construye una imagen del controller con los plugins preinstalados y versionados, en vez de instalarlos a mano.",
+      "examples": [
+        {
+          "description": "plugins.txt",
+          "code": "configuration-as-code:latest\nworkflow-aggregator:latest\ngit:latest\ndocker-workflow:latest\ncredentials-binding:latest\ntimestamper:latest\nws-cleanup:latest\npipeline-utility-steps:latest"
+        },
+        {
+          "description": "Dockerfile",
+          "code": "FROM jenkins/jenkins:lts-jdk21\nENV JAVA_OPTS=\"-Djenkins.install.runSetupWizard=false\"\nCOPY --chown=jenkins:jenkins plugins.txt /usr/share/jenkins/ref/plugins.txt\nRUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt"
+        },
+        {
+          "description": "Construir y verificar qué se instalaría",
+          "code": "docker build -t jenkins-custom:lts .\ndocker run --rm jenkins-custom:lts jenkins-plugin-cli --list"
+        }
+      ],
+      "tags": [
+        "docker",
+        "plugins",
+        "imagen"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Para builds reproducibles reemplaza 'latest' por versiones exactas (git:5.5.2). runSetupWizard=false asume que configurarás usuarios con JCasC."
+    },
+    {
+      "title": "Agente inbound en contenedor",
+      "command": "docker run jenkins/inbound-agent",
+      "section": "Docker",
+      "topic": "Instalación y contenedores",
+      "description": "Conecta un agente al controller usando el secreto que Jenkins genera al crear el nodo (Administrar Jenkins → Nodos).",
+      "examples": [
+        {
+          "description": "Agente inbound por WebSocket",
+          "code": "docker run -d --name agente-linux --restart unless-stopped \\\n  --init jenkins/inbound-agent \\\n  -url http://jenkins:8080 -webSocket \\\n  -secret 3f9a...e1 -name agente-linux -workDir /home/jenkins/agent"
+        },
+        {
+          "description": "Agente SSH con llave pública",
+          "code": "docker run -d --name agente-ssh \\\n  -e \"JENKINS_AGENT_SSH_PUBKEY=$(cat ~/.ssh/jenkins_agent.pub)\" \\\n  jenkins/ssh-agent:latest-jdk21"
+        }
+      ],
+      "tags": [
+        "docker",
+        "agentes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "El controller y los agentes deben compartir red Docker para resolver 'jenkins' por nombre. La imagen del agente debe tener la misma versión mayor de Java que el controller."
+    },
+    {
+      "title": "Usar Docker del host desde Jenkins",
+      "command": "-v /var/run/docker.sock:/var/run/docker.sock",
+      "section": "Docker",
+      "topic": "Instalación y contenedores",
+      "description": "Montar el socket de Docker permite a los builds crear contenedores en el host, pero equivale a dar acceso root al host a cualquier job.",
+      "examples": [
+        {
+          "description": "Agente con acceso al socket (solo entornos de confianza)",
+          "code": "docker run -d --name agente-docker \\\n  -v /var/run/docker.sock:/var/run/docker.sock \\\n  --group-add $(stat -c '%g' /var/run/docker.sock) \\\n  mi-agente-con-docker-cli:latest"
+        },
+        {
+          "description": "Alternativa más aislada: Docker-in-Docker con TLS",
+          "code": "docker run -d --name jenkins-docker --privileged \\\n  --network jenkins --network-alias docker \\\n  -e DOCKER_TLS_CERTDIR=/certs \\\n  -v jenkins-docker-certs:/certs/client \\\n  docker:dind"
+        }
+      ],
+      "tags": [
+        "docker",
+        "seguridad",
+        "agentes"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud",
+        "SRE"
+      ],
+      "notes": "Nunca montes docker.sock en el controller. Si el pipeline solo construye imágenes, kaniko o buildah sin privilegios son opciones más seguras."
+    },
+    {
+      "title": "Respaldar el volumen de JENKINS_HOME",
+      "command": "docker run --rm -v jenkins_home:/data alpine tar",
+      "section": "Docker",
+      "topic": "Respaldo",
+      "description": "Empaqueta el contenido del volumen nombrado usando un contenedor temporal de Alpine, sin depender de rutas internas de Docker.",
+      "examples": [
+        {
+          "description": "Respaldo comprimido con fecha",
+          "code": "docker run --rm \\\n  -v jenkins_home:/data:ro \\\n  -v \"$(pwd)\":/backup \\\n  alpine tar czf /backup/jenkins_home-$(date +%F).tgz -C /data ."
+        },
+        {
+          "description": "Excluir workspaces y cachés para reducir tamaño",
+          "code": "docker run --rm -v jenkins_home:/data:ro -v \"$(pwd)\":/backup alpine \\\n  tar czf /backup/jenkins_home.tgz -C /data --exclude='./workspace' --exclude='./caches' --exclude='./.cache' ."
+        }
+      ],
+      "tags": [
+        "docker",
+        "respaldo",
+        "volúmenes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud",
+        "SRE"
+      ],
+      "notes": "Para un respaldo consistente ejecuta antes 'quiet-down' o detén el contenedor. Guarda también secrets/ y secret.key: sin ellos las credenciales respaldadas no se pueden descifrar."
+    },
+    {
+      "title": "Restaurar el volumen de JENKINS_HOME",
+      "command": "docker run --rm -v jenkins_home:/data alpine tar xzf",
+      "section": "Docker",
+      "topic": "Respaldo",
+      "description": "Restaura un respaldo .tgz en un volumen (nuevo o vaciado) y vuelve a levantar el controller.",
+      "examples": [
+        {
+          "description": "Restaurar en un volumen nuevo",
+          "code": "docker stop jenkins\ndocker volume create jenkins_home_restaurado\ndocker run --rm -v jenkins_home_restaurado:/data -v \"$(pwd)\":/backup alpine \\\n  sh -c 'tar xzf /backup/jenkins_home-2026-10-15.tgz -C /data && chown -R 1000:1000 /data'"
+        },
+        {
+          "description": "Levantar Jenkins con el volumen restaurado",
+          "code": "docker run -d --name jenkins-restaurado -p 8080:8080 -v jenkins_home_restaurado:/var/jenkins_home jenkins/jenkins:lts-jdk21"
+        }
+      ],
+      "tags": [
+        "docker",
+        "respaldo",
+        "restauración"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud",
+        "SRE"
+      ],
+      "notes": "La imagen oficial corre como UID 1000: si los archivos quedan como root, Jenkins no arranca."
+    },
+    {
+      "title": "Configuration as Code (JCasC)",
+      "command": "CASC_JENKINS_CONFIG",
+      "section": "Docker",
+      "topic": "Configuración como código",
+      "description": "El plugin Configuration as Code define la configuración del controller (seguridad, credenciales, nodos, herramientas) en YAML versionado.",
+      "examples": [
+        {
+          "description": "casc.yaml mínimo",
+          "code": "jenkins:\n  systemMessage: \"Jenkins gestionado con JCasC\"\n  numExecutors: 0\n  securityRealm:\n    local:\n      allowsSignup: false\n      users:\n        - id: \"admin\"\n          password: \"${JENKINS_ADMIN_PASSWORD}\"\n  authorizationStrategy:\n    loggedInUsersCanDoAnything:\n      allowAnonymousRead: false\nunclassified:\n  location:\n    url: \"https://jenkins.ejemplo.cl/\""
+        },
+        {
+          "description": "Montarlo en el contenedor",
+          "code": "docker run -d --name jenkins -p 8080:8080 \\\n  -v jenkins_home:/var/jenkins_home \\\n  -v \"$(pwd)/casc.yaml\":/var/jenkins_home/casc.yaml:ro \\\n  -e CASC_JENKINS_CONFIG=/var/jenkins_home/casc.yaml \\\n  -e JENKINS_ADMIN_PASSWORD='cambia-esto' \\\n  jenkins-custom:lts"
+        },
+        {
+          "description": "Exportar la configuración actual como punto de partida",
+          "code": "Administrar Jenkins → Configuration as Code → View Configuration"
+        }
+      ],
+      "tags": [
+        "jcasc",
+        "configuración",
+        "iac"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Los secretos se referencian con ${VARIABLE} y se inyectan por entorno o archivos de secretos; nunca los escribas en el YAML versionado. Se puede recargar en caliente desde la UI o con la ruta /configuration-as-code/reload."
+    },
+    {
+      "title": "Lanzar builds por REST API",
+      "command": "curl -X POST .../buildWithParameters",
+      "section": "Administración",
+      "topic": "REST API",
+      "description": "Dispara builds desde scripts o sistemas externos autenticándose con usuario y API token.",
+      "examples": [
+        {
+          "description": "Build sin parámetros",
+          "code": "curl -fsS -X POST -u nicolas:$JENKINS_TOKEN \"$JENKINS_URL/job/api-deploy/build\""
+        },
+        {
+          "description": "Build con parámetros",
+          "code": "curl -fsS -X POST -u nicolas:$JENKINS_TOKEN \\\n  \"$JENKINS_URL/job/api-deploy/buildWithParameters\" \\\n  --data-urlencode ENTORNO=staging --data-urlencode VERSION=1.4.2"
+        },
+        {
+          "description": "Job dentro de carpetas",
+          "code": "curl -fsS -X POST -u nicolas:$JENKINS_TOKEN \"$JENKINS_URL/job/backend/job/api/job/main/build\""
+        }
+      ],
+      "tags": [
+        "api",
+        "rest",
+        "automatización"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "La respuesta trae la cabecera Location con la URL del elemento en cola (queue/item/N/), útil para seguir el build."
+    },
+    {
+      "title": "Consultar builds por REST API",
+      "command": "curl .../lastBuild/api/json",
+      "section": "Administración",
+      "topic": "REST API",
+      "description": "Cualquier página de Jenkins expone /api/json; el parámetro tree limita los campos devueltos.",
+      "examples": [
+        {
+          "description": "Resultado del último build",
+          "code": "curl -fsS -u nicolas:$JENKINS_TOKEN \"$JENKINS_URL/job/api-deploy/lastBuild/api/json?tree=number,result,duration,timestamp\" | jq"
+        },
+        {
+          "description": "Consola en texto plano",
+          "code": "curl -fsS -u nicolas:$JENKINS_TOKEN \"$JENKINS_URL/job/api-deploy/lastBuild/consoleText\" | tail -50"
+        },
+        {
+          "description": "Jobs y su estado (color)",
+          "code": "curl -fsS -u nicolas:$JENKINS_TOKEN \"$JENKINS_URL/api/json?tree=jobs[name,color]\" | jq -r '.jobs[] | \"\\(.name)\\t\\(.color)\"'"
+        },
+        {
+          "description": "Builds en cola",
+          "code": "curl -fsS -u nicolas:$JENKINS_TOKEN \"$JENKINS_URL/queue/api/json?tree=items[id,why,task[name]]\" | jq"
+        }
+      ],
+      "tags": [
+        "api",
+        "rest",
+        "monitoreo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Obtener un crumb CSRF",
+      "command": "curl .../crumbIssuer/api/json",
+      "section": "Administración",
+      "topic": "REST API",
+      "description": "Jenkins protege contra CSRF con un crumb. Con API token no hace falta; al autenticar con contraseña sí, y debe enviarse con la misma sesión (cookie).",
+      "examples": [
+        {
+          "description": "Obtener crumb y reutilizar la sesión",
+          "code": "CRUMB=$(curl -fsS -c cookies.txt -u nicolas:$JENKINS_PASSWORD \"$JENKINS_URL/crumbIssuer/api/json\" | jq -r '.crumbRequestField + \":\" + .crumb')\ncurl -fsS -b cookies.txt -X POST -u nicolas:$JENKINS_PASSWORD -H \"$CRUMB\" \"$JENKINS_URL/job/api-deploy/build\""
+        }
+      ],
+      "tags": [
+        "api",
+        "seguridad",
+        "csrf"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Usa API tokens para automatización: no requieren crumb y se pueden revocar de forma individual."
+    },
+    {
+      "title": "Listar plugins y versiones (Script Console)",
+      "command": "Jenkins.instance.pluginManager.plugins",
+      "section": "Administración",
+      "topic": "Script Console",
+      "description": "En Administrar Jenkins → Script Console se ejecuta Groovy con acceso total al controller; útil para inventario y operaciones masivas.",
+      "examples": [
+        {
+          "description": "Plugins en formato plugins.txt",
+          "code": "Jenkins.instance.pluginManager.plugins\n    .sort { it.shortName }\n    .each { println \"${it.shortName}:${it.version}\" }"
+        },
+        {
+          "description": "Plugins con actualización disponible",
+          "code": "Jenkins.instance.pluginManager.plugins\n    .findAll { it.hasUpdate() }\n    .each { println \"${it.shortName}: ${it.version} -> ${it.updateInfo.version}\" }"
+        }
+      ],
+      "tags": [
+        "script-console",
+        "plugins",
+        "groovy"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "La salida del primer ejemplo sirve directamente como plugins.txt para jenkins-plugin-cli."
+    },
+    {
+      "title": "Abortar builds colgados (Script Console)",
+      "command": "doStop() / doKill()",
+      "section": "Administración",
+      "topic": "Script Console",
+      "description": "Detiene builds que no responden al botón de abortar desde la interfaz.",
+      "examples": [
+        {
+          "description": "Abortar un build concreto",
+          "code": "def build = Jenkins.instance.getItemByFullName('backend/api/main').getBuildByNumber(128)\nbuild.doStop()"
+        },
+        {
+          "description": "Forzar término de un pipeline que no responde",
+          "code": "def run = Jenkins.instance.getItemByFullName('backend/api/main').getBuildByNumber(128)\nrun.doKill()"
+        },
+        {
+          "description": "Listar builds en ejecución",
+          "code": "Jenkins.instance.computers.each { c ->\n    c.executors.findAll { it.isBusy() }.each { e ->\n        println \"${c.name}: ${e.currentExecutable}\"\n    }\n}"
+        }
+      ],
+      "tags": [
+        "script-console",
+        "builds",
+        "troubleshooting"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Prueba primero con doStop(); doKill() (solo pipelines) termina sin ejecutar los bloques post."
+    },
+    {
+      "title": "Borrar builds antiguos (Script Console)",
+      "command": "build.delete()",
+      "section": "Administración",
+      "topic": "Script Console",
+      "description": "Elimina builds antiguos de un job para liberar espacio en JENKINS_HOME cuando no se configuró buildDiscarder.",
+      "examples": [
+        {
+          "description": "Borrar builds menores al número 500",
+          "code": "def job = Jenkins.instance.getItemByFullName('api-deploy')\njob.builds.findAll { it.number < 500 }.each { it.delete() }\nprintln 'Listo'"
+        },
+        {
+          "description": "Ver cuántos builds guarda cada job",
+          "code": "Jenkins.instance.getAllItems(Job).each { println \"${it.fullName}: ${it.builds.size()}\" }"
+        }
+      ],
+      "tags": [
+        "script-console",
+        "mantenimiento",
+        "disco"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "La solución de fondo es buildDiscarder(logRotator(...)) en options del Jenkinsfile."
+    },
+    {
+      "title": "Validar un Jenkinsfile antes de commitear",
+      "command": "declarative-linter",
+      "section": "Administración",
+      "topic": "Validación y depuración",
+      "description": "Valida la sintaxis de un pipeline declarativo contra el controller, sin ejecutarlo.",
+      "examples": [
+        {
+          "description": "Con la CLI",
+          "code": "java -jar jenkins-cli.jar -s \"$JENKINS_URL\" -auth nicolas:$JENKINS_TOKEN declarative-linter < Jenkinsfile"
+        },
+        {
+          "description": "Con la REST API",
+          "code": "curl -fsS -X POST -u nicolas:$JENKINS_TOKEN -F \"jenkinsfile=<Jenkinsfile\" \"$JENKINS_URL/pipeline-model-converter/validate\""
+        },
+        {
+          "description": "Por SSH (si el servicio SSH de Jenkins está habilitado)",
+          "code": "ssh -p 2222 nicolas@jenkins.ejemplo.cl declarative-linter < Jenkinsfile"
+        }
+      ],
+      "tags": [
+        "validación",
+        "jenkinsfile",
+        "linter"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Solo valida pipelines declarativos (no scripted) y no verifica que existan credenciales, agentes ni librerías. Puedes ponerlo en un hook de pre-commit."
+    },
+    {
+      "title": "Ejecutar Jenkinsfiles sin controller",
+      "command": "jenkinsfile-runner",
+      "section": "Administración",
+      "topic": "Validación y depuración",
+      "description": "Jenkinsfile Runner ejecuta un Jenkinsfile en un proceso efímero (normalmente en contenedor), útil para probar pipelines o correrlos en otros CI.",
+      "examples": [
+        {
+          "description": "Ejecutar con la imagen oficial",
+          "code": "docker run --rm -v \"$(pwd)\":/workspace jenkins/jenkinsfile-runner"
+        },
+        {
+          "description": "Con plugins y Jenkinsfile explícitos",
+          "code": "docker run --rm \\\n  -v \"$(pwd)/Jenkinsfile\":/workspace/Jenkinsfile \\\n  -v \"$(pwd)/plugins.txt\":/usr/share/jenkins/ref/plugins.txt \\\n  jenkins/jenkinsfile-runner"
+        }
+      ],
+      "tags": [
+        "validación",
+        "testing",
+        "efímero"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "El proyecto tiene poca actividad: para pruebas unitarias de shared libraries es más común JenkinsPipelineUnit."
+    },
+    {
+      "title": "Reproducir un build con cambios (Replay)",
+      "command": "Replay",
+      "section": "Administración",
+      "topic": "Validación y depuración",
+      "description": "Desde la página de un build, Replay permite editar el Jenkinsfile (y las librerías cargadas) y reejecutarlo sin hacer commit; ideal para depurar.",
+      "examples": [
+        {
+          "description": "Flujo de uso",
+          "code": "Build #57 → Replay → editar el script → Run"
+        },
+        {
+          "description": "Reiniciar desde una etapa (Declarative)",
+          "code": "Build #57 → Restart from Stage → elegir 'Deploy'"
+        }
+      ],
+      "tags": [
+        "depuración",
+        "replay"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Los cambios hechos en Replay no se guardan en el repositorio: cuando funcione, pásalos al Jenkinsfile y haz commit."
+    },
+    {
+      "title": "Logs del controller",
+      "command": "docker logs jenkins",
+      "section": "Administración",
+      "topic": "Operación",
+      "description": "Los logs del controller ayudan a diagnosticar plugins que fallan al cargar, problemas de memoria o agentes desconectados.",
+      "examples": [
+        {
+          "description": "Logs del contenedor",
+          "code": "docker logs --since 1h -f jenkins"
+        },
+        {
+          "description": "Instalación con paquete en Linux (systemd)",
+          "code": "sudo journalctl -u jenkins -f"
+        },
+        {
+          "description": "Log de un agente concreto",
+          "code": "$JENKINS_URL/computer/agente-linux/log"
+        },
+        {
+          "description": "Log recorder propio en la UI",
+          "code": "Administrar Jenkins → System Log → Add new log recorder → logger 'hudson.plugins.git' nivel FINE"
+        }
+      ],
+      "tags": [
+        "logs",
+        "troubleshooting"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ajustar memoria y zona horaria del controller",
+      "command": "JAVA_OPTS",
+      "section": "Administración",
+      "topic": "Operación",
+      "description": "Las opciones de la JVM se pasan con JAVA_OPTS (contenedor) o en el override de systemd (paquete), por ejemplo heap, zona horaria y propiedades del sistema.",
+      "examples": [
+        {
+          "description": "En Docker",
+          "code": "docker run -d --name jenkins -p 8080:8080 \\\n  -e JAVA_OPTS='-Xms1g -Xmx2g -Duser.timezone=America/Santiago' \\\n  -v jenkins_home:/var/jenkins_home jenkins/jenkins:lts-jdk21"
+        },
+        {
+          "description": "Instalación con paquete (systemd)",
+          "code": "sudo systemctl edit jenkins\n# [Service]\n# Environment=\"JAVA_OPTS=-Xmx2g -Duser.timezone=America/Santiago\"\nsudo systemctl restart jenkins"
+        }
+      ],
+      "tags": [
+        "jvm",
+        "memoria",
+        "configuración"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Reinicio seguro por URL",
+      "command": "$JENKINS_URL/safeRestart",
+      "section": "Administración",
+      "topic": "Operación",
+      "description": "Además de la CLI, Jenkins expone rutas para reiniciar, entrar en modo silencio o salir de él (requieren POST y permisos de administrador).",
+      "examples": [
+        {
+          "description": "Reinicio seguro con API token",
+          "code": "curl -fsS -X POST -u admin:$JENKINS_TOKEN \"$JENKINS_URL/safeRestart\""
+        },
+        {
+          "description": "Modo silencio y cancelación",
+          "code": "curl -fsS -X POST -u admin:$JENKINS_TOKEN \"$JENKINS_URL/quietDown\"\ncurl -fsS -X POST -u admin:$JENKINS_TOKEN \"$JENKINS_URL/cancelQuietDown\""
+        }
+      ],
+      "tags": [
+        "mantenimiento",
+        "reinicio",
+        "api"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Estructura de JENKINS_HOME",
+      "command": "ls $JENKINS_HOME",
+      "section": "Administración",
+      "topic": "Operación",
+      "description": "Conocer qué hay en JENKINS_HOME ayuda a respaldar lo importante y limpiar lo que crece sin control.",
+      "examples": [
+        {
+          "description": "Directorios clave",
+          "code": "config.xml          # configuración global\njobs/<job>/config.xml   # definición de cada job\njobs/<job>/builds/      # historial de builds (crece mucho)\nplugins/            # plugins instalados\nsecrets/ y secret.key   # claves para descifrar credenciales\ncredentials.xml     # credenciales (cifradas)\nworkspace/          # workspaces del controller (se puede regenerar)"
+        },
+        {
+          "description": "Qué ocupa más espacio",
+          "code": "docker exec jenkins sh -c 'du -sh /var/jenkins_home/* | sort -h | tail'"
+        }
+      ],
+      "tags": [
+        "jenkins-home",
+        "respaldo",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    }
+  ]
+}

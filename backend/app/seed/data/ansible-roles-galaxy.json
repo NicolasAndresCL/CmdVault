@@ -1,0 +1,265 @@
+{
+  "category": {
+    "slug": "ansible",
+    "name": "Ansible",
+    "icon": "settings_suggest",
+    "order": 8,
+    "description": "Gestión de configuración con Ansible: ad-hoc, playbooks, inventarios, roles, Vault y calidad."
+  },
+  "commands": [
+    {
+      "title": "Crear la estructura de un rol",
+      "command": "ansible-galaxy role init roles/nginx",
+      "section": "Roles y Galaxy",
+      "topic": "Roles",
+      "description": "Genera el esqueleto estándar de un rol: tasks, handlers, templates, defaults, vars, meta y tests.",
+      "examples": [
+        {
+          "description": "Estructura generada",
+          "code": "roles/nginx/\n├── defaults/main.yml   # valores por defecto (baja precedencia)\n├── vars/main.yml       # constantes del rol (alta precedencia)\n├── tasks/main.yml\n├── handlers/main.yml\n├── templates/\n├── files/\n├── meta/main.yml\n└── tests/"
+        },
+        {
+          "description": "Rol dentro de una colección",
+          "code": "cd ansible_collections/nicocano/infra && ansible-galaxy role init roles/nginx"
+        }
+      ],
+      "tags": [
+        "roles",
+        "estructura"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Pon en defaults/ todo lo que el usuario del rol deba poder sobrescribir; vars/ es para valores internos."
+    },
+    {
+      "title": "Usar roles en un playbook",
+      "command": "ansible-playbook site.yml",
+      "section": "Roles y Galaxy",
+      "topic": "Roles",
+      "description": "Los roles se aplican con roles: (estático, antes de tasks) o con include_role/import_role dentro de tasks.",
+      "examples": [
+        {
+          "description": "Lista de roles con variables y tags",
+          "code": "- hosts: web\n  become: true\n  roles:\n    - role: base\n    - role: nginx\n      vars:\n        nginx_port: 8080\n      tags: [nginx]"
+        },
+        {
+          "description": "Rol condicional dentro de tareas",
+          "code": "- name: Instalar monitoreo solo en producción\n  ansible.builtin.include_role:\n    name: node_exporter\n  when: \"'prod' in group_names\""
+        }
+      ],
+      "tags": [
+        "roles",
+        "include_role"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Dependencias y metadatos de un rol",
+      "command": "cat roles/app/meta/main.yml",
+      "section": "Roles y Galaxy",
+      "topic": "Roles",
+      "description": "meta/main.yml declara plataformas soportadas, versión mínima de Ansible y roles de los que depende.",
+      "examples": [
+        {
+          "description": "meta/main.yml",
+          "code": "galaxy_info:\n  author: Nicolás Cano Leal\n  description: Despliegue de la API\n  license: MIT\n  min_ansible_version: \"2.17\"\n  platforms:\n    - name: Ubuntu\n      versions: [noble]\n    - name: EL\n      versions: [\"9\", \"10\"]\ndependencies:\n  - role: base\n  - role: python\n    vars:\n      python_version: \"3.12\""
+        }
+      ],
+      "tags": [
+        "roles",
+        "meta",
+        "dependencias"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Validar argumentos de un rol",
+      "command": "ansible-playbook site.yml",
+      "section": "Roles y Galaxy",
+      "topic": "Roles",
+      "description": "meta/argument_specs.yml define tipos y obligatoriedad de las variables del rol; Ansible las valida al inicio y ansible-doc las documenta.",
+      "examples": [
+        {
+          "description": "meta/argument_specs.yml",
+          "code": "argument_specs:\n  main:\n    short_description: Instala y configura la API\n    options:\n      app_version:\n        type: str\n        required: true\n        description: Versión a desplegar.\n      app_port:\n        type: int\n        default: 8000\n      app_entorno:\n        type: str\n        choices: [dev, staging, prod]\n        default: dev"
+        },
+        {
+          "description": "Ver la documentación del rol",
+          "code": "ansible-doc -t role -r roles app"
+        }
+      ],
+      "tags": [
+        "roles",
+        "argument_specs",
+        "validacion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Instalar roles y colecciones desde requirements.yml",
+      "command": "ansible-galaxy install -r requirements.yml",
+      "section": "Roles y Galaxy",
+      "topic": "Galaxy",
+      "description": "requirements.yml fija roles y colecciones con versiones exactas para que todo el equipo y CI usen lo mismo.",
+      "examples": [
+        {
+          "description": "requirements.yml",
+          "code": "collections:\n  - name: ansible.posix\n    version: \">=2.0.0,<3.0.0\"\n  - name: community.general\n    version: \">=11.0.0\"\n  - name: community.docker\n  - name: amazon.aws\nroles:\n  - name: geerlingguy.docker\n    version: 7.4.7\n  - name: interno.base\n    src: git+https://github.com/nicocano/ansible-role-base.git\n    version: v1.3.0"
+        },
+        {
+          "description": "Solo colecciones o solo roles",
+          "code": "ansible-galaxy collection install -r requirements.yml && ansible-galaxy role install -r requirements.yml"
+        },
+        {
+          "description": "Instalar dentro del proyecto",
+          "code": "ansible-galaxy collection install -r requirements.yml -p ./collections"
+        }
+      ],
+      "tags": [
+        "galaxy",
+        "requirements",
+        "dependencias"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "ansible-galaxy install -r instala ambos tipos; las versiones de roles de ejemplo deben verificarse en Galaxy antes de fijarlas."
+    },
+    {
+      "title": "Gestionar colecciones",
+      "command": "ansible-galaxy collection list",
+      "section": "Roles y Galaxy",
+      "topic": "Galaxy",
+      "description": "Lista colecciones instaladas con su versión y ubicación; permite instalar, actualizar y verificar.",
+      "examples": [
+        {
+          "description": "Instalar o actualizar una colección",
+          "code": "ansible-galaxy collection install community.general --upgrade"
+        },
+        {
+          "description": "Versión concreta",
+          "code": "ansible-galaxy collection install 'community.docker:>=4.0.0'"
+        },
+        {
+          "description": "Ver una en particular",
+          "code": "ansible-galaxy collection list community.general"
+        },
+        {
+          "description": "Verificar integridad frente al servidor",
+          "code": "ansible-galaxy collection verify ansible.posix"
+        }
+      ],
+      "tags": [
+        "collections",
+        "galaxy"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El paquete 'ansible' completo trae muchas colecciones; con ansible-core debes instalarlas tú."
+    },
+    {
+      "title": "Crear una colección propia",
+      "command": "ansible-galaxy collection init nicocano.infra",
+      "section": "Roles y Galaxy",
+      "topic": "Galaxy",
+      "description": "Una colección empaqueta roles, módulos, plugins y playbooks bajo un namespace, distribuible por Galaxy o Automation Hub.",
+      "examples": [
+        {
+          "description": "Construir el artefacto",
+          "code": "cd nicocano/infra && ansible-galaxy collection build"
+        },
+        {
+          "description": "Instalar el tar.gz localmente",
+          "code": "ansible-galaxy collection install nicocano-infra-1.0.0.tar.gz"
+        },
+        {
+          "description": "Publicar en Galaxy",
+          "code": "ansible-galaxy collection publish nicocano-infra-1.0.0.tar.gz --api-key $GALAXY_TOKEN"
+        }
+      ],
+      "tags": [
+        "collections",
+        "empaquetado"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Buscar e inspeccionar roles de Galaxy",
+      "command": "ansible-galaxy role search docker --author geerlingguy",
+      "section": "Roles y Galaxy",
+      "topic": "Galaxy",
+      "description": "Busca roles publicados y muestra su información antes de instalarlos.",
+      "examples": [
+        {
+          "description": "Información de un rol",
+          "code": "ansible-galaxy role info geerlingguy.docker"
+        },
+        {
+          "description": "Roles instalados",
+          "code": "ansible-galaxy role list"
+        },
+        {
+          "description": "Quitar un rol",
+          "code": "ansible-galaxy role remove geerlingguy.docker"
+        }
+      ],
+      "tags": [
+        "galaxy",
+        "roles"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Rutas de roles y colecciones en ansible.cfg",
+      "command": "ansible-config dump --only-changed",
+      "section": "Roles y Galaxy",
+      "topic": "Roles",
+      "description": "roles_path y collections_path indican dónde buscar contenido; tenerlos dentro del proyecto hace la ejecución reproducible.",
+      "examples": [
+        {
+          "description": "ansible.cfg del proyecto",
+          "code": "[defaults]\nroles_path = ./roles:~/.ansible/roles\ncollections_path = ./collections:~/.ansible/collections"
+        }
+      ],
+      "tags": [
+        "roles_path",
+        "collections_path"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    }
+  ]
+}

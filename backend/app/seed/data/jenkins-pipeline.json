@@ -1,0 +1,814 @@
+{
+  "category": {
+    "slug": "jenkins",
+    "name": "Jenkins",
+    "icon": "engineering",
+    "order": 4,
+    "description": "CI/CD con Jenkins: pipelines declarativos, CLI, Jenkins en Docker y administración."
+  },
+  "commands": [
+    {
+      "title": "Estructura de un pipeline declarativo",
+      "command": "pipeline { agent stages post }",
+      "section": "Pipeline",
+      "topic": "Estructura",
+      "description": "Esqueleto mínimo de un Jenkinsfile declarativo: dónde se ejecuta (agent), qué etapas tiene (stages) y qué hacer al final (post).",
+      "examples": [
+        {
+          "description": "Jenkinsfile base",
+          "code": "pipeline {\n    agent any\n    options {\n        timestamps()\n        timeout(time: 30, unit: 'MINUTES')\n    }\n    stages {\n        stage('Lint') {\n            steps { sh 'ruff check .' }\n        }\n        stage('Test') {\n            steps { sh 'pytest -q' }\n        }\n        stage('Build') {\n            steps { sh 'docker build -t app:${GIT_COMMIT} .' }\n        }\n    }\n    post {\n        always { echo \"Resultado: ${currentBuild.currentResult}\" }\n    }\n}"
+        }
+      ],
+      "tags": [
+        "jenkinsfile",
+        "declarativo",
+        "estructura"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Ordena las etapas de rápido a lento (lint → test → build) para fallar pronto y ahorrar minutos de agente."
+    },
+    {
+      "title": "Bloque post",
+      "command": "post { always success failure }",
+      "section": "Pipeline",
+      "topic": "Estructura",
+      "description": "Define acciones al terminar el pipeline o una etapa según el resultado: notificar, publicar reportes o limpiar.",
+      "examples": [
+        {
+          "description": "Notificar y limpiar",
+          "code": "post {\n    success  { echo 'Despliegue OK' }\n    failure  { echo \"Falló ${env.JOB_NAME} #${env.BUILD_NUMBER}: ${env.BUILD_URL}\" }\n    unstable { echo 'Hay tests fallidos' }\n    changed  { echo 'El estado cambió respecto al build anterior' }\n    cleanup  { cleanWs() }\n}"
+        },
+        {
+          "description": "post a nivel de etapa",
+          "code": "stage('Test') {\n    steps { sh 'pytest --junitxml=reports/junit.xml' }\n    post { always { junit 'reports/junit.xml' } }\n}"
+        }
+      ],
+      "tags": [
+        "post",
+        "notificaciones"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "'cleanup' se ejecuta al final de todo, después de las demás condiciones; cleanWs() requiere el plugin Workspace Cleanup."
+    },
+    {
+      "title": "Opciones del pipeline",
+      "command": "options { }",
+      "section": "Pipeline",
+      "topic": "Estructura",
+      "description": "Configura comportamiento global: timeout, reintentos, builds concurrentes, retención de historial y timestamps.",
+      "examples": [
+        {
+          "description": "Opciones recomendadas",
+          "code": "options {\n    timeout(time: 45, unit: 'MINUTES')\n    disableConcurrentBuilds(abortPrevious: true)\n    buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '5'))\n    timestamps()\n    skipDefaultCheckout()\n}"
+        },
+        {
+          "description": "Reintentar una etapa inestable",
+          "code": "stage('Integración') {\n    options { retry(2) }\n    steps { sh './scripts/tests_integracion.sh' }\n}"
+        }
+      ],
+      "tags": [
+        "options",
+        "timeout",
+        "concurrencia"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "abortPrevious: true cancela el build anterior de la misma rama cuando llega un commit nuevo. timestamps() requiere el plugin Timestamper."
+    },
+    {
+      "title": "Parámetros de build",
+      "command": "parameters { }",
+      "section": "Pipeline",
+      "topic": "Estructura",
+      "description": "Declara parámetros que el usuario elige al lanzar el build y que quedan disponibles como params.NOMBRE.",
+      "examples": [
+        {
+          "description": "Tipos de parámetros comunes",
+          "code": "parameters {\n    choice(name: 'ENTORNO', choices: ['dev', 'staging', 'prod'], description: 'Destino del despliegue')\n    string(name: 'VERSION', defaultValue: 'latest', description: 'Tag de la imagen')\n    booleanParam(name: 'EJECUTAR_E2E', defaultValue: false, description: 'Correr tests end-to-end')\n}"
+        },
+        {
+          "description": "Usarlos",
+          "code": "steps {\n    echo \"Desplegando ${params.VERSION} en ${params.ENTORNO}\"\n    sh './deploy.sh \"$ENTORNO\" \"$VERSION\"'\n}"
+        }
+      ],
+      "tags": [
+        "parámetros",
+        "jenkinsfile"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Los parámetros declarados en el Jenkinsfile se registran en el job recién después de la primera ejecución."
+    },
+    {
+      "title": "Disparadores automáticos",
+      "command": "triggers { cron pollSCM }",
+      "section": "Pipeline",
+      "topic": "Estructura",
+      "description": "Programa ejecuciones periódicas o revisa el repositorio cada cierto tiempo. 'H' distribuye la carga con un hash del nombre del job.",
+      "examples": [
+        {
+          "description": "Build nocturno de lunes a viernes",
+          "code": "triggers { cron('H 2 * * 1-5') }"
+        },
+        {
+          "description": "Consultar el repositorio cada 5 minutos aprox.",
+          "code": "triggers { pollSCM('H/5 * * * *') }"
+        },
+        {
+          "description": "Disparar tras otro job",
+          "code": "triggers { upstream(upstreamProjects: 'libreria-base', threshold: hudson.model.Result.SUCCESS) }"
+        }
+      ],
+      "tags": [
+        "triggers",
+        "cron"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Prefiere webhooks (GitHub/GitLab) a pollSCM: son instantáneos y no cargan al controller."
+    },
+    {
+      "title": "Elegir agente por etiqueta",
+      "command": "agent { label 'linux' }",
+      "section": "Pipeline",
+      "topic": "Agentes",
+      "description": "Ejecuta el pipeline o una etapa en un agente que tenga cierta etiqueta (sistema operativo, herramientas, capacidad).",
+      "examples": [
+        {
+          "description": "Pipeline en agentes Linux y una etapa en Windows",
+          "code": "pipeline {\n    agent { label 'linux && docker' }\n    stages {\n        stage('Build') { steps { sh 'make build' } }\n        stage('Instalador Windows') {\n            agent { label 'windows' }\n            steps { bat 'build-installer.cmd' }\n        }\n    }\n}"
+        },
+        {
+          "description": "Sin agente global (cada etapa declara el suyo)",
+          "code": "pipeline {\n    agent none\n    stages {\n        stage('Test') {\n            agent { label 'linux' }\n            steps { sh 'pytest' }\n        }\n    }\n}"
+        }
+      ],
+      "tags": [
+        "agentes",
+        "etiquetas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Evita ejecutar builds en el controller (Built-In Node): pon sus ejecutores en 0 y usa agentes."
+    },
+    {
+      "title": "Agente Docker efímero",
+      "command": "agent { docker { image ... } }",
+      "section": "Pipeline",
+      "topic": "Agentes",
+      "description": "Ejecuta la etapa dentro de un contenedor creado para el build, con las herramientas exactas y sin ensuciar el agente.",
+      "examples": [
+        {
+          "description": "Tests en una imagen de Python",
+          "code": "pipeline {\n    agent {\n        docker {\n            image 'python:3.13-slim'\n            args '-v pip-cache:/root/.cache/pip'\n        }\n    }\n    stages {\n        stage('Test') {\n            steps {\n                sh 'pip install -r requirements.txt && pytest -q'\n            }\n        }\n    }\n}"
+        },
+        {
+          "description": "Etapas con imágenes distintas",
+          "code": "stage('Frontend') {\n    agent { docker { image 'node:22-alpine'; reuseNode true } }\n    steps { sh 'npm ci && npm run build' }\n}"
+        }
+      ],
+      "tags": [
+        "agentes",
+        "docker",
+        "efímero"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Requiere el plugin Docker Pipeline y Docker en el agente. reuseNode true reutiliza el mismo workspace del agente externo."
+    },
+    {
+      "title": "Agente desde un Dockerfile",
+      "command": "agent { dockerfile true }",
+      "section": "Pipeline",
+      "topic": "Agentes",
+      "description": "Construye la imagen del agente a partir de un Dockerfile del repositorio, versionando así el entorno de build junto al código.",
+      "examples": [
+        {
+          "description": "Dockerfile específico para CI",
+          "code": "agent {\n    dockerfile {\n        filename 'ci/Dockerfile.ci'\n        dir '.'\n        additionalBuildArgs '--build-arg PYTHON_VERSION=3.13'\n    }\n}"
+        }
+      ],
+      "tags": [
+        "agentes",
+        "docker",
+        "dockerfile"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Agentes en Kubernetes",
+      "command": "agent { kubernetes { yaml ... } }",
+      "section": "Pipeline",
+      "topic": "Agentes",
+      "description": "Con el plugin Kubernetes, cada build crea un pod efímero con los contenedores necesarios y lo destruye al terminar.",
+      "examples": [
+        {
+          "description": "Pod con Python y kaniko",
+          "code": "pipeline {\n    agent {\n        kubernetes {\n            yaml '''\napiVersion: v1\nkind: Pod\nspec:\n  containers:\n  - name: python\n    image: python:3.13-slim\n    command: [\"sleep\"]\n    args: [\"infinity\"]\n'''\n            defaultContainer 'python'\n        }\n    }\n    stages {\n        stage('Test') { steps { sh 'python --version' } }\n    }\n}"
+        },
+        {
+          "description": "Ejecutar en otro contenedor del pod",
+          "code": "container('kaniko') { sh '/kaniko/executor --context . --destination registry.ejemplo.cl/app:${GIT_COMMIT}' }"
+        }
+      ],
+      "tags": [
+        "agentes",
+        "kubernetes",
+        "efímero"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Condiciones con when",
+      "command": "when { }",
+      "section": "Pipeline",
+      "topic": "Control de flujo",
+      "description": "Ejecuta una etapa solo si se cumple una condición: rama, PR, parámetro, variable de entorno o expresión Groovy.",
+      "examples": [
+        {
+          "description": "Desplegar solo desde main",
+          "code": "stage('Deploy') {\n    when { branch 'main' }\n    steps { sh './deploy.sh prod' }\n}"
+        },
+        {
+          "description": "Varias condiciones y evaluación antes de asignar agente",
+          "code": "stage('E2E') {\n    when {\n        beforeAgent true\n        allOf {\n            expression { params.EJECUTAR_E2E }\n            not { changeRequest() }\n        }\n    }\n    steps { sh 'npm run e2e' }\n}"
+        },
+        {
+          "description": "Solo si cambiaron ciertos archivos",
+          "code": "when { changeset 'frontend/**' }"
+        },
+        {
+          "description": "Solo para tags de versión",
+          "code": "when { tag pattern: 'v\\\\d+\\\\.\\\\d+\\\\.\\\\d+', comparator: 'REGEXP' }"
+        }
+      ],
+      "tags": [
+        "when",
+        "condiciones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "'branch', 'changeRequest' y 'tag' requieren jobs Multibranch. beforeAgent true evita levantar un agente para una etapa que se va a saltar."
+    },
+    {
+      "title": "Etapas en paralelo",
+      "command": "parallel { }",
+      "section": "Pipeline",
+      "topic": "Control de flujo",
+      "description": "Ejecuta varias etapas al mismo tiempo para reducir la duración total del pipeline.",
+      "examples": [
+        {
+          "description": "Lint y tests en paralelo",
+          "code": "stage('Calidad') {\n    failFast true\n    parallel {\n        stage('Lint')  { steps { sh 'ruff check .' } }\n        stage('Tipos') { steps { sh 'mypy app/' } }\n        stage('Tests') { steps { sh 'pytest -q' } }\n    }\n}"
+        }
+      ],
+      "tags": [
+        "parallel",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "failFast true aborta las ramas restantes en cuanto una falla."
+    },
+    {
+      "title": "Matriz de combinaciones",
+      "command": "matrix { axes { } }",
+      "section": "Pipeline",
+      "topic": "Control de flujo",
+      "description": "Genera automáticamente etapas para cada combinación de ejes (versiones, sistemas operativos) y las ejecuta en paralelo.",
+      "examples": [
+        {
+          "description": "Tests en varias versiones de Python",
+          "code": "stage('Matriz') {\n    matrix {\n        axes {\n            axis { name 'PYTHON'; values '3.12', '3.13' }\n            axis { name 'DB'; values 'postgres', 'sqlite' }\n        }\n        excludes {\n            exclude {\n                axis { name 'PYTHON'; values '3.12' }\n                axis { name 'DB'; values 'sqlite' }\n            }\n        }\n        agent { docker { image \"python:${PYTHON}-slim\" } }\n        stages {\n            stage('Test') { steps { sh 'pip install -r requirements.txt && DB=$DB pytest -q' } }\n        }\n    }\n}"
+        }
+      ],
+      "tags": [
+        "matrix",
+        "paralelismo"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Aprobación manual con input",
+      "command": "input",
+      "section": "Pipeline",
+      "topic": "Control de flujo",
+      "description": "Detiene el pipeline hasta que una persona apruebe; puede pedir datos y restringir quién aprueba.",
+      "examples": [
+        {
+          "description": "Aprobación para producción",
+          "code": "stage('Aprobación') {\n    when { branch 'main' }\n    options { timeout(time: 1, unit: 'HOURS') }\n    input {\n        message '¿Desplegar a producción?'\n        ok 'Desplegar'\n        submitter 'admins,release-managers'\n        parameters { string(name: 'MOTIVO', defaultValue: '', description: 'Ticket del cambio') }\n    }\n    steps { echo \"Aprobado. Motivo: ${MOTIVO}\" }\n}"
+        }
+      ],
+      "tags": [
+        "input",
+        "aprobación",
+        "despliegue"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "El input a nivel de etapa se evalúa ANTES de asignar el agente, así no se bloquea un ejecutor esperando. Combínalo siempre con un timeout."
+    },
+    {
+      "title": "Lógica Groovy con script",
+      "command": "script { }",
+      "section": "Pipeline",
+      "topic": "Control de flujo",
+      "description": "Permite usar Groovy (variables, if, bucles, try/catch) dentro de un pipeline declarativo cuando las directivas no alcanzan.",
+      "examples": [
+        {
+          "description": "Variables y bucle",
+          "code": "steps {\n    script {\n        def servicios = ['api', 'worker', 'scheduler']\n        for (s in servicios) {\n            sh \"docker build -t registry.ejemplo.cl/${s}:${env.GIT_COMMIT} ${s}/\"\n        }\n        if (env.BRANCH_NAME == 'main') {\n            currentBuild.description = \"Release ${env.GIT_COMMIT.take(7)}\"\n        }\n    }\n}"
+        }
+      ],
+      "tags": [
+        "script",
+        "groovy"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Si el bloque script crece, muévelo a una shared library: los Jenkinsfile con mucha lógica son difíciles de probar."
+    },
+    {
+      "title": "Tolerar fallos sin abortar",
+      "command": "catchError / unstable",
+      "section": "Pipeline",
+      "topic": "Control de flujo",
+      "description": "Marca una etapa como fallida o inestable sin detener el resto del pipeline.",
+      "examples": [
+        {
+          "description": "Escaneo de seguridad que no bloquea",
+          "code": "stage('Escaneo') {\n    steps {\n        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {\n            sh 'trivy image --exit-code 1 --severity HIGH,CRITICAL app:${GIT_COMMIT}'\n        }\n    }\n}"
+        },
+        {
+          "description": "Marcar como inestable manualmente",
+          "code": "script {\n    if (cobertura < 80) { unstable(\"Cobertura ${cobertura}% bajo el mínimo\") }\n}"
+        }
+      ],
+      "tags": [
+        "errores",
+        "resiliencia"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Reintentos y tiempos límite en steps",
+      "command": "retry / timeout / waitUntil",
+      "section": "Pipeline",
+      "topic": "Control de flujo",
+      "description": "Envuelve steps concretos con reintentos, tiempo máximo o espera activa hasta que se cumpla una condición.",
+      "examples": [
+        {
+          "description": "Reintentar una descarga inestable",
+          "code": "retry(3) { sh 'curl -fsSL https://ejemplo.cl/artefacto.tgz -o artefacto.tgz' }"
+        },
+        {
+          "description": "Esperar a que la app responda tras desplegar",
+          "code": "timeout(time: 5, unit: 'MINUTES') {\n    waitUntil(initialRecurrencePeriod: 5000) {\n        sh(script: 'curl -sf https://staging.ejemplo.cl/health', returnStatus: true) == 0\n    }\n}"
+        }
+      ],
+      "tags": [
+        "retry",
+        "timeout",
+        "resiliencia"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Bloquear recursos compartidos",
+      "command": "lock('recurso')",
+      "section": "Pipeline",
+      "topic": "Control de flujo",
+      "description": "Con el plugin Lockable Resources, garantiza que solo un build a la vez use un recurso (entorno de staging, base de pruebas).",
+      "examples": [
+        {
+          "description": "Un despliegue a la vez en staging",
+          "code": "stage('Deploy staging') {\n    options { lock('entorno-staging') }\n    steps { sh './deploy.sh staging' }\n}"
+        }
+      ],
+      "tags": [
+        "lock",
+        "concurrencia"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Variables de entorno en el pipeline",
+      "command": "environment { }",
+      "section": "Pipeline",
+      "topic": "Credenciales y entorno",
+      "description": "Define variables para todo el pipeline o una etapa; Jenkins además expone variables propias como BUILD_NUMBER, GIT_COMMIT o BRANCH_NAME.",
+      "examples": [
+        {
+          "description": "Variables globales y por etapa",
+          "code": "pipeline {\n    agent any\n    environment {\n        REGISTRY = 'registry.ejemplo.cl'\n        IMAGE    = \"${REGISTRY}/api:${env.BUILD_NUMBER}\"\n    }\n    stages {\n        stage('Build') {\n            environment { DOCKER_BUILDKIT = '1' }\n            steps { sh 'docker build -t \"$IMAGE\" .' }\n        }\n    }\n}"
+        },
+        {
+          "description": "Ver todas las variables disponibles",
+          "code": "sh 'printenv | sort'"
+        }
+      ],
+      "tags": [
+        "environment",
+        "variables"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "La lista completa de variables integradas está en <JENKINS_URL>/env-vars.html."
+    },
+    {
+      "title": "Credenciales en environment",
+      "command": "credentials('id')",
+      "section": "Pipeline",
+      "topic": "Credenciales y entorno",
+      "description": "Inyecta credenciales guardadas en Jenkins como variables enmascaradas en el log. Con usuario/contraseña genera además VAR_USR y VAR_PSW.",
+      "examples": [
+        {
+          "description": "Token secreto y usuario/contraseña",
+          "code": "environment {\n    SONAR_TOKEN = credentials('sonar-token')          // Secret text\n    REGISTRY    = credentials('registry-ejemplo')     // Username/password\n}\nsteps {\n    sh 'echo \"$REGISTRY_PSW\" | docker login registry.ejemplo.cl -u \"$REGISTRY_USR\" --password-stdin'\n}"
+        }
+      ],
+      "tags": [
+        "credenciales",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Usa comillas simples en sh para que la variable la expanda la shell y no Groovy; con comillas dobles el secreto queda interpolado y Jenkins lo advierte en el log."
+    },
+    {
+      "title": "Credenciales con withCredentials",
+      "command": "withCredentials([...])",
+      "section": "Pipeline",
+      "topic": "Credenciales y entorno",
+      "description": "Expone credenciales solo dentro de un bloque concreto, con distintos tipos: texto, usuario/contraseña, archivo o llave SSH.",
+      "examples": [
+        {
+          "description": "Archivo kubeconfig y token",
+          "code": "withCredentials([\n    file(credentialsId: 'kubeconfig-prod', variable: 'KUBECONFIG'),\n    string(credentialsId: 'slack-webhook', variable: 'SLACK_URL')\n]) {\n    sh 'kubectl rollout status deploy/api -n prod'\n}"
+        },
+        {
+          "description": "Llave SSH para desplegar",
+          "code": "withCredentials([sshUserPrivateKey(credentialsId: 'deploy-ssh', keyFileVariable: 'KEY', usernameVariable: 'USUARIO')]) {\n    sh 'ssh -i \"$KEY\" -o StrictHostKeyChecking=accept-new \"$USUARIO\"@web01 ./deploy.sh'\n}"
+        },
+        {
+          "description": "Usuario y contraseña",
+          "code": "withCredentials([usernamePassword(credentialsId: 'registry-ejemplo', usernameVariable: 'U', passwordVariable: 'P')]) {\n    sh 'echo \"$P\" | docker login registry.ejemplo.cl -u \"$U\" --password-stdin'\n}"
+        }
+      ],
+      "tags": [
+        "credenciales",
+        "seguridad",
+        "withcredentials"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Agente SSH en el pipeline",
+      "command": "sshagent(['id'])",
+      "section": "Pipeline",
+      "topic": "Credenciales y entorno",
+      "description": "Carga una llave SSH en un ssh-agent temporal para que git, ssh o rsync la usen sin escribirla en disco.",
+      "examples": [
+        {
+          "description": "Desplegar con rsync",
+          "code": "sshagent(credentials: ['deploy-ssh']) {\n    sh 'rsync -az --delete dist/ deploy@web01:/var/www/app/'\n}"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "credenciales",
+        "despliegue"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Requiere el plugin SSH Agent."
+    },
+    {
+      "title": "Archivar artefactos",
+      "command": "archiveArtifacts",
+      "section": "Pipeline",
+      "topic": "Artefactos y reportes",
+      "description": "Guarda archivos generados por el build (binarios, reportes, paquetes) para descargarlos desde la página del build.",
+      "examples": [
+        {
+          "description": "Archivar con huella",
+          "code": "archiveArtifacts artifacts: 'dist/*.whl, reports/**/*.html', fingerprint: true, allowEmptyArchive: false"
+        },
+        {
+          "description": "Archivar solo si el build fue exitoso",
+          "code": "post { success { archiveArtifacts 'dist/**' } }"
+        }
+      ],
+      "tags": [
+        "artefactos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "No uses Jenkins como repositorio de artefactos a largo plazo: publica en un registry, Nexus/Artifactory o un bucket y conserva aquí solo lo reciente (buildDiscarder)."
+    },
+    {
+      "title": "Publicar resultados de tests",
+      "command": "junit",
+      "section": "Pipeline",
+      "topic": "Artefactos y reportes",
+      "description": "Publica reportes JUnit XML: tendencias, tests fallidos en la UI y el build marcado como UNSTABLE si hay fallos.",
+      "examples": [
+        {
+          "description": "pytest con reporte JUnit",
+          "code": "sh 'pytest --junitxml=reports/junit.xml'\njunit testResults: 'reports/junit.xml', allowEmptyResults: false"
+        },
+        {
+          "description": "Varios reportes",
+          "code": "junit '**/target/surefire-reports/*.xml'"
+        }
+      ],
+      "tags": [
+        "tests",
+        "junit",
+        "reportes"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Compartir archivos entre etapas",
+      "command": "stash / unstash",
+      "section": "Pipeline",
+      "topic": "Artefactos y reportes",
+      "description": "Guarda archivos del workspace para recuperarlos en otra etapa que corre en un agente distinto.",
+      "examples": [
+        {
+          "description": "Construir en un agente y desplegar en otro",
+          "code": "stage('Build') {\n    agent { docker { image 'node:22-alpine' } }\n    steps {\n        sh 'npm ci && npm run build'\n        stash name: 'dist', includes: 'dist/**'\n    }\n}\nstage('Deploy') {\n    agent { label 'deployer' }\n    steps {\n        unstash 'dist'\n        sh 'ls -la dist'\n    }\n}"
+        }
+      ],
+      "tags": [
+        "stash",
+        "artefactos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "stash es para archivos pequeños o medianos (pasan por el controller); para artefactos grandes usa un almacenamiento externo."
+    },
+    {
+      "title": "Ejecutar comandos de shell",
+      "command": "sh / bat / powershell",
+      "section": "Pipeline",
+      "topic": "Steps comunes",
+      "description": "Ejecuta comandos en el agente: sh en Linux/macOS, bat en CMD de Windows y powershell/pwsh en PowerShell. Puede capturar la salida o el código de salida.",
+      "examples": [
+        {
+          "description": "Capturar la salida",
+          "code": "script {\n    def version = sh(script: 'git describe --tags --always', returnStdout: true).trim()\n    echo \"Versión: ${version}\"\n}"
+        },
+        {
+          "description": "Capturar el código de salida sin fallar",
+          "code": "script {\n    int rc = sh(script: 'ruff check .', returnStatus: true)\n    if (rc != 0) { unstable('Ruff encontró problemas') }\n}"
+        },
+        {
+          "description": "Script multilínea con bash estricto",
+          "code": "sh '''#!/bin/bash\nset -euo pipefail\npip install -r requirements.txt\npytest -q\n'''"
+        },
+        {
+          "description": "Windows: CMD y PowerShell 7",
+          "code": "bat 'robocopy dist \\\\\\\\web01\\\\app /mir & if %ERRORLEVEL% LSS 8 exit /b 0'\npwsh 'Get-ChildItem dist | Measure-Object Length -Sum'"
+        }
+      ],
+      "tags": [
+        "sh",
+        "bat",
+        "powershell"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "El step 'powershell' usa Windows PowerShell 5.1; 'pwsh' usa PowerShell 7 (debe estar instalado en el agente). sh corre con 'sh -xe' por defecto: falla al primer error."
+    },
+    {
+      "title": "Checkout del repositorio",
+      "command": "checkout scm / git",
+      "section": "Pipeline",
+      "topic": "Steps comunes",
+      "description": "En jobs Pipeline from SCM o Multibranch, 'checkout scm' clona exactamente el commit que disparó el build; 'git' clona un repositorio explícito.",
+      "examples": [
+        {
+          "description": "Checkout del repositorio del job",
+          "code": "checkout scm"
+        },
+        {
+          "description": "Clonar otro repositorio con credenciales",
+          "code": "git url: 'https://github.com/org/infra.git', branch: 'main', credentialsId: 'github-app'"
+        },
+        {
+          "description": "Trabajar en un subdirectorio",
+          "code": "dir('infra') {\n    git url: 'https://github.com/org/infra.git', branch: 'main'\n    sh 'terraform init'\n}"
+        }
+      ],
+      "tags": [
+        "git",
+        "scm",
+        "checkout"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Leer y escribir archivos en el pipeline",
+      "command": "readFile / writeFile / readJSON",
+      "section": "Pipeline",
+      "topic": "Steps comunes",
+      "description": "Lee y genera archivos en el workspace; readJSON/readYaml (plugin Pipeline Utility Steps) los parsea a mapas.",
+      "examples": [
+        {
+          "description": "Generar un archivo de versión",
+          "code": "writeFile file: 'version.txt', text: \"${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}\""
+        },
+        {
+          "description": "Leer package.json",
+          "code": "script {\n    def pkg = readJSON file: 'package.json'\n    echo \"Versión: ${pkg.version}\"\n}"
+        },
+        {
+          "description": "Comprobar si existe un archivo",
+          "code": "script {\n    if (fileExists('requirements-dev.txt')) { sh 'pip install -r requirements-dev.txt' }\n}"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "utility-steps"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Construir y publicar imágenes Docker",
+      "command": "docker.build / docker.withRegistry",
+      "section": "Pipeline",
+      "topic": "Steps comunes",
+      "description": "Los steps del plugin Docker Pipeline construyen, etiquetan y publican imágenes autenticándose con credenciales de Jenkins.",
+      "examples": [
+        {
+          "description": "Build y push con dos tags",
+          "code": "script {\n    docker.withRegistry('https://registry.ejemplo.cl', 'registry-ejemplo') {\n        def img = docker.build(\"api:${env.GIT_COMMIT.take(7)}\", '--pull .')\n        img.push()\n        img.push('latest')\n    }\n}"
+        },
+        {
+          "description": "Ejecutar tests dentro de la imagen recién creada",
+          "code": "script {\n    docker.image(\"api:${env.GIT_COMMIT.take(7)}\").inside('-e APP_ENV=test') {\n        sh 'pytest -q'\n    }\n}"
+        }
+      ],
+      "tags": [
+        "docker",
+        "imágenes",
+        "registry"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Herramientas configuradas",
+      "command": "tools { }",
+      "section": "Pipeline",
+      "topic": "Steps comunes",
+      "description": "Usa versiones de herramientas instaladas y registradas en Administrar Jenkins → Tools (JDK, Maven, Node), agregándolas al PATH.",
+      "examples": [
+        {
+          "description": "JDK y Maven",
+          "code": "pipeline {\n    agent any\n    tools {\n        jdk 'jdk21'\n        maven 'maven-3.9'\n    }\n    stages {\n        stage('Build') { steps { sh 'mvn -B verify' } }\n    }\n}"
+        }
+      ],
+      "tags": [
+        "tools",
+        "jdk",
+        "maven"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Los nombres ('jdk21', 'maven-3.9') deben coincidir con los configurados en Jenkins. Con agentes Docker no hace falta: la imagen ya trae la herramienta."
+    },
+    {
+      "title": "Usar una shared library",
+      "command": "@Library('nombre') _",
+      "section": "Pipeline",
+      "topic": "Shared libraries",
+      "description": "Importa una biblioteca compartida de Groovy (configurada en Jenkins) para reutilizar steps entre muchos Jenkinsfiles.",
+      "examples": [
+        {
+          "description": "Cargar una versión fija",
+          "code": "@Library('pipeline-lib@v1.4.0') _\n\npipeline {\n    agent any\n    stages {\n        stage('Build') { steps { construirPython(version: '3.13') } }\n    }\n}"
+        },
+        {
+          "description": "Cargar dinámicamente",
+          "code": "library identifier: 'pipeline-lib@main', retriever: modernSCM([$class: 'GitSCMSource', remote: 'https://github.com/org/pipeline-lib.git'])"
+        }
+      ],
+      "tags": [
+        "shared-library",
+        "reutilización"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Fija la librería a un tag: apuntar a una rama hace que un cambio en ella rompa todos los pipelines a la vez."
+    },
+    {
+      "title": "Crear un step propio en vars/",
+      "command": "vars/miStep.groovy",
+      "section": "Pipeline",
+      "topic": "Shared libraries",
+      "description": "Cada archivo en vars/ de la shared library se convierte en un step global invocable desde los Jenkinsfiles.",
+      "examples": [
+        {
+          "description": "vars/construirPython.groovy",
+          "code": "def call(Map cfg = [:]) {\n    def version = cfg.get('version', '3.13')\n    docker.image(\"python:${version}-slim\").inside {\n        sh 'pip install -r requirements.txt'\n        sh 'ruff check .'\n        sh 'pytest -q --junitxml=reports/junit.xml'\n    }\n    junit 'reports/junit.xml'\n}"
+        },
+        {
+          "description": "Estructura del repositorio de la librería",
+          "code": "pipeline-lib/\n├── vars/\n│   └── construirPython.groovy\n├── src/org/ejemplo/Utilidades.groovy\n└── resources/plantillas/deploy.yaml"
+        }
+      ],
+      "tags": [
+        "shared-library",
+        "groovy"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    }
+  ]
+}

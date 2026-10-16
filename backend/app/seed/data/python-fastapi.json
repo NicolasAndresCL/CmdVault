@@ -1,0 +1,892 @@
+{
+  "category": {
+    "slug": "python",
+    "name": "Python",
+    "icon": "code",
+    "order": 2,
+    "description": "Python moderno y sus frameworks backend: Django, Django REST Framework y FastAPI."
+  },
+  "commands": [
+    {
+      "title": "Instalar FastAPI",
+      "command": "pip install \"fastapi[standard]\"",
+      "section": "FastAPI",
+      "topic": "Servidor y ejecución",
+      "description": "Instala FastAPI con el conjunto estándar: CLI 'fastapi', Uvicorn, httpx, Jinja2 y soporte de formularios.",
+      "examples": [
+        {
+          "description": "Instalar en un venv",
+          "code": "python -m pip install \"fastapi[standard]\""
+        },
+        {
+          "description": "Con uv",
+          "code": "uv add \"fastapi[standard]\""
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "instalación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Aplicación mínima",
+      "command": "FastAPI()",
+      "section": "FastAPI",
+      "topic": "Servidor y ejecución",
+      "description": "Crea la aplicación y define endpoints con decoradores; la documentación interactiva queda en /docs y /redoc.",
+      "examples": [
+        {
+          "description": "main.py",
+          "code": "from fastapi import FastAPI\n\napp = FastAPI(title=\"API de Pedidos\", version=\"1.0.0\")\n\n\n@app.get(\"/health\")\ndef health() -> dict[str, str]:\n    return {\"status\": \"ok\"}"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "inicio"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Servidor de desarrollo con fastapi dev",
+      "command": "fastapi dev",
+      "section": "FastAPI",
+      "topic": "Servidor y ejecución",
+      "description": "Levanta la app con recarga automática, detectando main.py o app/main.py. Por defecto escucha solo en 127.0.0.1:8000.",
+      "syntax": "fastapi dev [ruta] [--host] [--port]",
+      "examples": [
+        {
+          "description": "Detectar la app automáticamente",
+          "code": "fastapi dev"
+        },
+        {
+          "description": "Archivo y puerto concretos",
+          "code": "fastapi dev app/main.py --port 8001"
+        },
+        {
+          "description": "Accesible desde la red (p. ej. dentro de Docker)",
+          "code": "fastapi dev --host 0.0.0.0"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "cli",
+        "desarrollo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Servidor de producción con fastapi run",
+      "command": "fastapi run",
+      "section": "FastAPI",
+      "topic": "Servidor y ejecución",
+      "description": "Ejecuta la app sin recarga, escuchando en 0.0.0.0:8000, con opción de varios workers.",
+      "examples": [
+        {
+          "description": "Producción con 4 workers",
+          "code": "fastapi run app/main.py --workers 4"
+        },
+        {
+          "description": "Detrás de un proxy (respeta X-Forwarded-*)",
+          "code": "fastapi run --proxy-headers --port 80"
+        },
+        {
+          "description": "En un Dockerfile",
+          "code": "CMD [\"fastapi\", \"run\", \"app/main.py\", \"--port\", \"8000\", \"--workers\", \"4\"]"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "cli",
+        "producción"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "En Kubernetes suele preferirse 1 worker por contenedor y escalar con réplicas."
+    },
+    {
+      "title": "Ejecutar con Uvicorn",
+      "command": "uvicorn main:app",
+      "section": "FastAPI",
+      "topic": "Servidor y ejecución",
+      "description": "Uvicorn es el servidor ASGI que corre bajo FastAPI; se usa directamente cuando se necesitan opciones finas.",
+      "syntax": "uvicorn <modulo>:<app> [opciones]",
+      "examples": [
+        {
+          "description": "Desarrollo con recarga",
+          "code": "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+        },
+        {
+          "description": "Producción con workers y headers de proxy",
+          "code": "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --proxy-headers --forwarded-allow-ips='*'"
+        },
+        {
+          "description": "Nivel de log y sin access log",
+          "code": "uvicorn app.main:app --log-level warning --no-access-log"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "uvicorn",
+        "servidor"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Gunicorn con workers Uvicorn",
+      "command": "gunicorn -k uvicorn_worker.UvicornWorker",
+      "section": "FastAPI",
+      "topic": "Servidor y ejecución",
+      "description": "Gunicorn gestiona procesos (reinicio de workers caídos, timeouts) y Uvicorn atiende ASGI en cada uno.",
+      "examples": [
+        {
+          "description": "Lanzar 4 workers",
+          "code": "python -m pip install gunicorn uvicorn-worker\ngunicorn app.main:app -k uvicorn_worker.UvicornWorker -w 4 -b 0.0.0.0:8000 --timeout 60"
+        },
+        {
+          "description": "Reciclar workers para mitigar fugas de memoria",
+          "code": "gunicorn app.main:app -k uvicorn_worker.UvicornWorker -w 4 --max-requests 1000 --max-requests-jitter 100"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "gunicorn",
+        "producción"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ],
+      "notes": "El worker 'uvicorn.workers.UvicornWorker' está obsoleto; el reemplazo es el paquete uvicorn-worker. Gunicorn no funciona en Windows."
+    },
+    {
+      "title": "Parámetros de ruta y de query",
+      "command": "@app.get(\"/items/{item_id}\")",
+      "section": "FastAPI",
+      "topic": "Rutas y modelos",
+      "description": "FastAPI valida y convierte automáticamente parámetros de ruta y de query según sus anotaciones de tipo.",
+      "examples": [
+        {
+          "description": "Ruta + query opcional con validación",
+          "code": "from typing import Annotated\nfrom fastapi import FastAPI, Path, Query\n\napp = FastAPI()\n\n\n@app.get(\"/pedidos/{pedido_id}\")\ndef obtener(\n    pedido_id: Annotated[int, Path(ge=1)],\n    incluir_items: bool = False,\n):\n    return {\"id\": pedido_id, \"items\": incluir_items}\n\n\n@app.get(\"/pedidos\")\ndef listar(\n    estado: str | None = None,\n    limit: Annotated[int, Query(ge=1, le=100)] = 20,\n    offset: Annotated[int, Query(ge=0)] = 0,\n):\n    return {\"estado\": estado, \"limit\": limit, \"offset\": offset}"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "rutas",
+        "validación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Cuerpo de la petición y response_model",
+      "command": "response_model",
+      "section": "FastAPI",
+      "topic": "Rutas y modelos",
+      "description": "Recibe JSON validado con modelos Pydantic y controla qué se devuelve con response_model o la anotación de retorno.",
+      "examples": [
+        {
+          "description": "Modelos de entrada y salida separados",
+          "code": "from pydantic import BaseModel, EmailStr\n\n\nclass UsuarioCrear(BaseModel):\n    email: EmailStr\n    password: str\n\n\nclass UsuarioPublico(BaseModel):\n    id: int\n    email: EmailStr\n\n\n@app.post(\"/usuarios\", status_code=201)\ndef crear(datos: UsuarioCrear) -> UsuarioPublico:\n    usuario = guardar_usuario(datos)\n    return usuario  # la contraseña nunca sale: no está en UsuarioPublico"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "pydantic",
+        "validación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Separar el modelo de entrada del de salida evita filtrar campos sensibles como el hash de la contraseña."
+    },
+    {
+      "title": "Errores HTTP",
+      "command": "HTTPException",
+      "section": "FastAPI",
+      "topic": "Rutas y modelos",
+      "description": "Lanza respuestas de error con código y detalle; también se pueden registrar manejadores para excepciones de dominio.",
+      "examples": [
+        {
+          "description": "404 cuando no existe",
+          "code": "from fastapi import HTTPException, status\n\n\n@app.get(\"/pedidos/{pedido_id}\")\ndef obtener(pedido_id: int):\n    pedido = repo.get(pedido_id)\n    if pedido is None:\n        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=\"Pedido no encontrado\")\n    return pedido"
+        },
+        {
+          "description": "Manejador de excepción de dominio",
+          "code": "from fastapi import Request\nfrom fastapi.responses import JSONResponse\n\n\nclass StockInsuficiente(Exception):\n    pass\n\n\n@app.exception_handler(StockInsuficiente)\nasync def stock_handler(request: Request, exc: StockInsuficiente):\n    return JSONResponse(status_code=409, content={\"detail\": str(exc)})"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "errores"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Organizar rutas con APIRouter",
+      "command": "APIRouter",
+      "section": "FastAPI",
+      "topic": "Rutas y modelos",
+      "description": "Divide la API en módulos con prefijo, tags y dependencias comunes, y los incluye en la app principal.",
+      "examples": [
+        {
+          "description": "app/routers/pedidos.py",
+          "code": "from fastapi import APIRouter, Depends\n\nrouter = APIRouter(prefix=\"/pedidos\", tags=[\"pedidos\"], dependencies=[Depends(usuario_actual)])\n\n\n@router.get(\"\")\ndef listar():\n    return []"
+        },
+        {
+          "description": "app/main.py",
+          "code": "from fastapi import FastAPI\nfrom app.routers import pedidos, usuarios\n\napp = FastAPI()\napp.include_router(pedidos.router, prefix=\"/api/v1\")\napp.include_router(usuarios.router, prefix=\"/api/v1\")"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "routers",
+        "estructura"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Subir archivos",
+      "command": "UploadFile",
+      "section": "FastAPI",
+      "topic": "Rutas y modelos",
+      "description": "Recibe archivos multipart sin cargarlos completos en memoria.",
+      "examples": [
+        {
+          "description": "Subir y guardar un archivo",
+          "code": "from fastapi import File, UploadFile\n\n\n@app.post(\"/archivos\")\nasync def subir(archivo: UploadFile = File(...)):\n    contenido = await archivo.read()\n    return {\"nombre\": archivo.filename, \"tipo\": archivo.content_type, \"bytes\": len(contenido)}"
+        },
+        {
+          "description": "Probar con curl",
+          "code": "curl -F 'archivo=@reporte.pdf' http://localhost:8000/archivos"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "archivos",
+        "multipart"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Requiere python-multipart (incluido en fastapi[standard])."
+    },
+    {
+      "title": "Inyección de dependencias con Depends",
+      "command": "Depends",
+      "section": "FastAPI",
+      "topic": "Dependencias",
+      "description": "Declara dependencias reutilizables (paginación, usuario actual, sesión de BD) que FastAPI resuelve y cachea por petición.",
+      "examples": [
+        {
+          "description": "Dependencia de paginación con Annotated",
+          "code": "from typing import Annotated\nfrom fastapi import Depends, Query\n\n\nclass Paginacion:\n    def __init__(self, limit: int = Query(20, le=100), offset: int = 0):\n        self.limit = limit\n        self.offset = offset\n\n\nPaginacionDep = Annotated[Paginacion, Depends()]\n\n\n@app.get(\"/productos\")\ndef listar(pag: PaginacionDep):\n    return repo.listar(limit=pag.limit, offset=pag.offset)"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "dependencias"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Dependencias con yield",
+      "command": "Depends con yield",
+      "section": "FastAPI",
+      "topic": "Dependencias",
+      "description": "Una dependencia con yield ejecuta código de limpieza al terminar la petición, ideal para sesiones de base de datos.",
+      "examples": [
+        {
+          "description": "Sesión de BD por petición",
+          "code": "from collections.abc import Iterator\nfrom typing import Annotated\nfrom fastapi import Depends\nfrom sqlalchemy.orm import Session\n\n\ndef get_db() -> Iterator[Session]:\n    with SessionLocal() as session:\n        yield session\n\n\nDbDep = Annotated[Session, Depends(get_db)]\n\n\n@app.get(\"/clientes\")\ndef clientes(db: DbDep):\n    return db.scalars(select(Cliente)).all()"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "dependencias",
+        "base-de-datos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Reemplazar dependencias en tests",
+      "command": "app.dependency_overrides",
+      "section": "FastAPI",
+      "topic": "Dependencias",
+      "description": "Sustituye dependencias reales (BD, autenticación) por versiones de prueba sin cambiar el código de las rutas.",
+      "examples": [
+        {
+          "description": "Override de usuario y BD",
+          "code": "def usuario_falso():\n    return Usuario(id=1, email=\"test@ejemplo.cl\")\n\napp.dependency_overrides[usuario_actual] = usuario_falso\napp.dependency_overrides[get_db] = get_db_test\n# ... tests ...\napp.dependency_overrides.clear()"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "testing",
+        "dependencias"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Modelos Pydantic v2",
+      "command": "BaseModel",
+      "section": "FastAPI",
+      "topic": "Pydantic",
+      "description": "Define esquemas con validación, valores por defecto y restricciones; en v2 se usan model_validate, model_dump y model_config.",
+      "examples": [
+        {
+          "description": "Modelo con restricciones y config",
+          "code": "from datetime import datetime\nfrom decimal import Decimal\nfrom pydantic import BaseModel, ConfigDict, Field\n\n\nclass Pedido(BaseModel):\n    model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)\n\n    id: int\n    cliente: str = Field(min_length=2, max_length=100)\n    total: Decimal = Field(ge=0, decimal_places=2)\n    tags: list[str] = []\n    creado: datetime"
+        },
+        {
+          "description": "Validar y serializar",
+          "code": "p = Pedido.model_validate({\"id\": 1, \"cliente\": \" Ana \", \"total\": \"1990.50\", \"creado\": \"2026-10-16T10:00:00\"})\np.model_dump(mode=\"json\", exclude_none=True)\nPedido.model_validate(orm_obj)  # desde un objeto ORM gracias a from_attributes"
+        },
+        {
+          "description": "Esquema JSON",
+          "code": "Pedido.model_json_schema()"
+        }
+      ],
+      "tags": [
+        "pydantic",
+        "validación",
+        "modelos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "IA"
+      ],
+      "notes": "Equivalencias v1 → v2: .dict() → .model_dump(), .parse_obj() → .model_validate(), class Config/orm_mode → model_config/from_attributes."
+    },
+    {
+      "title": "Validadores en Pydantic v2",
+      "command": "@field_validator / @model_validator",
+      "section": "FastAPI",
+      "topic": "Pydantic",
+      "description": "Agrega validaciones personalizadas por campo o sobre el modelo completo.",
+      "examples": [
+        {
+          "description": "Validar un campo y una regla cruzada",
+          "code": "from pydantic import BaseModel, field_validator, model_validator\n\n\nclass Rango(BaseModel):\n    inicio: int\n    fin: int\n    nombre: str\n\n    @field_validator(\"nombre\")\n    @classmethod\n    def nombre_en_minusculas(cls, v: str) -> str:\n        return v.lower()\n\n    @model_validator(mode=\"after\")\n    def fin_mayor(self):\n        if self.fin <= self.inicio:\n            raise ValueError(\"fin debe ser mayor que inicio\")\n        return self"
+        }
+      ],
+      "tags": [
+        "pydantic",
+        "validación"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Configuración con pydantic-settings",
+      "command": "BaseSettings",
+      "section": "FastAPI",
+      "topic": "Pydantic",
+      "description": "Carga configuración tipada desde variables de entorno y archivos .env, fallando al arrancar si falta algo obligatorio.",
+      "examples": [
+        {
+          "description": "Settings con prefijo y .env",
+          "code": "from functools import lru_cache\nfrom pydantic import PostgresDsn, SecretStr\nfrom pydantic_settings import BaseSettings, SettingsConfigDict\n\n\nclass Settings(BaseSettings):\n    model_config = SettingsConfigDict(env_file=\".env\", env_prefix=\"APP_\")\n\n    debug: bool = False\n    database_url: PostgresDsn\n    secret_key: SecretStr\n    cors_origins: list[str] = []\n\n\n@lru_cache\ndef get_settings() -> Settings:\n    return Settings()"
+        },
+        {
+          "description": "Variables de entorno correspondientes",
+          "code": "APP_DATABASE_URL=postgresql+psycopg://app:app@localhost:5432/app\nAPP_SECRET_KEY=cambia-esto\nAPP_CORS_ORIGINS='[\"http://localhost:5173\"]'"
+        }
+      ],
+      "tags": [
+        "pydantic",
+        "configuración",
+        "entornos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ],
+      "notes": "Se instala aparte: 'pip install pydantic-settings'. Las listas se pasan como JSON en la variable de entorno. SecretStr evita imprimir el valor en logs."
+    },
+    {
+      "title": "Modelos SQLAlchemy 2.0",
+      "command": "DeclarativeBase / Mapped",
+      "section": "FastAPI",
+      "topic": "SQLAlchemy",
+      "description": "SQLAlchemy 2.0 declara modelos con anotaciones de tipo usando Mapped y mapped_column.",
+      "examples": [
+        {
+          "description": "Modelos con relación",
+          "code": "from datetime import datetime\nfrom sqlalchemy import ForeignKey, String, func\nfrom sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship\n\n\nclass Base(DeclarativeBase):\n    pass\n\n\nclass Cliente(Base):\n    __tablename__ = \"clientes\"\n    id: Mapped[int] = mapped_column(primary_key=True)\n    nombre: Mapped[str] = mapped_column(String(100))\n    email: Mapped[str | None] = mapped_column(String(255), unique=True)\n    pedidos: Mapped[list[\"Pedido\"]] = relationship(back_populates=\"cliente\")\n\n\nclass Pedido(Base):\n    __tablename__ = \"pedidos\"\n    id: Mapped[int] = mapped_column(primary_key=True)\n    cliente_id: Mapped[int] = mapped_column(ForeignKey(\"clientes.id\"))\n    creado: Mapped[datetime] = mapped_column(server_default=func.now())\n    cliente: Mapped[Cliente] = relationship(back_populates=\"pedidos\")"
+        }
+      ],
+      "tags": [
+        "sqlalchemy",
+        "orm",
+        "modelos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Mapped[str | None] hace la columna nullable; Mapped[str] la hace NOT NULL."
+    },
+    {
+      "title": "Motor y sesión síncronos",
+      "command": "create_engine / sessionmaker",
+      "section": "FastAPI",
+      "topic": "SQLAlchemy",
+      "description": "Configura la conexión a la base de datos y la fábrica de sesiones para trabajar de forma síncrona.",
+      "examples": [
+        {
+          "description": "Configuración con PostgreSQL (psycopg 3)",
+          "code": "from sqlalchemy import create_engine\nfrom sqlalchemy.orm import sessionmaker\n\nengine = create_engine(\n    \"postgresql+psycopg://app:app@localhost:5432/app\",\n    pool_size=5,\n    max_overflow=10,\n    pool_pre_ping=True,\n)\nSessionLocal = sessionmaker(engine, expire_on_commit=False)"
+        },
+        {
+          "description": "Crear tablas (solo prototipos; en serio usa Alembic)",
+          "code": "Base.metadata.create_all(engine)"
+        }
+      ],
+      "tags": [
+        "sqlalchemy",
+        "conexión",
+        "base-de-datos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "pool_pre_ping evita errores por conexiones cortadas por el servidor o un balanceador."
+    },
+    {
+      "title": "Consultas estilo SQLAlchemy 2.0",
+      "command": "select()",
+      "section": "FastAPI",
+      "topic": "SQLAlchemy",
+      "description": "En 2.0 las consultas se construyen con select() y se ejecutan con session.scalars / session.execute.",
+      "examples": [
+        {
+          "description": "Filtrar, ordenar y paginar",
+          "code": "from sqlalchemy import select\n\nstmt = (\n    select(Pedido)\n    .where(Pedido.cliente_id == 10)\n    .order_by(Pedido.creado.desc())\n    .limit(20)\n)\npedidos = session.scalars(stmt).all()"
+        },
+        {
+          "description": "Obtener por clave primaria y crear",
+          "code": "cliente = session.get(Cliente, 10)\nsession.add(Pedido(cliente_id=10))\nsession.commit()"
+        },
+        {
+          "description": "Carga anticipada para evitar N+1",
+          "code": "from sqlalchemy.orm import selectinload\n\nstmt = select(Cliente).options(selectinload(Cliente.pedidos))\nclientes = session.scalars(stmt).all()"
+        },
+        {
+          "description": "Agregación",
+          "code": "from sqlalchemy import func\n\nsession.execute(select(Pedido.cliente_id, func.count()).group_by(Pedido.cliente_id)).all()"
+        }
+      ],
+      "tags": [
+        "sqlalchemy",
+        "consultas",
+        "orm"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "session.query() es la API heredada (legacy); en código nuevo usa select()."
+    },
+    {
+      "title": "SQLAlchemy asíncrono",
+      "command": "create_async_engine",
+      "section": "FastAPI",
+      "topic": "SQLAlchemy",
+      "description": "Motor y sesiones async para usar await con drivers como asyncpg o psycopg en modo async.",
+      "examples": [
+        {
+          "description": "Configuración y dependencia",
+          "code": "from collections.abc import AsyncIterator\nfrom sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine\n\nengine = create_async_engine(\"postgresql+asyncpg://app:app@localhost:5432/app\", pool_pre_ping=True)\nSessionLocal = async_sessionmaker(engine, expire_on_commit=False)\n\n\nasync def get_db() -> AsyncIterator[AsyncSession]:\n    async with SessionLocal() as session:\n        yield session"
+        },
+        {
+          "description": "Consultar en una ruta async",
+          "code": "@app.get(\"/clientes\")\nasync def clientes(db: Annotated[AsyncSession, Depends(get_db)]):\n    result = await db.scalars(select(Cliente).limit(50))\n    return result.all()"
+        }
+      ],
+      "tags": [
+        "sqlalchemy",
+        "async",
+        "base-de-datos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "En async no hay lazy loading implícito: usa selectinload/joinedload o te encontrarás con MissingGreenlet."
+    },
+    {
+      "title": "Inicializar Alembic",
+      "command": "alembic init",
+      "section": "FastAPI",
+      "topic": "Alembic",
+      "description": "Crea el directorio de migraciones y alembic.ini. La plantilla async sirve para motores asíncronos.",
+      "examples": [
+        {
+          "description": "Plantilla síncrona",
+          "code": "alembic init migrations"
+        },
+        {
+          "description": "Plantilla async",
+          "code": "alembic init -t async migrations"
+        },
+        {
+          "description": "Conectar los modelos en migrations/env.py",
+          "code": "from app.config import get_settings\nfrom app.models import Base\n\nconfig.set_main_option(\"sqlalchemy.url\", str(get_settings().database_url))\ntarget_metadata = Base.metadata"
+        }
+      ],
+      "tags": [
+        "alembic",
+        "migraciones",
+        "inicio"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ],
+      "notes": "Sin target_metadata, --autogenerate no detecta nada. No dejes la URL con contraseña en alembic.ini: léela del entorno en env.py."
+    },
+    {
+      "title": "Generar migraciones con Alembic",
+      "command": "alembic revision --autogenerate",
+      "section": "FastAPI",
+      "topic": "Alembic",
+      "description": "Compara los modelos con el esquema real y genera un script de migración que debes revisar antes de aplicar.",
+      "examples": [
+        {
+          "description": "Autogenerar",
+          "code": "alembic revision --autogenerate -m \"agrega tabla pedidos\""
+        },
+        {
+          "description": "Migración vacía para datos o SQL a mano",
+          "code": "alembic revision -m \"poblar estados\""
+        },
+        {
+          "description": "Fallar en CI si los modelos y migraciones difieren",
+          "code": "alembic check"
+        }
+      ],
+      "tags": [
+        "alembic",
+        "migraciones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ],
+      "notes": "Autogenerate no detecta renombres (los ve como drop + add) ni algunos cambios de tipo: revisa siempre el archivo generado."
+    },
+    {
+      "title": "Aplicar y revertir migraciones",
+      "command": "alembic upgrade head",
+      "section": "FastAPI",
+      "topic": "Alembic",
+      "description": "Aplica migraciones hasta la última (head) o revierte un número de pasos o hasta una revisión concreta.",
+      "examples": [
+        {
+          "description": "Aplicar todo",
+          "code": "alembic upgrade head"
+        },
+        {
+          "description": "Revertir la última",
+          "code": "alembic downgrade -1"
+        },
+        {
+          "description": "Ver el SQL sin ejecutar (modo offline)",
+          "code": "alembic upgrade head --sql > migracion.sql"
+        },
+        {
+          "description": "Volver a una revisión específica",
+          "code": "alembic downgrade 3f2a1c9e4b7d"
+        }
+      ],
+      "tags": [
+        "alembic",
+        "migraciones",
+        "despliegue"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Historial y estado de Alembic",
+      "command": "alembic history / current",
+      "section": "FastAPI",
+      "topic": "Alembic",
+      "description": "Consulta qué revisiones existen y en cuál está la base de datos.",
+      "examples": [
+        {
+          "description": "Revisión actual de la BD",
+          "code": "alembic current"
+        },
+        {
+          "description": "Historial detallado",
+          "code": "alembic history --verbose"
+        },
+        {
+          "description": "Ver heads (detectar ramas divergentes)",
+          "code": "alembic heads"
+        },
+        {
+          "description": "Fusionar dos heads",
+          "code": "alembic merge -m \"merge ramas\" heads"
+        }
+      ],
+      "tags": [
+        "alembic",
+        "migraciones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Tareas en segundo plano",
+      "command": "BackgroundTasks",
+      "section": "FastAPI",
+      "topic": "Middleware y ciclo de vida",
+      "description": "Ejecuta trabajo liviano después de enviar la respuesta (correos, logs, webhooks) sin bloquear al cliente.",
+      "examples": [
+        {
+          "description": "Enviar un correo tras registrar",
+          "code": "from fastapi import BackgroundTasks\n\n\ndef enviar_bienvenida(email: str) -> None:\n    ...  # SMTP o API de correo\n\n\n@app.post(\"/registro\", status_code=201)\ndef registro(datos: UsuarioCrear, tasks: BackgroundTasks):\n    usuario = crear_usuario(datos)\n    tasks.add_task(enviar_bienvenida, usuario.email)\n    return {\"id\": usuario.id}"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "tareas",
+        "async"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Corren en el mismo proceso: si el worker se reinicia, la tarea se pierde. Para trabajo pesado o que debe garantizarse usa Celery, RQ o arq."
+    },
+    {
+      "title": "Habilitar CORS",
+      "command": "CORSMiddleware",
+      "section": "FastAPI",
+      "topic": "Middleware y ciclo de vida",
+      "description": "Permite que frontends en otros orígenes (p. ej. Vite en :5173) consuman la API desde el navegador.",
+      "examples": [
+        {
+          "description": "Orígenes explícitos",
+          "code": "from fastapi.middleware.cors import CORSMiddleware\n\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=[\"http://localhost:5173\", \"https://app.ejemplo.cl\"],\n    allow_credentials=True,\n    allow_methods=[\"*\"],\n    allow_headers=[\"*\"],\n)"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "cors",
+        "middleware"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Con allow_credentials=True no puedes usar allow_origins=[\"*\"]; enumera los orígenes."
+    },
+    {
+      "title": "Middleware propio",
+      "command": "@app.middleware(\"http\")",
+      "section": "FastAPI",
+      "topic": "Middleware y ciclo de vida",
+      "description": "Intercepta todas las peticiones para medir tiempos, agregar cabeceras o propagar IDs de correlación.",
+      "examples": [
+        {
+          "description": "Tiempo de respuesta y request id",
+          "code": "import time\nimport uuid\nfrom fastapi import Request\n\n\n@app.middleware(\"http\")\nasync def tiempo_y_request_id(request: Request, call_next):\n    inicio = time.perf_counter()\n    request_id = request.headers.get(\"X-Request-ID\", str(uuid.uuid4()))\n    response = await call_next(request)\n    response.headers[\"X-Request-ID\"] = request_id\n    response.headers[\"X-Process-Time\"] = f\"{time.perf_counter() - inicio:.4f}\"\n    return response"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "middleware",
+        "observabilidad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ciclo de vida con lifespan",
+      "command": "lifespan",
+      "section": "FastAPI",
+      "topic": "Middleware y ciclo de vida",
+      "description": "Ejecuta código al arrancar y al apagar la app (pools de conexión, modelos de ML, clientes HTTP). Reemplaza a @app.on_event.",
+      "examples": [
+        {
+          "description": "Abrir y cerrar recursos",
+          "code": "from contextlib import asynccontextmanager\nimport httpx\nfrom fastapi import FastAPI, Request\n\n\n@asynccontextmanager\nasync def lifespan(app: FastAPI):\n    app.state.http = httpx.AsyncClient(timeout=10)\n    yield\n    await app.state.http.aclose()\n    await engine.dispose()\n\n\napp = FastAPI(lifespan=lifespan)\n\n\n@app.get(\"/externo\")\nasync def externo(request: Request):\n    r = await request.app.state.http.get(\"https://httpbin.org/get\")\n    return r.json()"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "lifespan",
+        "recursos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "IA"
+      ],
+      "notes": "Ideal para cargar una sola vez un modelo de IA pesado al iniciar el worker."
+    },
+    {
+      "title": "Tests con TestClient",
+      "command": "TestClient",
+      "section": "FastAPI",
+      "topic": "Testing",
+      "description": "Cliente de pruebas síncrono basado en httpx que ejecuta la app en memoria, sin levantar servidor.",
+      "examples": [
+        {
+          "description": "Test básico con pytest",
+          "code": "from fastapi.testclient import TestClient\nfrom app.main import app\n\nclient = TestClient(app)\n\n\ndef test_health():\n    resp = client.get(\"/health\")\n    assert resp.status_code == 200\n    assert resp.json() == {\"status\": \"ok\"}\n\n\ndef test_validacion():\n    resp = client.post(\"/usuarios\", json={\"email\": \"no-es-email\", \"password\": \"x\"})\n    assert resp.status_code == 422"
+        },
+        {
+          "description": "Ejecutar el lifespan en los tests",
+          "code": "def test_con_lifespan():\n    with TestClient(app) as client:\n        assert client.get(\"/health\").status_code == 200"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "testing",
+        "pytest"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "Solo usando 'with TestClient(app)' se ejecutan los eventos de arranque y apagado del lifespan."
+    },
+    {
+      "title": "Tests asíncronos con httpx",
+      "command": "httpx.AsyncClient + ASGITransport",
+      "section": "FastAPI",
+      "topic": "Testing",
+      "description": "Permite testear la app en modo async, necesario cuando el test también usa recursos async (sesiones de BD async).",
+      "examples": [
+        {
+          "description": "Test async",
+          "code": "import pytest\nfrom httpx import ASGITransport, AsyncClient\nfrom app.main import app\n\n\n@pytest.mark.anyio\nasync def test_health_async():\n    async with AsyncClient(transport=ASGITransport(app=app), base_url=\"http://test\") as ac:\n        resp = await ac.get(\"/health\")\n    assert resp.status_code == 200"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "testing",
+        "async"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Autenticación OAuth2 con Bearer",
+      "command": "OAuth2PasswordBearer",
+      "section": "FastAPI",
+      "topic": "Seguridad",
+      "description": "Extrae el token Bearer de la cabecera Authorization y lo valida en una dependencia que entrega el usuario actual.",
+      "examples": [
+        {
+          "description": "Dependencia de usuario actual con JWT (PyJWT)",
+          "code": "from typing import Annotated\nimport jwt\nfrom fastapi import Depends, HTTPException, status\nfrom fastapi.security import OAuth2PasswordBearer\n\noauth2_scheme = OAuth2PasswordBearer(tokenUrl=\"/auth/token\")\n\n\ndef usuario_actual(token: Annotated[str, Depends(oauth2_scheme)]):\n    try:\n        payload = jwt.decode(token, SECRET_KEY, algorithms=[\"HS256\"])\n    except jwt.InvalidTokenError:\n        raise HTTPException(status.HTTP_401_UNAUTHORIZED, \"Token inválido\", headers={\"WWW-Authenticate\": \"Bearer\"})\n    return obtener_usuario(payload[\"sub\"])\n\n\n@app.get(\"/me\")\ndef me(usuario: Annotated[Usuario, Depends(usuario_actual)]):\n    return usuario"
+        }
+      ],
+      "tags": [
+        "fastapi",
+        "seguridad",
+        "jwt",
+        "oauth2"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Para hashear contraseñas usa una librería mantenida como pwdlib o argon2-cffi; passlib está prácticamente sin mantenimiento."
+    }
+  ]
+}

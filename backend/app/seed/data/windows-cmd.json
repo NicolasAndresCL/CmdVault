@@ -1,0 +1,1397 @@
+{
+  "category": {
+    "slug": "windows",
+    "name": "Windows",
+    "icon": "desktop_windows",
+    "order": 3,
+    "description": "Línea de comandos de Windows: CMD clásico y PowerShell para automatización y diagnóstico."
+  },
+  "commands": [
+    {
+      "title": "Listar archivos en CMD",
+      "command": "dir",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Lista archivos y carpetas del directorio, con opciones para incluir ocultos, ordenar y buscar recursivamente.",
+      "syntax": "dir [ruta] [/a[:atributos]] [/s] [/b] [/o[:orden]]",
+      "examples": [
+        {
+          "description": "Incluir ocultos y del sistema",
+          "code": "dir /a"
+        },
+        {
+          "description": "Buscar recursivamente por patrón, solo rutas",
+          "code": "dir /s /b C:\\proyectos\\*.log"
+        },
+        {
+          "description": "Ordenar por tamaño, los mayores al final",
+          "code": "dir /o:s"
+        },
+        {
+          "description": "Solo directorios",
+          "code": "dir /a:d"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "listado"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Cambiar de directorio en CMD",
+      "command": "cd / pushd",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Cambia el directorio actual. Para cambiar también de unidad se usa /d; pushd/popd permiten volver al anterior y montan rutas UNC temporalmente.",
+      "examples": [
+        {
+          "description": "Cambiar de unidad y carpeta a la vez",
+          "code": "cd /d D:\\respaldos"
+        },
+        {
+          "description": "Entrar a una carpeta compartida de red",
+          "code": "pushd \\\\servidor\\compartido\\logs\n:: ... trabajar ...\npopd"
+        },
+        {
+          "description": "Ver el directorio actual",
+          "code": "cd"
+        }
+      ],
+      "tags": [
+        "navegación",
+        "archivos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Árbol de carpetas",
+      "command": "tree",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Muestra la estructura de directorios en forma de árbol.",
+      "examples": [
+        {
+          "description": "Con archivos y caracteres ASCII",
+          "code": "tree C:\\proyectos\\api /f /a"
+        },
+        {
+          "description": "Guardar el árbol en un archivo",
+          "code": "tree /f /a > estructura.txt"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "estructura"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Crear y borrar carpetas",
+      "command": "mkdir / rmdir",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "mkdir crea carpetas (incluyendo intermedias); rmdir /s /q borra una carpeta completa sin preguntar.",
+      "examples": [
+        {
+          "description": "Crear una ruta completa",
+          "code": "mkdir C:\\apps\\api\\logs"
+        },
+        {
+          "description": "Borrar una carpeta con todo su contenido",
+          "code": "rmdir /s /q C:\\temp\\build"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "directorios"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Copiar archivos en CMD",
+      "command": "copy",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Copia uno o más archivos. Para directorios completos usa robocopy.",
+      "examples": [
+        {
+          "description": "Copiar un archivo sobrescribiendo sin preguntar",
+          "code": "copy /y config.prod.json config.json"
+        },
+        {
+          "description": "Concatenar archivos",
+          "code": "copy /b parte1.csv + parte2.csv total.csv"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "copiar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Copiar directorios con xcopy",
+      "command": "xcopy",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Copia directorios y subdirectorios. Está en desuso frente a robocopy, pero sigue presente en scripts antiguos.",
+      "examples": [
+        {
+          "description": "Copiar todo incluyendo vacíos y ocultos",
+          "code": "xcopy C:\\origen D:\\destino /e /h /i /y"
+        },
+        {
+          "description": "Solo archivos más nuevos",
+          "code": "xcopy C:\\origen D:\\destino /d /e /y"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "copiar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Prefiere robocopy: reintenta, maneja rutas largas y deja log."
+    },
+    {
+      "title": "Copias robustas con robocopy",
+      "command": "robocopy",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Copia y sincroniza directorios con reintentos, multihilo, logs y espejo. Es la herramienta estándar para respaldos y migraciones en Windows.",
+      "syntax": "robocopy origen destino [archivos] [opciones]",
+      "examples": [
+        {
+          "description": "Espejo exacto (borra lo que sobra en destino)",
+          "code": "robocopy C:\\datos \\\\nas\\respaldo\\datos /mir /r:2 /w:5 /log:C:\\logs\\robocopy.log"
+        },
+        {
+          "description": "Copia multihilo preservando atributos y fechas",
+          "code": "robocopy C:\\origen D:\\destino /e /copy:DAT /mt:16"
+        },
+        {
+          "description": "Mover archivos de más de 30 días",
+          "code": "robocopy C:\\logs D:\\archivo\\logs *.log /mov /minage:30"
+        },
+        {
+          "description": "Simular sin copiar",
+          "code": "robocopy C:\\origen D:\\destino /mir /l"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "respaldo",
+        "sincronización"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software",
+        "SRE"
+      ],
+      "notes": "Los códigos de salida 0–7 son éxito (1 = copió archivos); solo >= 8 es error. En CI o Jenkins hay que tratarlo explícitamente. /mir borra en destino: prueba antes con /l."
+    },
+    {
+      "title": "Mover y renombrar en CMD",
+      "command": "move / ren",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "move traslada archivos o carpetas; ren cambia el nombre, admitiendo comodines.",
+      "examples": [
+        {
+          "description": "Mover archivos a otra carpeta",
+          "code": "move /y *.zip D:\\archivo\\"
+        },
+        {
+          "description": "Cambiar extensión en lote",
+          "code": "ren *.txt *.log"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "mover"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Borrar archivos en CMD",
+      "command": "del",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Elimina archivos; con /s recorre subcarpetas. No pasa por la papelera.",
+      "examples": [
+        {
+          "description": "Borrar temporales recursivamente sin preguntar",
+          "code": "del /s /q /f C:\\temp\\*.tmp"
+        },
+        {
+          "description": "Borrar archivos con más de 14 días con forfiles",
+          "code": "forfiles /p C:\\logs /m *.log /d -14 /c \"cmd /c del @path\""
+        }
+      ],
+      "tags": [
+        "archivos",
+        "borrar",
+        "limpieza"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Ver el contenido de archivos en CMD",
+      "command": "type / more",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "type imprime un archivo de texto; more lo pagina.",
+      "examples": [
+        {
+          "description": "Ver un archivo",
+          "code": "type C:\\Windows\\System32\\drivers\\etc\\hosts"
+        },
+        {
+          "description": "Paginar una salida larga",
+          "code": "systeminfo | more"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "lectura"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Buscar texto con findstr",
+      "command": "findstr",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Busca cadenas o expresiones regulares simples en archivos o en la salida de otros comandos; es el 'grep' de CMD.",
+      "examples": [
+        {
+          "description": "Buscar sin distinguir mayúsculas y con número de línea",
+          "code": "findstr /i /n \"error\" C:\\logs\\app.log"
+        },
+        {
+          "description": "Buscar recursivamente en archivos .config",
+          "code": "findstr /s /i \"connectionString\" *.config"
+        },
+        {
+          "description": "Filtrar la salida de otro comando",
+          "code": "netstat -ano | findstr :8080"
+        },
+        {
+          "description": "Varias palabras (cualquiera)",
+          "code": "findstr /i \"error warning fatal\" app.log"
+        }
+      ],
+      "tags": [
+        "texto",
+        "búsqueda"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Separar palabras con espacios busca CUALQUIERA de ellas; para una frase literal usa /c:\"texto exacto\"."
+    },
+    {
+      "title": "Ubicar ejecutables con where",
+      "command": "where",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Indica en qué ruta del PATH se encuentra un ejecutable, útil para detectar versiones duplicadas.",
+      "examples": [
+        {
+          "description": "¿Qué python se ejecuta?",
+          "code": "where python"
+        },
+        {
+          "description": "Buscar recursivamente un archivo",
+          "code": "where /r C:\\ nginx.exe"
+        }
+      ],
+      "tags": [
+        "path",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Atributos de archivos",
+      "command": "attrib",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Consulta o cambia los atributos de solo lectura, oculto, sistema y archivo.",
+      "examples": [
+        {
+          "description": "Quitar solo lectura y oculto recursivamente",
+          "code": "attrib -r -h C:\\datos\\* /s /d"
+        },
+        {
+          "description": "Ocultar un archivo",
+          "code": "attrib +h secreto.txt"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "atributos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Enlaces simbólicos en Windows",
+      "command": "mklink",
+      "section": "CMD",
+      "topic": "Archivos y directorios",
+      "description": "Crea enlaces simbólicos, enlaces duros o uniones de directorio (junctions).",
+      "examples": [
+        {
+          "description": "Enlace simbólico a un directorio (requiere admin o modo desarrollador)",
+          "code": "mklink /d C:\\apps\\actual C:\\apps\\releases\\v2.3.0"
+        },
+        {
+          "description": "Unión de directorio (no requiere admin)",
+          "code": "mklink /j C:\\Users\\Nicol\\proyectos D:\\proyectos"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "enlaces"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Configuración IP con ipconfig",
+      "command": "ipconfig",
+      "section": "CMD",
+      "topic": "Redes",
+      "description": "Muestra la configuración de red de los adaptadores y permite renovar DHCP o limpiar la caché DNS.",
+      "examples": [
+        {
+          "description": "Detalle completo (MAC, DNS, DHCP)",
+          "code": "ipconfig /all"
+        },
+        {
+          "description": "Limpiar la caché DNS",
+          "code": "ipconfig /flushdns"
+        },
+        {
+          "description": "Renovar la IP por DHCP",
+          "code": "ipconfig /release && ipconfig /renew"
+        },
+        {
+          "description": "Ver la caché DNS",
+          "code": "ipconfig /displaydns | findstr \"Nombre Record\""
+        }
+      ],
+      "tags": [
+        "redes",
+        "ip",
+        "dns"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Probar conectividad con ping",
+      "command": "ping",
+      "section": "CMD",
+      "topic": "Redes",
+      "description": "Envía paquetes ICMP para verificar si un host responde y medir la latencia.",
+      "examples": [
+        {
+          "description": "Ping continuo hasta Ctrl+C",
+          "code": "ping -t 10.0.0.1"
+        },
+        {
+          "description": "10 paquetes de 1400 bytes sin fragmentar (probar MTU)",
+          "code": "ping -n 10 -l 1400 -f ejemplo.cl"
+        },
+        {
+          "description": "Forzar IPv4",
+          "code": "ping -4 servidor"
+        }
+      ],
+      "tags": [
+        "redes",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Trazar rutas con tracert",
+      "command": "tracert / pathping",
+      "section": "CMD",
+      "topic": "Redes",
+      "description": "tracert muestra cada salto hasta un destino; pathping además mide pérdida por salto durante varios minutos.",
+      "examples": [
+        {
+          "description": "Trazar sin resolver nombres",
+          "code": "tracert -d ejemplo.cl"
+        },
+        {
+          "description": "Pérdida de paquetes por salto",
+          "code": "pathping -n ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "redes",
+        "diagnóstico",
+        "latencia"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Consultas DNS con nslookup",
+      "command": "nslookup",
+      "section": "CMD",
+      "topic": "Redes",
+      "description": "Consulta registros DNS contra el servidor configurado o uno específico.",
+      "examples": [
+        {
+          "description": "Resolver un nombre",
+          "code": "nslookup app.ejemplo.cl"
+        },
+        {
+          "description": "Consultar contra 1.1.1.1",
+          "code": "nslookup app.ejemplo.cl 1.1.1.1"
+        },
+        {
+          "description": "Registros MX",
+          "code": "nslookup -type=mx ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "redes",
+        "dns"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Conexiones y puertos con netstat",
+      "command": "netstat -ano",
+      "section": "CMD",
+      "topic": "Redes",
+      "description": "Lista conexiones y puertos en escucha con el PID dueño, para identificar qué proceso ocupa un puerto.",
+      "examples": [
+        {
+          "description": "¿Qué PID usa el puerto 8000?",
+          "code": "netstat -ano | findstr :8000"
+        },
+        {
+          "description": "Solo puertos en escucha",
+          "code": "netstat -ano | findstr LISTENING"
+        },
+        {
+          "description": "Con el nombre del ejecutable (requiere admin)",
+          "code": "netstat -abno"
+        }
+      ],
+      "tags": [
+        "redes",
+        "puertos",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Con el PID obtenido usa 'tasklist /fi \"pid eq 1234\"' para saber qué programa es."
+    },
+    {
+      "title": "Tabla de rutas en Windows",
+      "command": "route print",
+      "section": "CMD",
+      "topic": "Redes",
+      "description": "Muestra y modifica la tabla de enrutamiento.",
+      "examples": [
+        {
+          "description": "Ver rutas IPv4",
+          "code": "route print -4"
+        },
+        {
+          "description": "Agregar una ruta persistente (admin)",
+          "code": "route -p add 192.168.50.0 mask 255.255.255.0 10.0.0.1"
+        }
+      ],
+      "tags": [
+        "redes",
+        "rutas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Firewall y red con netsh",
+      "command": "netsh",
+      "section": "CMD",
+      "topic": "Redes",
+      "description": "Configura el firewall de Windows, proxies, Wi-Fi y redirecciones de puerto desde la línea de comandos.",
+      "examples": [
+        {
+          "description": "Abrir un puerto en el firewall (admin)",
+          "code": "netsh advfirewall firewall add rule name=\"API 8000\" dir=in action=allow protocol=TCP localport=8000"
+        },
+        {
+          "description": "Redirigir un puerto hacia WSL o otra IP",
+          "code": "netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=8080 connectaddress=172.20.10.2"
+        },
+        {
+          "description": "Ver el proxy de WinHTTP",
+          "code": "netsh winhttp show proxy"
+        },
+        {
+          "description": "Estado de los perfiles del firewall",
+          "code": "netsh advfirewall show allprofiles state"
+        }
+      ],
+      "tags": [
+        "redes",
+        "firewall"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "curl nativo de Windows",
+      "command": "curl.exe",
+      "section": "CMD",
+      "topic": "Redes",
+      "description": "Windows 10/11 incluye curl.exe. En PowerShell 5.1 'curl' es un alias de Invoke-WebRequest, por eso conviene escribir curl.exe.",
+      "examples": [
+        {
+          "description": "Ver cabeceras de respuesta",
+          "code": "curl.exe -I https://ejemplo.cl"
+        },
+        {
+          "description": "POST con JSON (comillas escapadas en CMD)",
+          "code": "curl.exe -X POST http://localhost:8000/items -H \"Content-Type: application/json\" -d \"{\\\"nombre\\\":\\\"demo\\\"}\""
+        },
+        {
+          "description": "Descargar un archivo",
+          "code": "curl.exe -L -o instalador.msi https://ejemplo.cl/instalador.msi"
+        }
+      ],
+      "tags": [
+        "redes",
+        "http",
+        "api"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Listar procesos con tasklist",
+      "command": "tasklist",
+      "section": "CMD",
+      "topic": "Procesos y servicios",
+      "description": "Lista los procesos en ejecución con PID y memoria; admite filtros y muestra servicios asociados.",
+      "examples": [
+        {
+          "description": "Filtrar por nombre",
+          "code": "tasklist /fi \"imagename eq python.exe\""
+        },
+        {
+          "description": "Servicios dentro de cada svchost",
+          "code": "tasklist /svc /fi \"imagename eq svchost.exe\""
+        },
+        {
+          "description": "Proceso por PID",
+          "code": "tasklist /fi \"pid eq 1234\""
+        },
+        {
+          "description": "Exportar a CSV",
+          "code": "tasklist /fo csv > procesos.csv"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Terminar procesos con taskkill",
+      "command": "taskkill",
+      "section": "CMD",
+      "topic": "Procesos y servicios",
+      "description": "Termina procesos por PID o nombre; /f fuerza y /t incluye los procesos hijos.",
+      "examples": [
+        {
+          "description": "Forzar por PID con su árbol de hijos",
+          "code": "taskkill /pid 1234 /f /t"
+        },
+        {
+          "description": "Matar todas las instancias por nombre",
+          "code": "taskkill /im node.exe /f"
+        },
+        {
+          "description": "Terminar procesos que no responden",
+          "code": "taskkill /fi \"status eq not responding\" /f"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "señales"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Gestionar servicios con sc",
+      "command": "sc",
+      "section": "CMD",
+      "topic": "Procesos y servicios",
+      "description": "Consulta, crea, configura e inicia servicios de Windows desde la línea de comandos.",
+      "syntax": "sc <comando> [servicio] [opciones]",
+      "examples": [
+        {
+          "description": "Estado de un servicio",
+          "code": "sc query wuauserv"
+        },
+        {
+          "description": "Configurar inicio automático (diferido)",
+          "code": "sc config Jenkins start= delayed-auto"
+        },
+        {
+          "description": "Crear un servicio",
+          "code": "sc create MiApi binPath= \"C:\\apps\\api\\api.exe\" start= auto DisplayName= \"Mi API\""
+        },
+        {
+          "description": "Configurar reinicio ante fallos",
+          "code": "sc failure MiApi reset= 86400 actions= restart/5000/restart/5000/restart/5000"
+        }
+      ],
+      "tags": [
+        "servicios",
+        "administración"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "La sintaxis exige un espacio DESPUÉS del igual: 'start= auto'. En PowerShell 'sc' es alias de Set-Content: usa 'sc.exe'."
+    },
+    {
+      "title": "Iniciar y detener servicios con net",
+      "command": "net start / net stop",
+      "section": "CMD",
+      "topic": "Procesos y servicios",
+      "description": "Forma rápida de iniciar o detener un servicio por su nombre.",
+      "examples": [
+        {
+          "description": "Reiniciar el spooler de impresión",
+          "code": "net stop spooler && net start spooler"
+        },
+        {
+          "description": "Listar servicios en ejecución",
+          "code": "net start"
+        }
+      ],
+      "tags": [
+        "servicios"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Información del sistema",
+      "command": "systeminfo",
+      "section": "CMD",
+      "topic": "Sistema y mantenimiento",
+      "description": "Muestra versión de Windows, build, fecha de instalación, último arranque, memoria, hotfixes y dominio.",
+      "examples": [
+        {
+          "description": "Filtrar datos clave",
+          "code": "systeminfo | findstr /b /c:\"OS Name\" /c:\"OS Version\" /c:\"System Boot Time\" /c:\"Total Physical Memory\""
+        },
+        {
+          "description": "De un equipo remoto",
+          "code": "systeminfo /s servidor01 /u DOMINIO\\admin"
+        },
+        {
+          "description": "Versión rápida",
+          "code": "ver"
+        }
+      ],
+      "tags": [
+        "sistema",
+        "inventario"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Los nombres de campo cambian según el idioma de Windows (en español: 'Nombre del sistema operativo')."
+    },
+    {
+      "title": "Revisar el disco con chkdsk",
+      "command": "chkdsk",
+      "section": "CMD",
+      "topic": "Sistema y mantenimiento",
+      "description": "Verifica y repara errores del sistema de archivos y sectores dañados.",
+      "examples": [
+        {
+          "description": "Solo verificar (lectura)",
+          "code": "chkdsk C:"
+        },
+        {
+          "description": "Reparar errores (programa en el próximo reinicio si está en uso)",
+          "code": "chkdsk C: /f"
+        },
+        {
+          "description": "Análisis en línea sin desmontar",
+          "code": "chkdsk C: /scan"
+        }
+      ],
+      "tags": [
+        "disco",
+        "mantenimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Reparar archivos del sistema con sfc",
+      "command": "sfc /scannow",
+      "section": "CMD",
+      "topic": "Sistema y mantenimiento",
+      "description": "Verifica la integridad de los archivos protegidos de Windows y reemplaza los dañados.",
+      "examples": [
+        {
+          "description": "Analizar y reparar (consola como administrador)",
+          "code": "sfc /scannow"
+        },
+        {
+          "description": "Solo verificar",
+          "code": "sfc /verifyonly"
+        }
+      ],
+      "tags": [
+        "sistema",
+        "reparación"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "Software"
+      ],
+      "notes": "Si sfc no puede reparar, ejecuta primero DISM /RestoreHealth y luego vuelve a correr sfc."
+    },
+    {
+      "title": "Reparar la imagen de Windows con DISM",
+      "command": "DISM /Online /Cleanup-Image",
+      "section": "CMD",
+      "topic": "Sistema y mantenimiento",
+      "description": "Repara el almacén de componentes de Windows y gestiona características opcionales.",
+      "examples": [
+        {
+          "description": "Verificar y reparar la imagen",
+          "code": "DISM /Online /Cleanup-Image /ScanHealth\nDISM /Online /Cleanup-Image /RestoreHealth"
+        },
+        {
+          "description": "Limpiar componentes antiguos para liberar espacio",
+          "code": "DISM /Online /Cleanup-Image /StartComponentCleanup"
+        },
+        {
+          "description": "Habilitar una característica (p. ej. Hyper-V)",
+          "code": "DISM /Online /Enable-Feature /FeatureName:Microsoft-Hyper-V /All"
+        }
+      ],
+      "tags": [
+        "sistema",
+        "reparación",
+        "características"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Programar tareas con schtasks",
+      "command": "schtasks",
+      "section": "CMD",
+      "topic": "Sistema y mantenimiento",
+      "description": "Crea, consulta, ejecuta y elimina tareas del Programador de tareas.",
+      "examples": [
+        {
+          "description": "Tarea diaria a las 03:00 como SYSTEM",
+          "code": "schtasks /create /tn \"Respaldo diario\" /tr \"C:\\scripts\\respaldo.cmd\" /sc daily /st 03:00 /ru SYSTEM"
+        },
+        {
+          "description": "Ejecutar ahora",
+          "code": "schtasks /run /tn \"Respaldo diario\""
+        },
+        {
+          "description": "Ver detalles",
+          "code": "schtasks /query /tn \"Respaldo diario\" /v /fo list"
+        },
+        {
+          "description": "Eliminar sin confirmar",
+          "code": "schtasks /delete /tn \"Respaldo diario\" /f"
+        }
+      ],
+      "tags": [
+        "tareas",
+        "automatización"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Apagar o reiniciar",
+      "command": "shutdown",
+      "section": "CMD",
+      "topic": "Sistema y mantenimiento",
+      "description": "Apaga, reinicia o cierra sesión, local o remotamente, con temporizador y mensaje.",
+      "examples": [
+        {
+          "description": "Reiniciar en 60 segundos con aviso",
+          "code": "shutdown /r /t 60 /c \"Reinicio por mantenimiento\""
+        },
+        {
+          "description": "Cancelar un apagado programado",
+          "code": "shutdown /a"
+        },
+        {
+          "description": "Reiniciar un equipo remoto",
+          "code": "shutdown /r /m \\\\servidor01 /t 0"
+        },
+        {
+          "description": "Reiniciar al firmware (UEFI)",
+          "code": "shutdown /r /fw /t 0"
+        }
+      ],
+      "tags": [
+        "sistema",
+        "apagado"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Directivas de grupo",
+      "command": "gpupdate / gpresult",
+      "section": "CMD",
+      "topic": "Sistema y mantenimiento",
+      "description": "Fuerza la aplicación de directivas de grupo y muestra cuáles se aplicaron al equipo y al usuario.",
+      "examples": [
+        {
+          "description": "Forzar la actualización",
+          "code": "gpupdate /force"
+        },
+        {
+          "description": "Informe HTML de directivas aplicadas",
+          "code": "gpresult /h C:\\temp\\gp.html"
+        }
+      ],
+      "tags": [
+        "sistema",
+        "dominio",
+        "gpo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Consultar el registro desde CMD",
+      "command": "reg",
+      "section": "CMD",
+      "topic": "Sistema y mantenimiento",
+      "description": "Consulta, agrega y exporta claves del registro de Windows.",
+      "examples": [
+        {
+          "description": "Leer un valor",
+          "code": "reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\" /v ProductName"
+        },
+        {
+          "description": "Agregar un valor DWORD",
+          "code": "reg add \"HKCU\\Software\\MiApp\" /v Debug /t REG_DWORD /d 1 /f"
+        },
+        {
+          "description": "Exportar una clave como respaldo",
+          "code": "reg export \"HKCU\\Software\\MiApp\" C:\\temp\\miapp.reg"
+        }
+      ],
+      "tags": [
+        "registro",
+        "configuración"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Exporta siempre la clave antes de modificarla."
+    },
+    {
+      "title": "Energía y diagnóstico de batería",
+      "command": "powercfg",
+      "section": "CMD",
+      "topic": "Sistema y mantenimiento",
+      "description": "Gestiona planes de energía y genera informes de batería y eficiencia energética.",
+      "examples": [
+        {
+          "description": "Informe de batería",
+          "code": "powercfg /batteryreport /output C:\\temp\\bateria.html"
+        },
+        {
+          "description": "Desactivar la hibernación (libera hiberfil.sys)",
+          "code": "powercfg /hibernate off"
+        },
+        {
+          "description": "¿Qué impide la suspensión?",
+          "code": "powercfg /requests"
+        }
+      ],
+      "tags": [
+        "sistema",
+        "energía"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software"
+      ]
+    },
+    {
+      "title": "Usuarios locales con net user",
+      "command": "net user",
+      "section": "CMD",
+      "topic": "Usuarios y permisos",
+      "description": "Crea, modifica y consulta cuentas de usuario locales o de dominio.",
+      "examples": [
+        {
+          "description": "Detalle de un usuario",
+          "code": "net user nicolas"
+        },
+        {
+          "description": "Crear un usuario local",
+          "code": "net user deploy \"Cl4ve$egura2026\" /add"
+        },
+        {
+          "description": "Consultar un usuario del dominio",
+          "code": "net user nicolas /domain"
+        },
+        {
+          "description": "Desactivar una cuenta",
+          "code": "net user deploy /active:no"
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "administración"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Grupos locales",
+      "command": "net localgroup",
+      "section": "CMD",
+      "topic": "Usuarios y permisos",
+      "description": "Administra la pertenencia a grupos locales como Administradores o Usuarios de escritorio remoto.",
+      "examples": [
+        {
+          "description": "Ver miembros de Administradores",
+          "code": "net localgroup Administradores"
+        },
+        {
+          "description": "Agregar a Usuarios de escritorio remoto",
+          "code": "net localgroup \"Usuarios de escritorio remoto\" deploy /add"
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "grupos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Los nombres de los grupos dependen del idioma: 'Administrators' en inglés, 'Administradores' en español."
+    },
+    {
+      "title": "Unidades de red con net use",
+      "command": "net use",
+      "section": "CMD",
+      "topic": "Usuarios y permisos",
+      "description": "Conecta, lista y desconecta unidades de red compartidas (SMB).",
+      "examples": [
+        {
+          "description": "Mapear una unidad persistente",
+          "code": "net use Z: \\\\nas01\\respaldos /persistent:yes"
+        },
+        {
+          "description": "Conectar con otro usuario",
+          "code": "net use \\\\nas01\\ipc$ /user:DOMINIO\\deploy *"
+        },
+        {
+          "description": "Listar y desconectar",
+          "code": "net use\nnet use Z: /delete"
+        }
+      ],
+      "tags": [
+        "red",
+        "smb",
+        "unidades"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Identidad del usuario actual",
+      "command": "whoami",
+      "section": "CMD",
+      "topic": "Usuarios y permisos",
+      "description": "Muestra el usuario actual, sus grupos y privilegios; útil para depurar permisos y UAC.",
+      "examples": [
+        {
+          "description": "Usuario y dominio",
+          "code": "whoami"
+        },
+        {
+          "description": "Grupos y nivel de integridad",
+          "code": "whoami /groups"
+        },
+        {
+          "description": "Privilegios",
+          "code": "whoami /priv"
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Permisos NTFS con icacls",
+      "command": "icacls",
+      "section": "CMD",
+      "topic": "Usuarios y permisos",
+      "description": "Consulta y modifica las listas de control de acceso (ACL) de archivos y carpetas.",
+      "examples": [
+        {
+          "description": "Ver permisos",
+          "code": "icacls C:\\apps\\api"
+        },
+        {
+          "description": "Dar modificación heredable a un usuario",
+          "code": "icacls C:\\apps\\api /grant \"deploy:(OI)(CI)M\" /t"
+        },
+        {
+          "description": "Tomar posesión y restaurar herencia",
+          "code": "takeown /f C:\\datos /r /d s\nicacls C:\\datos /reset /t"
+        },
+        {
+          "description": "Respaldar y restaurar ACL",
+          "code": "icacls C:\\apps /save acl.txt /t\nicacls C:\\ /restore acl.txt"
+        }
+      ],
+      "tags": [
+        "permisos",
+        "acl",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "(OI) herencia a archivos, (CI) a subcarpetas; M = modificar, F = control total, RX = lectura y ejecución. La opción /d de takeown espera 's' o 'y' según el idioma del sistema."
+    },
+    {
+      "title": "Variables de entorno en CMD",
+      "command": "set",
+      "section": "CMD",
+      "topic": "Variables y scripting",
+      "description": "Muestra o define variables de entorno para la sesión actual de CMD.",
+      "examples": [
+        {
+          "description": "Definir y usar una variable",
+          "code": "set APP_ENV=production\necho %APP_ENV%"
+        },
+        {
+          "description": "Ver variables que empiezan con un prefijo",
+          "code": "set JAVA"
+        },
+        {
+          "description": "Pedir un valor al usuario",
+          "code": "set /p NOMBRE=Ingresa tu nombre: "
+        },
+        {
+          "description": "Aritmética simple",
+          "code": "set /a TOTAL=5*60"
+        }
+      ],
+      "tags": [
+        "variables",
+        "entorno",
+        "batch"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "No pongas espacios alrededor del '=': 'set A = 1' crea la variable 'A ' con valor ' 1'."
+    },
+    {
+      "title": "Variables persistentes con setx",
+      "command": "setx",
+      "section": "CMD",
+      "topic": "Variables y scripting",
+      "description": "Guarda variables de entorno de forma permanente para el usuario o el sistema. No afecta la ventana actual.",
+      "examples": [
+        {
+          "description": "Variable de usuario",
+          "code": "setx JAVA_HOME \"C:\\Program Files\\Eclipse Adoptium\\jdk-21\""
+        },
+        {
+          "description": "Variable de sistema (admin)",
+          "code": "setx /m APP_ENV production"
+        }
+      ],
+      "tags": [
+        "variables",
+        "entorno"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Nunca hagas 'setx PATH \"%PATH%;C:\\nuevo\"': mezcla el PATH de usuario y de sistema y trunca a 1024 caracteres. Edita el PATH desde la interfaz o con PowerShell."
+    },
+    {
+      "title": "Bucles y condiciones en batch",
+      "command": "for / if",
+      "section": "CMD",
+      "topic": "Variables y scripting",
+      "description": "Los scripts .bat/.cmd usan for para recorrer archivos o la salida de comandos e if/errorlevel para controlar errores.",
+      "examples": [
+        {
+          "description": "Recorrer archivos (en un .bat se usa %%)",
+          "code": "for %%f in (C:\\logs\\*.log) do echo Procesando %%f"
+        },
+        {
+          "description": "Capturar la salida de un comando",
+          "code": "for /f \"tokens=*\" %%i in ('git rev-parse --short HEAD') do set COMMIT=%%i"
+        },
+        {
+          "description": "Abortar si el comando anterior falló",
+          "code": "call npm run build\nif errorlevel 1 (\n  echo Build fallido\n  exit /b 1\n)"
+        },
+        {
+          "description": "Plantilla de script seguro",
+          "code": "@echo off\nsetlocal enabledelayedexpansion\ncd /d \"%~dp0\"\n:: %~dp0 = carpeta donde está el script"
+        }
+      ],
+      "tags": [
+        "batch",
+        "scripting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "En la consola interactiva se usa %f; dentro de un archivo .bat, %%f. 'if errorlevel 1' significa 'código >= 1'."
+    },
+    {
+      "title": "Instalar software con winget",
+      "command": "winget install",
+      "section": "CMD",
+      "topic": "Paquetes",
+      "description": "Gestor de paquetes oficial de Windows: instala, actualiza y exporta aplicaciones desde la terminal.",
+      "syntax": "winget <install|upgrade|search|list|export|import> [opciones]",
+      "examples": [
+        {
+          "description": "Buscar e instalar por ID exacto",
+          "code": "winget search python\nwinget install --id Python.Python.3.13 -e --silent"
+        },
+        {
+          "description": "Actualizar todo",
+          "code": "winget upgrade --all --silent --accept-package-agreements --accept-source-agreements"
+        },
+        {
+          "description": "Exportar e importar las apps de un equipo",
+          "code": "winget export -o apps.json\nwinget import -i apps.json --accept-package-agreements"
+        },
+        {
+          "description": "Ver detalles de un paquete",
+          "code": "winget show Microsoft.PowerShell"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "winget",
+        "instalación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Usa siempre --id con -e (coincidencia exacta) en scripts para no instalar un paquete equivocado."
+    },
+    {
+      "title": "Calcular hashes con certutil",
+      "command": "certutil -hashfile",
+      "section": "CMD",
+      "topic": "Sistema y mantenimiento",
+      "description": "Calcula el hash de un archivo para verificar su integridad, sin instalar nada.",
+      "examples": [
+        {
+          "description": "SHA-256 de un instalador",
+          "code": "certutil -hashfile instalador.msi SHA256"
+        },
+        {
+          "description": "Decodificar Base64",
+          "code": "certutil -decode entrada.b64 salida.bin"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "integridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    }
+  ]
+}

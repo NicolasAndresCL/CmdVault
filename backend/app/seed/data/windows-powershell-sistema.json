@@ -1,0 +1,1032 @@
+{
+  "category": {
+    "slug": "windows",
+    "name": "Windows",
+    "icon": "desktop_windows",
+    "order": 3,
+    "description": "Línea de comandos de Windows: CMD clásico y PowerShell para automatización y diagnóstico."
+  },
+  "commands": [
+    {
+      "title": "Procesos con Get-Process",
+      "command": "Get-Process",
+      "section": "PowerShell",
+      "topic": "Procesos y servicios",
+      "description": "Lista procesos como objetos con CPU, memoria, ruta y hora de inicio.",
+      "examples": [
+        {
+          "description": "Top 10 por CPU",
+          "code": "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10 Name, Id, CPU"
+        },
+        {
+          "description": "Ruta del ejecutable de un proceso",
+          "code": "Get-Process -Name node | Select-Object Id, Path, StartTime"
+        },
+        {
+          "description": "¿Qué proceso usa el puerto 8000?",
+          "code": "Get-Process -Id (Get-NetTCPConnection -LocalPort 8000 -State Listen).OwningProcess"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Terminar procesos con Stop-Process",
+      "command": "Stop-Process",
+      "section": "PowerShell",
+      "topic": "Procesos y servicios",
+      "description": "Termina procesos por nombre, PID u objeto del pipeline.",
+      "examples": [
+        {
+          "description": "Por nombre forzando",
+          "code": "Stop-Process -Name python -Force"
+        },
+        {
+          "description": "Procesos de más de 2 GB, con confirmación",
+          "code": "Get-Process | Where-Object WorkingSet64 -gt 2GB | Stop-Process -Confirm"
+        },
+        {
+          "description": "Esperar a que termine un proceso",
+          "code": "Wait-Process -Name setup -Timeout 600"
+        }
+      ],
+      "tags": [
+        "procesos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Lanzar procesos con Start-Process",
+      "command": "Start-Process",
+      "section": "PowerShell",
+      "topic": "Procesos y servicios",
+      "description": "Inicia programas con argumentos, como administrador, esperando su término o redirigiendo la salida.",
+      "examples": [
+        {
+          "description": "Abrir una consola como administrador",
+          "code": "Start-Process pwsh -Verb RunAs"
+        },
+        {
+          "description": "Instalador silencioso esperando que termine",
+          "code": "Start-Process msiexec.exe -ArgumentList '/i', 'agente.msi', '/qn', '/norestart' -Wait -NoNewWindow"
+        },
+        {
+          "description": "Redirigir salida a archivos",
+          "code": "Start-Process python -ArgumentList 'worker.py' -RedirectStandardOutput out.log -RedirectStandardError err.log -WindowStyle Hidden"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "instalación"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Consultar servicios con Get-Service",
+      "command": "Get-Service",
+      "section": "PowerShell",
+      "topic": "Procesos y servicios",
+      "description": "Lista servicios con su estado y tipo de inicio; permite filtrar por nombre o estado.",
+      "examples": [
+        {
+          "description": "Servicios que coinciden con un patrón",
+          "code": "Get-Service -Name *sql*"
+        },
+        {
+          "description": "Automáticos que no están corriendo",
+          "code": "Get-Service | Where-Object { $_.StartType -eq 'Automatic' -and $_.Status -ne 'Running' }"
+        },
+        {
+          "description": "Dependencias de un servicio",
+          "code": "Get-Service WinRM -RequiredServices"
+        }
+      ],
+      "tags": [
+        "servicios",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "La propiedad StartType está disponible desde PS 5.0; en PS 7 también aparecen BinaryPathName y UserName."
+    },
+    {
+      "title": "Reiniciar y configurar servicios",
+      "command": "Restart-Service / Set-Service",
+      "section": "PowerShell",
+      "topic": "Procesos y servicios",
+      "description": "Inicia, detiene, reinicia y cambia el tipo de inicio de servicios (requiere consola de administrador).",
+      "examples": [
+        {
+          "description": "Reiniciar un servicio",
+          "code": "Restart-Service -Name Spooler -Force"
+        },
+        {
+          "description": "Cambiar a inicio automático",
+          "code": "Set-Service -Name Jenkins -StartupType Automatic"
+        },
+        {
+          "description": "Detener y deshabilitar",
+          "code": "Stop-Service -Name Fax; Set-Service -Name Fax -StartupType Disabled"
+        },
+        {
+          "description": "Crear un servicio",
+          "code": "New-Service -Name MiApi -BinaryPathName 'C:\\apps\\api\\api.exe' -StartupType Automatic -DisplayName 'Mi API'"
+        }
+      ],
+      "tags": [
+        "servicios",
+        "administración"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Remove-Service existe solo en PS 6+; en 5.1 usa 'sc.exe delete <servicio>'."
+    },
+    {
+      "title": "Medir tiempo de ejecución en PowerShell",
+      "command": "Measure-Command",
+      "section": "PowerShell",
+      "topic": "Procesos y servicios",
+      "description": "Mide cuánto tarda un bloque de código; útil para comparar enfoques.",
+      "examples": [
+        {
+          "description": "Tiempo de una consulta",
+          "code": "(Measure-Command { Invoke-RestMethod https://api.github.com }).TotalMilliseconds"
+        },
+        {
+          "description": "Comparar filtros",
+          "code": "Measure-Command { Get-ChildItem C:\\Windows -Recurse -Filter *.dll -ErrorAction SilentlyContinue }"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "medición"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Probar conexiones con Test-NetConnection",
+      "command": "Test-NetConnection",
+      "section": "PowerShell",
+      "topic": "Redes y web",
+      "description": "Prueba conectividad ICMP y puertos TCP, y traza rutas. Es la forma rápida de saber si un puerto está abierto.",
+      "syntax": "Test-NetConnection [host] [-Port n]",
+      "examples": [
+        {
+          "description": "¿Está abierto el 5432 en la BD?",
+          "code": "Test-NetConnection db01 -Port 5432"
+        },
+        {
+          "description": "Solo True/False para scripts",
+          "code": "(Test-NetConnection web01 -Port 443 -InformationLevel Quiet)"
+        },
+        {
+          "description": "Traza de ruta",
+          "code": "Test-NetConnection ejemplo.cl -TraceRoute"
+        },
+        {
+          "description": "Alternativa en PS 7 (multiplataforma)",
+          "code": "Test-Connection web01 -TcpPort 443"
+        }
+      ],
+      "tags": [
+        "redes",
+        "diagnóstico",
+        "puertos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Test-NetConnection solo existe en Windows. En PS 7 Test-Connection ganó -TcpPort y funciona también en Linux."
+    },
+    {
+      "title": "Resolver DNS con Resolve-DnsName",
+      "command": "Resolve-DnsName",
+      "section": "PowerShell",
+      "topic": "Redes y web",
+      "description": "Consulta registros DNS devolviendo objetos; equivalente moderno de nslookup.",
+      "examples": [
+        {
+          "description": "Registro A",
+          "code": "Resolve-DnsName app.ejemplo.cl -Type A"
+        },
+        {
+          "description": "Contra un servidor concreto",
+          "code": "Resolve-DnsName ejemplo.cl -Type MX -Server 1.1.1.1"
+        },
+        {
+          "description": "Limpiar la caché DNS",
+          "code": "Clear-DnsClientCache"
+        }
+      ],
+      "tags": [
+        "redes",
+        "dns"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Configuración de red en PowerShell",
+      "command": "Get-NetIPAddress / Get-NetAdapter",
+      "section": "PowerShell",
+      "topic": "Redes y web",
+      "description": "Consulta adaptadores, direcciones IP, rutas y servidores DNS configurados.",
+      "examples": [
+        {
+          "description": "Direcciones IPv4",
+          "code": "Get-NetIPAddress -AddressFamily IPv4 | Select-Object InterfaceAlias, IPAddress, PrefixLength"
+        },
+        {
+          "description": "Resumen por interfaz",
+          "code": "Get-NetIPConfiguration"
+        },
+        {
+          "description": "Adaptadores activos",
+          "code": "Get-NetAdapter | Where-Object Status -eq 'Up'"
+        },
+        {
+          "description": "Cambiar DNS (admin)",
+          "code": "Set-DnsClientServerAddress -InterfaceAlias 'Ethernet' -ServerAddresses 1.1.1.1, 8.8.8.8"
+        }
+      ],
+      "tags": [
+        "redes",
+        "configuración"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Conexiones TCP con Get-NetTCPConnection",
+      "command": "Get-NetTCPConnection",
+      "section": "PowerShell",
+      "topic": "Redes y web",
+      "description": "Lista conexiones y puertos en escucha con el proceso dueño, como objetos filtrables.",
+      "examples": [
+        {
+          "description": "Puertos en escucha con nombre de proceso",
+          "code": "Get-NetTCPConnection -State Listen | Select-Object LocalAddress, LocalPort, @{n='Proceso';e={(Get-Process -Id $_.OwningProcess).Name}} | Sort-Object LocalPort"
+        },
+        {
+          "description": "Conexiones establecidas a un puerto remoto",
+          "code": "Get-NetTCPConnection -State Established -RemotePort 5432"
+        }
+      ],
+      "tags": [
+        "redes",
+        "puertos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Reglas de firewall en PowerShell",
+      "command": "New-NetFirewallRule",
+      "section": "PowerShell",
+      "topic": "Redes y web",
+      "description": "Crea, consulta y elimina reglas del Firewall de Windows.",
+      "examples": [
+        {
+          "description": "Permitir un puerto entrante",
+          "code": "New-NetFirewallRule -DisplayName 'API 8000' -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Domain,Private"
+        },
+        {
+          "description": "Ver reglas habilitadas de entrada",
+          "code": "Get-NetFirewallRule -Enabled True -Direction Inbound | Select-Object -First 20 DisplayName, Profile"
+        },
+        {
+          "description": "Eliminar una regla",
+          "code": "Remove-NetFirewallRule -DisplayName 'API 8000'"
+        }
+      ],
+      "tags": [
+        "redes",
+        "firewall",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Consumir APIs REST con Invoke-RestMethod",
+      "command": "Invoke-RestMethod",
+      "section": "PowerShell",
+      "topic": "Redes y web",
+      "description": "Hace peticiones HTTP y convierte automáticamente la respuesta JSON en objetos.",
+      "examples": [
+        {
+          "description": "GET con token",
+          "code": "$headers = @{ Authorization = \"Bearer $env:API_TOKEN\" }\nInvoke-RestMethod -Uri https://api.ejemplo.cl/pedidos -Headers $headers"
+        },
+        {
+          "description": "POST con JSON",
+          "code": "$body = @{ nombre = 'demo'; total = 1990 } | ConvertTo-Json\nInvoke-RestMethod -Uri https://api.ejemplo.cl/items -Method Post -Body $body -ContentType 'application/json'"
+        },
+        {
+          "description": "Reintentos y código de estado (PS 7)",
+          "code": "Invoke-RestMethod https://api.ejemplo.cl/health -MaximumRetryCount 3 -RetryIntervalSec 2 -StatusCodeVariable sc; $sc"
+        },
+        {
+          "description": "Paginación automática por cabecera Link (PS 7)",
+          "code": "Invoke-RestMethod https://api.github.com/orgs/jenkinsci/repos -FollowRelLink -MaximumFollowRelLink 3"
+        }
+      ],
+      "tags": [
+        "api",
+        "http",
+        "rest"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "En PS 5.1, si falla TLS en servidores antiguos: [Net.ServicePointManager]::SecurityProtocol = 'Tls12'. -StatusCodeVariable, -MaximumRetryCount y -FollowRelLink son solo de PS 7."
+    },
+    {
+      "title": "Peticiones HTTP con Invoke-WebRequest",
+      "command": "Invoke-WebRequest",
+      "section": "PowerShell",
+      "topic": "Redes y web",
+      "description": "Hace peticiones HTTP y entrega la respuesta completa (código, cabeceras, contenido); útil para descargas y health checks.",
+      "examples": [
+        {
+          "description": "Descargar un archivo",
+          "code": "Invoke-WebRequest -Uri https://ejemplo.cl/agente.msi -OutFile .\\agente.msi"
+        },
+        {
+          "description": "Código y cabeceras",
+          "code": "$r = Invoke-WebRequest https://ejemplo.cl -Method Head\n$r.StatusCode; $r.Headers['Server']"
+        },
+        {
+          "description": "No fallar ante 4xx/5xx (PS 7)",
+          "code": "$r = Invoke-WebRequest https://ejemplo.cl/no-existe -SkipHttpErrorCheck; $r.StatusCode"
+        }
+      ],
+      "tags": [
+        "http",
+        "descargas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "En PS 5.1 agrega -UseBasicParsing (evita depender de Internet Explorer) y desactiva la barra de progreso con $ProgressPreference = 'SilentlyContinue' para descargas mucho más rápidas."
+    },
+    {
+      "title": "Leer eventos con Get-WinEvent",
+      "command": "Get-WinEvent",
+      "section": "PowerShell",
+      "topic": "Eventos y diagnóstico",
+      "description": "Consulta los registros de eventos de Windows (clásicos y modernos) con filtros eficientes.",
+      "examples": [
+        {
+          "description": "Errores del sistema de las últimas 24 horas",
+          "code": "Get-WinEvent -FilterHashtable @{ LogName = 'System'; Level = 2; StartTime = (Get-Date).AddDays(-1) }"
+        },
+        {
+          "description": "Inicios de sesión fallidos (ID 4625)",
+          "code": "Get-WinEvent -FilterHashtable @{ LogName = 'Security'; Id = 4625 } -MaxEvents 20"
+        },
+        {
+          "description": "Reinicios inesperados y apagados (IDs 41, 6008, 1074)",
+          "code": "Get-WinEvent -FilterHashtable @{ LogName = 'System'; Id = 41, 6008, 1074 } -MaxEvents 10 | Format-List TimeCreated, Id, Message"
+        },
+        {
+          "description": "Listar registros disponibles con eventos",
+          "code": "Get-WinEvent -ListLog * | Where-Object RecordCount -gt 0 | Sort-Object RecordCount -Descending | Select-Object -First 15 LogName, RecordCount"
+        }
+      ],
+      "tags": [
+        "eventos",
+        "logs",
+        "diagnóstico"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Software"
+      ],
+      "notes": "El registro Security requiere consola de administrador. -FilterHashtable filtra en el origen y es órdenes de magnitud más rápido que Where-Object."
+    },
+    {
+      "title": "Eventos clásicos con Get-EventLog",
+      "command": "Get-EventLog",
+      "section": "PowerShell",
+      "topic": "Eventos y diagnóstico",
+      "description": "Cmdlet antiguo para los registros clásicos (System, Application). Solo existe en Windows PowerShell 5.1.",
+      "examples": [
+        {
+          "description": "Últimos 20 errores de aplicación (PS 5.1)",
+          "code": "Get-EventLog -LogName Application -EntryType Error -Newest 20"
+        },
+        {
+          "description": "Escribir un evento propio (PS 5.1)",
+          "code": "New-EventLog -LogName Application -Source MiApp\nWrite-EventLog -LogName Application -Source MiApp -EventId 1000 -EntryType Information -Message 'Despliegue OK'"
+        }
+      ],
+      "tags": [
+        "eventos",
+        "logs",
+        "ps51"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Get-EventLog fue eliminado en PowerShell 7: usa Get-WinEvent, que funciona en ambas versiones."
+    },
+    {
+      "title": "Contadores de rendimiento",
+      "command": "Get-Counter",
+      "section": "PowerShell",
+      "topic": "Eventos y diagnóstico",
+      "description": "Lee contadores de rendimiento de Windows (CPU, memoria, disco, red) en tiempo real.",
+      "examples": [
+        {
+          "description": "CPU total cada 2 segundos, 5 muestras",
+          "code": "Get-Counter '\\Processor(_Total)\\% Processor Time' -SampleInterval 2 -MaxSamples 5"
+        },
+        {
+          "description": "Memoria disponible y cola de disco",
+          "code": "Get-Counter '\\Memory\\Available MBytes', '\\PhysicalDisk(_Total)\\Current Disk Queue Length'"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "monitoreo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "Software"
+      ],
+      "notes": "Los nombres de contadores están localizados: en un Windows en español son '\\Procesador(_Total)\\% de tiempo de procesador'."
+    },
+    {
+      "title": "Registrar la sesión con Start-Transcript",
+      "command": "Start-Transcript",
+      "section": "PowerShell",
+      "topic": "Eventos y diagnóstico",
+      "description": "Graba en un archivo todo lo que ocurre en la sesión de PowerShell; útil como evidencia de cambios en producción.",
+      "examples": [
+        {
+          "description": "Iniciar y detener la grabación",
+          "code": "Start-Transcript -Path \"C:\\logs\\cambio-$(Get-Date -Format yyyyMMdd-HHmm).txt\"\n# ... comandos del cambio ...\nStop-Transcript"
+        }
+      ],
+      "tags": [
+        "auditoría",
+        "logs"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Sesión remota interactiva",
+      "command": "Enter-PSSession",
+      "section": "PowerShell",
+      "topic": "Remoting",
+      "description": "Abre una consola interactiva en un equipo remoto vía WinRM o, en PS 7, vía SSH.",
+      "examples": [
+        {
+          "description": "Conectar por WinRM en el dominio",
+          "code": "Enter-PSSession -ComputerName srv01 -Credential DOMINIO\\admin"
+        },
+        {
+          "description": "Conectar por SSH (PS 7)",
+          "code": "Enter-PSSession -HostName srv-linux01 -UserName deploy"
+        },
+        {
+          "description": "Salir",
+          "code": "Exit-PSSession"
+        }
+      ],
+      "tags": [
+        "remoting",
+        "administración"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Antes hay que habilitar WinRM en el destino con 'Enable-PSRemoting -Force'. Fuera de un dominio se requiere HTTPS o configurar TrustedHosts."
+    },
+    {
+      "title": "Ejecutar comandos remotos con Invoke-Command",
+      "command": "Invoke-Command",
+      "section": "PowerShell",
+      "topic": "Remoting",
+      "description": "Ejecuta un bloque de script en uno o muchos equipos remotos en paralelo y devuelve los resultados como objetos.",
+      "examples": [
+        {
+          "description": "Estado de un servicio en varios servidores",
+          "code": "Invoke-Command -ComputerName web01, web02, web03 -ScriptBlock { Get-Service W3SVC } | Select-Object PSComputerName, Status"
+        },
+        {
+          "description": "Pasar variables locales",
+          "code": "$svc = 'Spooler'\nInvoke-Command -ComputerName srv01 -ScriptBlock { Restart-Service $using:svc }"
+        },
+        {
+          "description": "Ejecutar un script local en remoto",
+          "code": "Invoke-Command -ComputerName srv01 -FilePath .\\diagnostico.ps1"
+        },
+        {
+          "description": "Sesión reutilizable",
+          "code": "$s = New-PSSession -ComputerName srv01\nInvoke-Command -Session $s { $env:COMPUTERNAME }\nRemove-PSSession $s"
+        }
+      ],
+      "tags": [
+        "remoting",
+        "automatización"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Habilitar PowerShell Remoting",
+      "command": "Enable-PSRemoting",
+      "section": "PowerShell",
+      "topic": "Remoting",
+      "description": "Configura WinRM, el listener y el firewall para aceptar sesiones remotas de PowerShell.",
+      "examples": [
+        {
+          "description": "Habilitar en el servidor (admin)",
+          "code": "Enable-PSRemoting -Force"
+        },
+        {
+          "description": "Confiar en un host fuera de dominio (en el cliente)",
+          "code": "Set-Item WSMan:\\localhost\\Client\\TrustedHosts -Value 'srv01.lab.local' -Concatenate -Force"
+        },
+        {
+          "description": "Probar WinRM",
+          "code": "Test-WSMan srv01"
+        }
+      ],
+      "tags": [
+        "remoting",
+        "configuración"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Ejecútalo en cada versión de PowerShell que quieras exponer: en PS 7 registra el endpoint 'PowerShell.7'."
+    },
+    {
+      "title": "Información del equipo",
+      "command": "Get-ComputerInfo / Get-CimInstance",
+      "section": "PowerShell",
+      "topic": "Sistema y registro",
+      "description": "Obtiene inventario del sistema: versión de Windows, BIOS, CPU, memoria y discos. Get-CimInstance reemplaza a Get-WmiObject y a wmic.",
+      "examples": [
+        {
+          "description": "Datos clave del sistema",
+          "code": "Get-ComputerInfo -Property OsName, OsVersion, OsBuildNumber, CsTotalPhysicalMemory, OsLastBootUpTime"
+        },
+        {
+          "description": "Último arranque",
+          "code": "(Get-CimInstance Win32_OperatingSystem).LastBootUpTime"
+        },
+        {
+          "description": "Número de serie y modelo",
+          "code": "Get-CimInstance Win32_BIOS | Select-Object SerialNumber\nGet-CimInstance Win32_ComputerSystem | Select-Object Manufacturer, Model"
+        },
+        {
+          "description": "Espacio libre por disco",
+          "code": "Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID, @{n='LibreGB';e={[math]::Round($_.FreeSpace/1GB,1)}}, @{n='TotalGB';e={[math]::Round($_.Size/1GB,1)}}"
+        }
+      ],
+      "tags": [
+        "sistema",
+        "inventario"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Get-WmiObject no existe en PS 7 y wmic está en retirada en Windows 11: usa Get-CimInstance."
+    },
+    {
+      "title": "Espacio en disco y volúmenes",
+      "command": "Get-Volume / Get-PSDrive",
+      "section": "PowerShell",
+      "topic": "Sistema y registro",
+      "description": "Muestra volúmenes con su espacio libre y las unidades disponibles en PowerShell (incluidas HKLM:, Env:, Cert:).",
+      "examples": [
+        {
+          "description": "Volúmenes y espacio",
+          "code": "Get-Volume | Where-Object DriveLetter | Select-Object DriveLetter, FileSystemLabel, @{n='LibreGB';e={[math]::Round($_.SizeRemaining/1GB,1)}}"
+        },
+        {
+          "description": "Unidades de sistema de archivos",
+          "code": "Get-PSDrive -PSProvider FileSystem"
+        },
+        {
+          "description": "Carpetas más pesadas",
+          "code": "Get-ChildItem C:\\Users\\Nicol -Directory | ForEach-Object { [pscustomobject]@{ Carpeta = $_.Name; GB = [math]::Round((Get-ChildItem $_.FullName -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum/1GB,2) } } | Sort-Object GB -Descending"
+        }
+      ],
+      "tags": [
+        "disco",
+        "almacenamiento"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Leer y escribir el registro",
+      "command": "HKLM: / HKCU:",
+      "section": "PowerShell",
+      "topic": "Sistema y registro",
+      "description": "El registro se navega como unidades de PowerShell: se lee con Get-ItemProperty y se modifica con Set-ItemProperty / New-ItemProperty.",
+      "examples": [
+        {
+          "description": "Leer versión de Windows",
+          "code": "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion' | Select-Object ProductName, DisplayVersion, CurrentBuild"
+        },
+        {
+          "description": "Crear clave y valor",
+          "code": "New-Item -Path 'HKCU:\\Software\\MiApp' -Force | Out-Null\nNew-ItemProperty -Path 'HKCU:\\Software\\MiApp' -Name Debug -Value 1 -PropertyType DWord -Force"
+        },
+        {
+          "description": "Software instalado",
+          "code": "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' | Where-Object DisplayName | Select-Object DisplayName, DisplayVersion | Sort-Object DisplayName"
+        },
+        {
+          "description": "Habilitar rutas largas (admin)",
+          "code": "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem' -Name LongPathsEnabled -Value 1"
+        }
+      ],
+      "tags": [
+        "registro",
+        "configuración"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "En Windows 11, ProductName puede seguir diciendo 'Windows 10': usa CurrentBuild >= 22000 para distinguirlo."
+    },
+    {
+      "title": "Tareas programadas en PowerShell",
+      "command": "Register-ScheduledTask",
+      "section": "PowerShell",
+      "topic": "Sistema y registro",
+      "description": "Crea tareas del Programador de tareas con acciones, disparadores y configuraciones como objetos.",
+      "examples": [
+        {
+          "description": "Tarea diaria que ejecuta un script",
+          "code": "$accion = New-ScheduledTaskAction -Execute 'pwsh.exe' -Argument '-NoProfile -File C:\\scripts\\respaldo.ps1'\n$disparador = New-ScheduledTaskTrigger -Daily -At 3am\n$config = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2)\nRegister-ScheduledTask -TaskName 'Respaldo diario' -Action $accion -Trigger $disparador -Settings $config -User 'SYSTEM' -RunLevel Highest"
+        },
+        {
+          "description": "Ejecutar, ver estado y último resultado",
+          "code": "Start-ScheduledTask -TaskName 'Respaldo diario'\nGet-ScheduledTask -TaskName 'Respaldo diario' | Get-ScheduledTaskInfo"
+        },
+        {
+          "description": "Eliminar",
+          "code": "Unregister-ScheduledTask -TaskName 'Respaldo diario' -Confirm:$false"
+        }
+      ],
+      "tags": [
+        "tareas",
+        "automatización"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "LastTaskResult = 0 es éxito; 267009 (0x41301) significa que está en ejecución."
+    },
+    {
+      "title": "Actualizaciones instaladas y reinicio",
+      "command": "Get-HotFix / Restart-Computer",
+      "section": "PowerShell",
+      "topic": "Sistema y registro",
+      "description": "Lista parches instalados y reinicia equipos locales o remotos, esperando opcionalmente a que vuelvan.",
+      "examples": [
+        {
+          "description": "Últimos parches instalados",
+          "code": "Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 10 HotFixID, Description, InstalledOn"
+        },
+        {
+          "description": "Reiniciar un servidor remoto y esperar a PowerShell",
+          "code": "Restart-Computer -ComputerName srv01 -Wait -For PowerShell -Timeout 600 -Force"
+        }
+      ],
+      "tags": [
+        "sistema",
+        "parches"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Portapapeles desde PowerShell",
+      "command": "Get-Clipboard / Set-Clipboard",
+      "section": "PowerShell",
+      "topic": "Sistema y registro",
+      "description": "Copia y pega texto del portapapeles desde scripts y la consola.",
+      "examples": [
+        {
+          "description": "Copiar la salida de un comando",
+          "code": "Get-Content .\\id_ed25519.pub | Set-Clipboard"
+        },
+        {
+          "description": "Procesar texto copiado",
+          "code": "Get-Clipboard | Where-Object { $_ -match 'ERROR' }"
+        }
+      ],
+      "tags": [
+        "productividad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software"
+      ],
+      "notes": "En PS 7 sobre Linux requiere xclip o wl-clipboard."
+    },
+    {
+      "title": "Permisos NTFS con Get-Acl y Set-Acl",
+      "command": "Get-Acl / Set-Acl",
+      "section": "PowerShell",
+      "topic": "Usuarios y permisos",
+      "description": "Lee y modifica las ACL de archivos, carpetas y claves de registro como objetos.",
+      "examples": [
+        {
+          "description": "Ver permisos legibles",
+          "code": "(Get-Acl C:\\apps\\api).Access | Select-Object IdentityReference, FileSystemRights, AccessControlType, IsInherited"
+        },
+        {
+          "description": "Dar modificación heredable a un usuario",
+          "code": "$acl = Get-Acl C:\\apps\\api\n$regla = [System.Security.AccessControl.FileSystemAccessRule]::new('DOMINIO\\deploy', 'Modify', 'ContainerInherit,ObjectInherit', 'None', 'Allow')\n$acl.AddAccessRule($regla)\nSet-Acl -Path C:\\apps\\api -AclObject $acl"
+        },
+        {
+          "description": "Copiar las ACL de una carpeta a otra",
+          "code": "Get-Acl C:\\plantilla | Set-Acl C:\\nueva"
+        }
+      ],
+      "tags": [
+        "permisos",
+        "acl",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Para cambios masivos y simples, icacls suele ser más rápido y directo."
+    },
+    {
+      "title": "Usuarios y grupos locales en PowerShell",
+      "command": "Get-LocalUser / New-LocalUser",
+      "section": "PowerShell",
+      "topic": "Usuarios y permisos",
+      "description": "Gestiona cuentas y grupos locales con el módulo Microsoft.PowerShell.LocalAccounts.",
+      "examples": [
+        {
+          "description": "Listar usuarios habilitados",
+          "code": "Get-LocalUser | Where-Object Enabled"
+        },
+        {
+          "description": "Crear usuario con contraseña segura",
+          "code": "$pass = Read-Host -AsSecureString 'Contraseña'\nNew-LocalUser -Name deploy -Password $pass -FullName 'Usuario de despliegue' -PasswordNeverExpires"
+        },
+        {
+          "description": "Agregar a un grupo",
+          "code": "Add-LocalGroupMember -Group 'Administradores' -Member deploy"
+        },
+        {
+          "description": "Miembros de un grupo",
+          "code": "Get-LocalGroupMember -Group 'Administradores'"
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "grupos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "En PS 7 este módulo funciona a través de la capa de compatibilidad con Windows PowerShell."
+    },
+    {
+      "title": "Credenciales seguras",
+      "command": "Get-Credential / SecretManagement",
+      "section": "PowerShell",
+      "topic": "Usuarios y permisos",
+      "description": "Pide credenciales sin dejarlas en texto plano y permite almacenarlas en una bóveda local con SecretManagement.",
+      "examples": [
+        {
+          "description": "Pedir credenciales interactivas",
+          "code": "$cred = Get-Credential DOMINIO\\admin\nInvoke-Command -ComputerName srv01 -Credential $cred { hostname }"
+        },
+        {
+          "description": "Bóveda local con SecretStore",
+          "code": "Install-Module Microsoft.PowerShell.SecretManagement, Microsoft.PowerShell.SecretStore -Scope CurrentUser\nRegister-SecretVault -Name Local -ModuleName Microsoft.PowerShell.SecretStore -DefaultVault\nSet-Secret -Name ApiToken -Secret 'xyz'\n$token = Get-Secret -Name ApiToken -AsPlainText"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "credenciales",
+        "secretos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Instalar WSL",
+      "command": "wsl --install",
+      "section": "PowerShell",
+      "topic": "WSL",
+      "description": "Instala el Subsistema de Windows para Linux con Ubuntu por defecto, o la distribución que elijas.",
+      "examples": [
+        {
+          "description": "Instalar con la distro por defecto (admin, requiere reinicio)",
+          "code": "wsl --install"
+        },
+        {
+          "description": "Distribuciones disponibles en línea",
+          "code": "wsl --list --online"
+        },
+        {
+          "description": "Instalar una distro concreta",
+          "code": "wsl --install -d Ubuntu-24.04"
+        },
+        {
+          "description": "Actualizar el kernel y componentes de WSL",
+          "code": "wsl --update"
+        }
+      ],
+      "tags": [
+        "wsl",
+        "linux",
+        "instalación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Gestionar distribuciones WSL",
+      "command": "wsl --list --verbose",
+      "section": "PowerShell",
+      "topic": "WSL",
+      "description": "Lista distribuciones con su estado y versión de WSL; permite apagarlas, elegir la predeterminada o ejecutar comandos.",
+      "examples": [
+        {
+          "description": "Ver distros, estado y versión",
+          "code": "wsl -l -v"
+        },
+        {
+          "description": "Apagar todas las distros (libera memoria)",
+          "code": "wsl --shutdown"
+        },
+        {
+          "description": "Distro predeterminada",
+          "code": "wsl --set-default Ubuntu-24.04"
+        },
+        {
+          "description": "Ejecutar un comando en una distro como root",
+          "code": "wsl -d Ubuntu-24.04 -u root -- apt update"
+        }
+      ],
+      "tags": [
+        "wsl",
+        "linux"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software",
+        "Cloud"
+      ],
+      "notes": "Tras editar %UserProfile%\\.wslconfig (memoria, CPU, networkingMode=mirrored) ejecuta 'wsl --shutdown' para que se aplique."
+    },
+    {
+      "title": "Respaldar y mover distros WSL",
+      "command": "wsl --export / --import",
+      "section": "PowerShell",
+      "topic": "WSL",
+      "description": "Exporta una distribución completa a un .tar y la importa en otra ubicación o equipo.",
+      "examples": [
+        {
+          "description": "Respaldar",
+          "code": "wsl --export Ubuntu-24.04 D:\\respaldos\\ubuntu.tar"
+        },
+        {
+          "description": "Restaurar en otro disco",
+          "code": "wsl --import Ubuntu-Dev D:\\wsl\\ubuntu-dev D:\\respaldos\\ubuntu.tar"
+        },
+        {
+          "description": "Eliminar una distro (borra sus datos)",
+          "code": "wsl --unregister Ubuntu-Dev"
+        }
+      ],
+      "tags": [
+        "wsl",
+        "respaldo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software",
+        "Cloud"
+      ],
+      "notes": "--unregister borra el disco virtual sin pedir confirmación: exporta antes."
+    }
+  ]
+}

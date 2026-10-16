@@ -1,0 +1,595 @@
+{
+  "category": {
+    "slug": "ansible",
+    "name": "Ansible",
+    "icon": "settings_suggest",
+    "order": 8,
+    "description": "Gestión de configuración con Ansible: ad-hoc, playbooks, inventarios, roles, Vault y calidad."
+  },
+  "commands": [
+    {
+      "title": "Probar conectividad con ping",
+      "command": "ansible all -i inventory.ini -m ping",
+      "section": "Ad-hoc",
+      "topic": "Conectividad",
+      "description": "Verifica SSH, autenticación y Python en los hosts. No es un ping ICMP: devuelve pong si Ansible puede ejecutar módulos.",
+      "syntax": "ansible PATRÓN -i INVENTARIO -m MÓDULO [-a ARGS] [-b] [-l LÍMITE]",
+      "examples": [
+        {
+          "description": "Solo un grupo",
+          "code": "ansible web -i inventory.yml -m ping"
+        },
+        {
+          "description": "Con otro usuario y llave",
+          "code": "ansible all -i inventory.ini -m ping -u ubuntu --private-key ~/.ssh/lab_ed25519"
+        },
+        {
+          "description": "Salida en una línea por host",
+          "code": "ansible all -m ping -o"
+        }
+      ],
+      "tags": [
+        "ping",
+        "conectividad",
+        "ad-hoc"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si falla con 'python not found', define ansible_python_interpreter o instala python3 en el host."
+    },
+    {
+      "title": "Ejecutar un comando en varios hosts",
+      "command": "ansible web -a 'uptime'",
+      "section": "Ad-hoc",
+      "topic": "Comandos",
+      "description": "Sin -m se usa el módulo command, que ejecuta sin shell (sin pipes, redirecciones ni variables de entorno).",
+      "examples": [
+        {
+          "description": "Necesitas pipes: usar shell",
+          "code": "ansible web -m ansible.builtin.shell -a 'df -h | grep -v tmpfs'"
+        },
+        {
+          "description": "Con privilegios",
+          "code": "ansible db -b -a 'systemctl is-active postgresql'"
+        },
+        {
+          "description": "Más paralelismo",
+          "code": "ansible all -f 30 -a 'cat /etc/os-release'"
+        }
+      ],
+      "tags": [
+        "command",
+        "shell",
+        "ad-hoc"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Escalar privilegios con become",
+      "command": "ansible all -b -K -m ansible.builtin.apt -a 'update_cache=yes'",
+      "section": "Ad-hoc",
+      "topic": "Comandos",
+      "description": "-b (--become) ejecuta como root vía sudo; -K pide la contraseña de sudo. --become-user cambia a otro usuario.",
+      "examples": [
+        {
+          "description": "Como el usuario postgres",
+          "code": "ansible db -b --become-user postgres -a 'psql -c \"select 1\"'"
+        },
+        {
+          "description": "Método su en lugar de sudo",
+          "code": "ansible legado -b --become-method su -K -a 'whoami'"
+        }
+      ],
+      "tags": [
+        "become",
+        "sudo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Instalar paquetes ad-hoc en Ubuntu y AlmaLinux",
+      "command": "ansible ubuntu -b -m ansible.builtin.apt -a 'name=htop state=present update_cache=yes'",
+      "section": "Ad-hoc",
+      "topic": "Paquetes",
+      "description": "Usa el módulo del gestor de paquetes de cada familia o el genérico package.",
+      "examples": [
+        {
+          "description": "AlmaLinux con dnf",
+          "code": "ansible alma -b -m ansible.builtin.dnf -a 'name=htop state=present'"
+        },
+        {
+          "description": "Genérico para ambos",
+          "code": "ansible all -b -m ansible.builtin.package -a 'name=git state=latest'"
+        },
+        {
+          "description": "Actualizar todo en Ubuntu",
+          "code": "ansible ubuntu -b -m ansible.builtin.apt -a 'upgrade=dist update_cache=yes'"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "apt",
+        "dnf"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux paquetes como htop vienen de EPEL: instala antes epel-release."
+    },
+    {
+      "title": "Gestionar servicios ad-hoc",
+      "command": "ansible web -b -m ansible.builtin.service -a 'name=nginx state=restarted'",
+      "section": "Ad-hoc",
+      "topic": "Servicios",
+      "description": "Inicia, detiene, reinicia o habilita servicios en lote.",
+      "examples": [
+        {
+          "description": "Habilitar y arrancar con systemd",
+          "code": "ansible web -b -m ansible.builtin.systemd_service -a 'name=nginx state=started enabled=true'"
+        },
+        {
+          "description": "Recargar systemd tras cambiar unidades",
+          "code": "ansible all -b -m ansible.builtin.systemd_service -a 'daemon_reload=true'"
+        }
+      ],
+      "tags": [
+        "servicios",
+        "systemd"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Copiar archivos ad-hoc",
+      "command": "ansible web -b -m ansible.builtin.copy -a 'src=./motd dest=/etc/motd mode=0644'",
+      "section": "Ad-hoc",
+      "topic": "Archivos",
+      "description": "Distribuye archivos o contenido a muchos hosts con permisos y respaldo opcionales.",
+      "examples": [
+        {
+          "description": "Contenido en línea",
+          "code": "ansible all -b -m ansible.builtin.copy -a 'content=\"Gestionado por Ansible\\n\" dest=/etc/motd'"
+        },
+        {
+          "description": "Traer archivos de los hosts al controlador",
+          "code": "ansible web -b -m ansible.builtin.fetch -a 'src=/var/log/nginx/error.log dest=./logs/'"
+        },
+        {
+          "description": "Crear un directorio",
+          "code": "ansible web -b -m ansible.builtin.file -a 'path=/opt/app state=directory owner=app mode=0750'"
+        }
+      ],
+      "tags": [
+        "copy",
+        "fetch",
+        "archivos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Recolectar facts de los hosts",
+      "command": "ansible web -m ansible.builtin.setup",
+      "section": "Ad-hoc",
+      "topic": "Facts",
+      "description": "Devuelve la información que Ansible descubre de cada host: SO, IPs, memoria, discos, etc. Con filter se acota.",
+      "examples": [
+        {
+          "description": "Solo la distribución",
+          "code": "ansible all -m ansible.builtin.setup -a 'filter=ansible_distribution*'"
+        },
+        {
+          "description": "Subconjunto mínimo de facts",
+          "code": "ansible all -m ansible.builtin.setup -a 'gather_subset=!all,!min,network'"
+        },
+        {
+          "description": "Guardar facts en archivos por host",
+          "code": "ansible all -m ansible.builtin.setup --tree /tmp/facts"
+        }
+      ],
+      "tags": [
+        "facts",
+        "setup"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Gestionar usuarios ad-hoc",
+      "command": "ansible all -b -m ansible.builtin.user -a 'name=deploy groups=sudo append=true shell=/bin/bash'",
+      "section": "Ad-hoc",
+      "topic": "Usuarios",
+      "description": "Crea, modifica o elimina usuarios en todos los hosts.",
+      "examples": [
+        {
+          "description": "Eliminar un usuario y su home",
+          "code": "ansible all -b -m ansible.builtin.user -a 'name=exempleado state=absent remove=true'"
+        },
+        {
+          "description": "Agregar llave SSH autorizada",
+          "code": "ansible all -b -m ansible.posix.authorized_key -a \"user=deploy key='{{ lookup('file', '~/.ssh/id_ed25519.pub') }}'\""
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "ssh"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux el grupo de administradores es wheel; en Ubuntu, sudo."
+    },
+    {
+      "title": "Reiniciar hosts y esperar",
+      "command": "ansible web -b -m ansible.builtin.reboot -a 'reboot_timeout=600'",
+      "section": "Ad-hoc",
+      "topic": "Servicios",
+      "description": "Reinicia los hosts, espera a que vuelvan por SSH y verifica que respondan.",
+      "examples": [
+        {
+          "description": "Reiniciar de a uno",
+          "code": "ansible web -b -f 1 -m ansible.builtin.reboot"
+        },
+        {
+          "description": "Verificar si Ubuntu pide reinicio",
+          "code": "ansible ubuntu -m ansible.builtin.stat -a 'path=/var/run/reboot-required'"
+        }
+      ],
+      "tags": [
+        "reboot",
+        "mantenimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ver qué hosts coinciden con un patrón",
+      "command": "ansible 'web:&prod' --list-hosts",
+      "section": "Ad-hoc",
+      "topic": "Patrones",
+      "description": "Lista los hosts seleccionados por un patrón sin ejecutar nada. Patrones: unión (:), intersección (:&), exclusión (:!) y comodines.",
+      "examples": [
+        {
+          "description": "Todos menos la base de datos",
+          "code": "ansible 'all:!db' --list-hosts"
+        },
+        {
+          "description": "Comodines y rangos",
+          "code": "ansible 'web0[1:3]*' --list-hosts"
+        },
+        {
+          "description": "Expresión regular",
+          "code": "ansible '~(web|api)-\\d+' --list-hosts"
+        }
+      ],
+      "tags": [
+        "patrones",
+        "limit"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Evaluar variables con el módulo debug",
+      "command": "ansible web -m ansible.builtin.debug -a 'var=ansible_host'",
+      "section": "Ad-hoc",
+      "topic": "Facts",
+      "description": "Muestra el valor resuelto de una variable para cada host, considerando inventario, group_vars y host_vars.",
+      "examples": [
+        {
+          "description": "Evaluar una expresión Jinja",
+          "code": "ansible all -m ansible.builtin.debug -a 'msg={{ groups[\"web\"] | length }}'"
+        },
+        {
+          "description": "En localhost sin inventario",
+          "code": "ansible localhost -m ansible.builtin.debug -a 'msg={{ \"10.0.0.0/24\" | ansible.utils.ipaddr(\"size\") }}'"
+        }
+      ],
+      "tags": [
+        "debug",
+        "variables"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ad-hoc en modo simulación",
+      "command": "ansible web -b -C -D -m ansible.builtin.lineinfile -a 'path=/etc/ssh/sshd_config regexp=^PermitRootLogin line=\"PermitRootLogin no\"'",
+      "section": "Ad-hoc",
+      "topic": "Archivos",
+      "description": "-C (check) y -D (diff) muestran qué cambiaría sin aplicarlo, también en comandos ad-hoc.",
+      "examples": [
+        {
+          "description": "Aplicar después de revisar",
+          "code": "ansible web -b -m ansible.builtin.lineinfile -a 'path=/etc/ssh/sshd_config regexp=^PermitRootLogin line=\"PermitRootLogin no\" validate=\"sshd -t -f %s\"'"
+        }
+      ],
+      "tags": [
+        "check",
+        "diff",
+        "ssh"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "validate evita dejar un sshd_config roto que te cierre el acceso al servidor."
+    },
+    {
+      "title": "Inventario en formato INI",
+      "command": "ansible-inventory -i inventory.ini --graph",
+      "section": "Inventario",
+      "topic": "Formatos",
+      "description": "Formato clásico con grupos entre corchetes, variables por host y grupos hijos.",
+      "examples": [
+        {
+          "description": "inventory.ini",
+          "code": "[web]\nweb01 ansible_host=10.0.1.11\nweb02 ansible_host=10.0.1.12\n\n[db]\ndb01 ansible_host=10.0.2.21 ansible_user=almalinux\n\n[ubuntu:children]\nweb\n\n[alma:children]\ndb\n\n[all:vars]\nansible_user=ubuntu\nansible_python_interpreter=/usr/bin/python3"
+        }
+      ],
+      "tags": [
+        "inventario",
+        "ini"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Inventario en formato YAML",
+      "command": "ansible-inventory -i inventory.yml --list",
+      "section": "Inventario",
+      "topic": "Formatos",
+      "description": "Formato estructurado, más legible para jerarquías y variables complejas.",
+      "examples": [
+        {
+          "description": "inventory.yml",
+          "code": "all:\n  vars:\n    ansible_python_interpreter: /usr/bin/python3\n  children:\n    prod:\n      children:\n        web:\n          hosts:\n            web01: { ansible_host: 10.0.1.11 }\n            web02: { ansible_host: 10.0.1.12 }\n          vars:\n            ansible_user: ubuntu\n        db:\n          hosts:\n            db01:\n              ansible_host: 10.0.2.21\n              ansible_user: almalinux\n              postgres_version: 17"
+        }
+      ],
+      "tags": [
+        "inventario",
+        "yaml"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ver el inventario resuelto",
+      "command": "ansible-inventory -i inventory.yml --graph",
+      "section": "Inventario",
+      "topic": "Inspección",
+      "description": "Muestra la jerarquía de grupos o el inventario completo con variables fusionadas, ideal para depurar precedencias.",
+      "examples": [
+        {
+          "description": "Árbol con variables",
+          "code": "ansible-inventory -i inventory.yml --graph --vars"
+        },
+        {
+          "description": "Variables finales de un host",
+          "code": "ansible-inventory -i inventory.yml --host db01"
+        },
+        {
+          "description": "Exportar a YAML",
+          "code": "ansible-inventory -i aws_ec2.yml --list --yaml > inventario-estatico.yml"
+        }
+      ],
+      "tags": [
+        "ansible-inventory",
+        "depuracion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Variables de grupo y de host",
+      "command": "tree group_vars host_vars",
+      "section": "Inventario",
+      "topic": "Variables",
+      "description": "group_vars/<grupo>.yml y host_vars/<host>.yml junto al inventario o al playbook separan datos de la lógica.",
+      "examples": [
+        {
+          "description": "Estructura típica",
+          "code": "inventories/\n├── prod/\n│   ├── hosts.yml\n│   ├── group_vars/\n│   │   ├── all.yml\n│   │   ├── web.yml\n│   │   └── db/\n│   │       ├── main.yml\n│   │       └── vault.yml\n│   └── host_vars/\n│       └── db01.yml\n└── staging/\n    └── hosts.yml"
+        },
+        {
+          "description": "group_vars/web.yml",
+          "code": "nginx_worker_processes: auto\napp_port: 8000\nfirewall_puertos: [80, 443]"
+        }
+      ],
+      "tags": [
+        "group_vars",
+        "host_vars",
+        "variables"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Precedencia simplificada: host_vars gana a group_vars de grupo hijo, que gana a group_vars/all; las extra vars (-e) ganan a todo."
+    },
+    {
+      "title": "Variables de conexión del inventario",
+      "command": "ansible-inventory --host web01",
+      "section": "Inventario",
+      "topic": "Variables",
+      "description": "Variables especiales que controlan cómo Ansible se conecta a cada host.",
+      "examples": [
+        {
+          "description": "Conexión con bastión por ProxyJump",
+          "code": "web01:\n  ansible_host: 10.0.1.11\n  ansible_user: ubuntu\n  ansible_port: 22\n  ansible_ssh_private_key_file: ~/.ssh/prod_ed25519\n  ansible_ssh_common_args: \"-o ProxyJump=deploy@bastion.ejemplo.cl\""
+        },
+        {
+          "description": "Ejecutar en el controlador local",
+          "code": "localhost:\n  ansible_connection: local\n  ansible_python_interpreter: \"{{ ansible_playbook_python }}\""
+        }
+      ],
+      "tags": [
+        "conexion",
+        "ssh",
+        "bastion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Inventario dinámico de AWS EC2",
+      "command": "ansible-inventory -i aws_ec2.yml --graph",
+      "section": "Inventario",
+      "topic": "Dinámico",
+      "description": "El plugin amazon.aws.aws_ec2 consulta EC2 y agrupa instancias por etiquetas, región o tipo, sin mantener listas a mano.",
+      "examples": [
+        {
+          "description": "aws_ec2.yml",
+          "code": "plugin: amazon.aws.aws_ec2\nregions:\n  - us-east-1\nfilters:\n  instance-state-name: running\n  tag:Proyecto: tienda\nkeyed_groups:\n  - key: tags.Rol\n    prefix: rol\n  - key: placement.availability_zone\n    prefix: az\nhostnames:\n  - tag:Name\ncompose:\n  ansible_host: private_ip_address"
+        },
+        {
+          "description": "Instalar la colección y dependencias",
+          "code": "ansible-galaxy collection install amazon.aws && pip install boto3 botocore"
+        },
+        {
+          "description": "Usarlo en un playbook",
+          "code": "ansible-playbook -i aws_ec2.yml site.yml -l rol_web"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "inventario-dinamico"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El nombre del archivo debe terminar en aws_ec2.yml o aws_ec2.yaml para que el plugin lo reconozca."
+    },
+    {
+      "title": "Grupos construidos con el plugin constructed",
+      "command": "ansible-inventory -i inventory.yml -i constructed.yml --graph",
+      "section": "Inventario",
+      "topic": "Dinámico",
+      "description": "constructed crea grupos y variables a partir de expresiones sobre otras variables o facts, combinable con cualquier inventario.",
+      "examples": [
+        {
+          "description": "constructed.yml que agrupa por distribución",
+          "code": "plugin: ansible.builtin.constructed\nstrict: false\nkeyed_groups:\n  - key: ansible_distribution | lower\n    prefix: os\ngroups:\n  produccion: \"'prod' in group_names\""
+        }
+      ],
+      "tags": [
+        "constructed",
+        "inventario"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para agrupar por facts, estos deben estar en caché (fact caching) o el grupo saldrá vacío."
+    },
+    {
+      "title": "Limitar la ejecución a algunos hosts",
+      "command": "ansible-playbook site.yml -l web01",
+      "section": "Inventario",
+      "topic": "Patrones",
+      "description": "--limit (-l) restringe el playbook a un subconjunto con la misma sintaxis de patrones.",
+      "examples": [
+        {
+          "description": "Varios hosts o grupos",
+          "code": "ansible-playbook site.yml -l 'web01,db01'"
+        },
+        {
+          "description": "Reintentar solo los fallidos",
+          "code": "ansible-playbook site.yml -l @site.retry"
+        },
+        {
+          "description": "Desde un archivo",
+          "code": "ansible-playbook site.yml -l @hosts-mantenimiento.txt"
+        }
+      ],
+      "tags": [
+        "limit",
+        "patrones"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los .retry solo se generan si retry_files_enabled = True en ansible.cfg (desactivado por defecto)."
+    },
+    {
+      "title": "Varios inventarios a la vez",
+      "command": "ansible-playbook -i inventories/prod -i aws_ec2.yml site.yml",
+      "section": "Inventario",
+      "topic": "Formatos",
+      "description": "Ansible fusiona varios -i, o todos los archivos de un directorio de inventario.",
+      "examples": [
+        {
+          "description": "Directorio como inventario",
+          "code": "ansible-inventory -i inventories/prod/ --graph"
+        },
+        {
+          "description": "Inventario por defecto en ansible.cfg",
+          "code": "[defaults]\ninventory = inventories/prod/hosts.yml"
+        }
+      ],
+      "tags": [
+        "inventario",
+        "multiple"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    }
+  ]
+}

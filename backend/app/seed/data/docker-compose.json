@@ -1,0 +1,653 @@
+{
+  "category": {
+    "slug": "docker",
+    "name": "Docker",
+    "icon": "directions_boat",
+    "order": 5,
+    "description": "Contenedores con Docker Engine y Compose actualizados: imágenes, buildx, redes, volúmenes, seguridad y diagnóstico."
+  },
+  "commands": [
+    {
+      "title": "Levantar servicios con Compose",
+      "command": "docker compose up -d",
+      "section": "Compose",
+      "topic": "Ciclo de vida",
+      "description": "Crea redes, volúmenes y contenedores definidos en compose.yaml y los deja corriendo en segundo plano.",
+      "syntax": "docker compose [-f ARCHIVO] [-p PROYECTO] up [opciones] [SERVICIO...]",
+      "examples": [
+        {
+          "description": "Reconstruir imágenes antes de levantar",
+          "code": "docker compose up -d --build"
+        },
+        {
+          "description": "Esperar a que todos estén healthy (ideal en CI)",
+          "code": "docker compose up -d --wait --wait-timeout 120"
+        },
+        {
+          "description": "Recrear todo y quitar servicios huérfanos",
+          "code": "docker compose up -d --force-recreate --remove-orphans"
+        },
+        {
+          "description": "Levantar solo un servicio y sus dependencias",
+          "code": "docker compose up -d api"
+        }
+      ],
+      "tags": [
+        "compose",
+        "up"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Usa siempre 'docker compose' (plugin v2 o superior, hoy Compose v5). El binario docker-compose v1 en Python está retirado y no recibe soporte."
+    },
+    {
+      "title": "Bajar servicios con Compose",
+      "command": "docker compose down",
+      "section": "Compose",
+      "topic": "Ciclo de vida",
+      "description": "Detiene y elimina contenedores y redes del proyecto. Los volúmenes nombrados se conservan salvo que pidas lo contrario.",
+      "examples": [
+        {
+          "description": "Eliminar también volúmenes (borra datos)",
+          "code": "docker compose down -v"
+        },
+        {
+          "description": "Eliminar también las imágenes construidas localmente",
+          "code": "docker compose down --rmi local"
+        },
+        {
+          "description": "Con timeout de apagado",
+          "code": "docker compose down -t 30"
+        }
+      ],
+      "tags": [
+        "compose",
+        "down"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "down -v elimina los volúmenes declarados: la base de datos de desarrollo se pierde por completo. Respáldala antes."
+    },
+    {
+      "title": "Ver logs de Compose",
+      "command": "docker compose logs -f api",
+      "section": "Compose",
+      "topic": "Observabilidad",
+      "description": "Muestra la salida combinada de los servicios, con prefijo de color por servicio.",
+      "examples": [
+        {
+          "description": "Últimas 50 líneas de todos con timestamp",
+          "code": "docker compose logs --tail 50 -t"
+        },
+        {
+          "description": "Desde hace 15 minutos sin prefijos",
+          "code": "docker compose logs --since 15m --no-log-prefix worker"
+        }
+      ],
+      "tags": [
+        "compose",
+        "logs"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Estado de servicios de Compose",
+      "command": "docker compose ps",
+      "section": "Compose",
+      "topic": "Observabilidad",
+      "description": "Lista los contenedores del proyecto con su estado, salud y puertos.",
+      "examples": [
+        {
+          "description": "Incluir detenidos",
+          "code": "docker compose ps -a"
+        },
+        {
+          "description": "Solo los nombres de servicios corriendo",
+          "code": "docker compose ps --services --filter status=running"
+        },
+        {
+          "description": "Formato JSON",
+          "code": "docker compose ps --format json | jq"
+        }
+      ],
+      "tags": [
+        "compose",
+        "ps"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ejecutar comando en un servicio",
+      "command": "docker compose exec api sh",
+      "section": "Compose",
+      "topic": "Acceso",
+      "description": "Abre un proceso dentro del contenedor ya corriendo de un servicio.",
+      "examples": [
+        {
+          "description": "Migraciones de Django",
+          "code": "docker compose exec api python manage.py migrate"
+        },
+        {
+          "description": "Sin TTY, para scripts o CI",
+          "code": "docker compose exec -T db pg_dump -U postgres app > backup.sql"
+        },
+        {
+          "description": "Como root en una réplica concreta",
+          "code": "docker compose exec -u root --index 2 worker sh"
+        }
+      ],
+      "tags": [
+        "compose",
+        "exec"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Tarea puntual con Compose run",
+      "command": "docker compose run --rm api pytest -q",
+      "section": "Compose",
+      "topic": "Acceso",
+      "description": "Crea un contenedor nuevo de un servicio para una tarea única, con su misma configuración, redes y volúmenes.",
+      "examples": [
+        {
+          "description": "Sin levantar las dependencias",
+          "code": "docker compose run --rm --no-deps api python manage.py check"
+        },
+        {
+          "description": "Publicando los puertos del servicio",
+          "code": "docker compose run --rm --service-ports api"
+        },
+        {
+          "description": "Sobrescribiendo variables",
+          "code": "docker compose run --rm -e LOG_LEVEL=debug worker python -m tasks.reindex"
+        }
+      ],
+      "tags": [
+        "compose",
+        "run"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Validar y ver configuración de Compose",
+      "command": "docker compose config",
+      "section": "Compose",
+      "topic": "Configuración",
+      "description": "Fusiona archivos, interpola variables y muestra el modelo final normalizado. Detecta errores de sintaxis antes de levantar.",
+      "examples": [
+        {
+          "description": "Solo validar, sin imprimir",
+          "code": "docker compose config -q"
+        },
+        {
+          "description": "Listar servicios o volúmenes",
+          "code": "docker compose config --services && docker compose config --volumes"
+        },
+        {
+          "description": "Ver resultado de fusionar base + override de producción",
+          "code": "docker compose -f compose.yaml -f compose.prod.yaml config"
+        }
+      ],
+      "tags": [
+        "compose",
+        "config",
+        "validacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Descargar y construir imágenes de Compose",
+      "command": "docker compose pull",
+      "section": "Compose",
+      "topic": "Imágenes",
+      "description": "pull trae las imágenes de los servicios desde el registro; build construye las que tienen sección build.",
+      "examples": [
+        {
+          "description": "Pull ignorando fallos de servicios locales",
+          "code": "docker compose pull --ignore-buildable"
+        },
+        {
+          "description": "Build sin caché de un servicio",
+          "code": "docker compose build --no-cache api"
+        },
+        {
+          "description": "Actualizar a la última imagen sin downtime largo",
+          "code": "docker compose pull api && docker compose up -d api"
+        }
+      ],
+      "tags": [
+        "compose",
+        "pull",
+        "build"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Recarga en caliente con Compose watch",
+      "command": "docker compose watch",
+      "section": "Compose",
+      "topic": "Desarrollo",
+      "description": "Observa archivos locales y, según la regla develop.watch, sincroniza cambios al contenedor, reinicia o reconstruye el servicio.",
+      "examples": [
+        {
+          "description": "Definición en compose.yaml",
+          "code": "services:\n  api:\n    build: .\n    develop:\n      watch:\n        - action: sync\n          path: ./app\n          target: /app/app\n          ignore:\n            - \"**/__pycache__\"\n        - action: sync+restart\n          path: ./config\n          target: /app/config\n        - action: rebuild\n          path: requirements.txt"
+        },
+        {
+          "description": "Levantar y observar en un solo paso",
+          "code": "docker compose up --watch"
+        }
+      ],
+      "tags": [
+        "compose",
+        "watch",
+        "hot-reload"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "watch es más rápido que un bind mount en Docker Desktop para macOS/Windows, porque evita el sistema de archivos compartido."
+    },
+    {
+      "title": "Perfiles de Compose",
+      "command": "docker compose --profile debug up -d",
+      "section": "Compose",
+      "topic": "Configuración",
+      "description": "Los servicios con profiles solo arrancan si se activa alguno de sus perfiles. Sirve para herramientas opcionales como pgAdmin o mailpit.",
+      "examples": [
+        {
+          "description": "Declarar un servicio opcional",
+          "code": "services:\n  pgadmin:\n    image: dpage/pgadmin4\n    profiles: [\"debug\"]"
+        },
+        {
+          "description": "Activar perfiles por variable",
+          "code": "COMPOSE_PROFILES=debug,monitoring docker compose up -d"
+        }
+      ],
+      "tags": [
+        "compose",
+        "profiles"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Archivos de entorno en Compose",
+      "command": "docker compose --env-file .env.prod up -d",
+      "section": "Compose",
+      "topic": "Configuración",
+      "description": "El .env del directorio del proyecto se usa para interpolar ${VAR} en el YAML; --env-file elige otro. env_file en un servicio inyecta variables al contenedor.",
+      "examples": [
+        {
+          "description": "Interpolación con valor por defecto y obligatorio",
+          "code": "services:\n  api:\n    image: ghcr.io/nicocano/api:${TAG:-latest}\n    environment:\n      DATABASE_URL: ${DATABASE_URL:?falta DATABASE_URL}\n    env_file:\n      - path: ./api.env\n        required: false"
+        },
+        {
+          "description": "Ver qué valores quedaron interpolados",
+          "code": "docker compose --env-file .env.prod config | grep image"
+        }
+      ],
+      "tags": [
+        "compose",
+        "env",
+        "interpolacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Son dos cosas distintas: .env para el archivo Compose y env_file para el entorno del contenedor."
+    },
+    {
+      "title": "Archivos override de Compose",
+      "command": "docker compose -f compose.yaml -f compose.prod.yaml up -d",
+      "section": "Compose",
+      "topic": "Configuración",
+      "description": "Compose fusiona varios archivos en orden; por defecto carga compose.yaml y compose.override.yaml si existe.",
+      "examples": [
+        {
+          "description": "Fijar los archivos con una variable",
+          "code": "COMPOSE_FILE=compose.yaml:compose.prod.yaml docker compose up -d"
+        },
+        {
+          "description": "Override típico de desarrollo",
+          "code": "# compose.override.yaml\nservices:\n  api:\n    build: .\n    volumes:\n      - ./app:/app/app\n    environment:\n      DEBUG: \"1\""
+        },
+        {
+          "description": "Incluir otro proyecto Compose",
+          "code": "include:\n  - ../infra/compose.observabilidad.yaml"
+        }
+      ],
+      "tags": [
+        "compose",
+        "override",
+        "include"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En Windows el separador de COMPOSE_FILE es ';'."
+    },
+    {
+      "title": "Healthcheck y dependencias en Compose",
+      "command": "docker compose up -d --wait",
+      "section": "Compose",
+      "topic": "Configuración",
+      "description": "depends_on con condition: service_healthy hace que un servicio espere a que su dependencia pase el healthcheck, no solo a que arranque.",
+      "examples": [
+        {
+          "description": "API que espera a Postgres sano y a que termine la migración",
+          "code": "services:\n  db:\n    image: postgres:18\n    environment:\n      POSTGRES_PASSWORD_FILE: /run/secrets/db_password\n    secrets: [db_password]\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U postgres\"]\n      interval: 5s\n      timeout: 3s\n      retries: 10\n      start_period: 10s\n  migrate:\n    build: .\n    command: python manage.py migrate\n    depends_on:\n      db:\n        condition: service_healthy\n  api:\n    build: .\n    depends_on:\n      db:\n        condition: service_healthy\n      migrate:\n        condition: service_completed_successfully\n        restart: true\nsecrets:\n  db_password:\n    file: ./secrets/db_password.txt"
+        }
+      ],
+      "tags": [
+        "compose",
+        "healthcheck",
+        "depends_on",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Sin condition, depends_on solo ordena el arranque. restart: true reinicia el dependiente si la dependencia se recrea."
+    },
+    {
+      "title": "Escalar servicios en Compose",
+      "command": "docker compose up -d --scale worker=4",
+      "section": "Compose",
+      "topic": "Ciclo de vida",
+      "description": "Ajusta el número de réplicas de un servicio. No funciona con container_name fijo ni con puertos de host fijos.",
+      "examples": [
+        {
+          "description": "Con el subcomando dedicado",
+          "code": "docker compose scale worker=4"
+        },
+        {
+          "description": "Réplicas fijas en el YAML",
+          "code": "services:\n  worker:\n    deploy:\n      replicas: 3"
+        }
+      ],
+      "tags": [
+        "compose",
+        "escalado"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Reiniciar, detener y arrancar servicios",
+      "command": "docker compose restart api",
+      "section": "Compose",
+      "topic": "Ciclo de vida",
+      "description": "Controla servicios sin recrearlos. restart no aplica cambios del YAML: para eso usa up -d.",
+      "examples": [
+        {
+          "description": "Detener sin borrar",
+          "code": "docker compose stop worker"
+        },
+        {
+          "description": "Volver a arrancar",
+          "code": "docker compose start worker"
+        },
+        {
+          "description": "Pausar todo el proyecto",
+          "code": "docker compose pause"
+        }
+      ],
+      "tags": [
+        "compose",
+        "restart"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Error común: editar compose.yaml y hacer restart esperando ver el cambio. Solo up -d recrea con la nueva configuración."
+    },
+    {
+      "title": "Listar proyectos de Compose",
+      "command": "docker compose ls",
+      "section": "Compose",
+      "topic": "Observabilidad",
+      "description": "Muestra los proyectos Compose activos en el host con su estado y archivos de configuración.",
+      "examples": [
+        {
+          "description": "Incluir detenidos",
+          "code": "docker compose ls -a"
+        },
+        {
+          "description": "Operar sobre un proyecto por nombre desde cualquier carpeta",
+          "code": "docker compose -p miapp ps"
+        }
+      ],
+      "tags": [
+        "compose",
+        "proyectos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Procesos, imágenes y puertos en Compose",
+      "command": "docker compose top",
+      "section": "Compose",
+      "topic": "Observabilidad",
+      "description": "Subcomandos de inspección por servicio: procesos, imágenes usadas, puertos publicados y eventos.",
+      "examples": [
+        {
+          "description": "Imágenes de cada servicio",
+          "code": "docker compose images"
+        },
+        {
+          "description": "Puerto del host para el 5432 de db",
+          "code": "docker compose port db 5432"
+        },
+        {
+          "description": "Eventos en JSON",
+          "code": "docker compose events --json"
+        }
+      ],
+      "tags": [
+        "compose",
+        "top",
+        "inspeccion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Copiar archivos con Compose",
+      "command": "docker compose cp api:/app/reports ./reports",
+      "section": "Compose",
+      "topic": "Acceso",
+      "description": "Copia archivos entre el host y el contenedor de un servicio sin conocer el nombre exacto del contenedor.",
+      "examples": [
+        {
+          "description": "Subir un archivo a un servicio",
+          "code": "docker compose cp ./seed.sql db:/tmp/seed.sql"
+        }
+      ],
+      "tags": [
+        "compose",
+        "cp"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Secretos en Compose",
+      "command": "docker compose up -d",
+      "section": "Compose",
+      "topic": "Configuración",
+      "description": "Los secrets se montan como archivos en /run/secrets/<nombre> en vez de variables de entorno visibles en inspect.",
+      "examples": [
+        {
+          "description": "Secreto desde archivo y desde variable de entorno",
+          "code": "services:\n  api:\n    image: ghcr.io/nicocano/api:1.0\n    secrets:\n      - source: api_key\n        target: api_key\nsecrets:\n  api_key:\n    environment: API_KEY\n  tls_cert:\n    file: ./certs/server.crt"
+        }
+      ],
+      "tags": [
+        "compose",
+        "secretos",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Muchas imágenes oficiales aceptan variables *_FILE (POSTGRES_PASSWORD_FILE) para leer el secreto desde archivo."
+    },
+    {
+      "title": "Anclas y campos de extensión en Compose",
+      "command": "docker compose config",
+      "section": "Compose",
+      "topic": "Configuración",
+      "description": "Los campos x-* y las anclas YAML permiten reutilizar bloques comunes (logging, entorno) entre servicios.",
+      "examples": [
+        {
+          "description": "Configuración de logging compartida",
+          "code": "x-logging: &logging\n  driver: json-file\n  options:\n    max-size: \"10m\"\n    max-file: \"3\"\nservices:\n  api:\n    image: ghcr.io/nicocano/api:1.0\n    logging: *logging\n  worker:\n    image: ghcr.io/nicocano/worker:1.0\n    logging: *logging"
+        }
+      ],
+      "tags": [
+        "compose",
+        "yaml",
+        "anclas",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Modelos de IA en Compose",
+      "command": "docker compose up -d",
+      "section": "Compose",
+      "topic": "IA",
+      "description": "El elemento de nivel superior models declara modelos de Docker Model Runner y los inyecta a los servicios como variables de URL y nombre de modelo.",
+      "examples": [
+        {
+          "description": "Servicio que consume un LLM local",
+          "code": "services:\n  chat:\n    build: .\n    models:\n      llm:\n        endpoint_var: LLM_URL\n        model_var: LLM_MODEL\nmodels:\n  llm:\n    model: ai/llama3.2"
+        }
+      ],
+      "tags": [
+        "compose",
+        "ia",
+        "model-runner",
+        "snippet"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "IA",
+        "Fullstack"
+      ],
+      "notes": "Requiere una versión reciente de Compose y Model Runner habilitado; verifica con docker compose version y docker model status."
+    },
+    {
+      "title": "Publicar una aplicación Compose como artefacto OCI",
+      "command": "docker compose publish ghcr.io/nicocano/stack:1.0",
+      "section": "Compose",
+      "topic": "Distribución",
+      "description": "Empaqueta el modelo Compose y lo sube a un registro OCI para que otros lo ejecuten con docker compose -f oci://...",
+      "examples": [
+        {
+          "description": "Ejecutar un stack publicado",
+          "code": "docker compose -f oci://ghcr.io/nicocano/stack:1.0 up -d"
+        }
+      ],
+      "tags": [
+        "compose",
+        "oci",
+        "publish"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Se niega a publicar si detecta variables sensibles o bind mounts locales; revisa el aviso en vez de forzarlo."
+    },
+    {
+      "title": "Versión de Compose",
+      "command": "docker compose version",
+      "section": "Compose",
+      "topic": "Ciclo de vida",
+      "description": "Muestra la versión del plugin Compose. Útil para confirmar soporte de funciones como watch, models o publish.",
+      "examples": [
+        {
+          "description": "Solo el número",
+          "code": "docker compose version --short"
+        }
+      ],
+      "tags": [
+        "compose",
+        "version"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ]
+    }
+  ]
+}

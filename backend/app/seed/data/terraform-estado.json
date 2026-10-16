@@ -1,0 +1,314 @@
+{
+  "category": {
+    "slug": "terraform",
+    "name": "Terraform",
+    "icon": "cloud",
+    "order": 7,
+    "description": "Infraestructura como código con Terraform: flujo plan/apply, estado remoto, módulos, HCL y calidad en CI."
+  },
+  "commands": [
+    {
+      "title": "Listar recursos en el estado",
+      "command": "terraform state list",
+      "section": "Estado",
+      "topic": "Inspección",
+      "description": "Lista las direcciones de todos los recursos registrados en el estado.",
+      "examples": [
+        {
+          "description": "Filtrar por módulo o tipo",
+          "code": "terraform state list module.vpc"
+        },
+        {
+          "description": "Buscar por ID real",
+          "code": "terraform state list -id=i-0abc123def456"
+        }
+      ],
+      "tags": [
+        "state",
+        "list"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Ver un recurso del estado",
+      "command": "terraform state show aws_instance.web",
+      "section": "Estado",
+      "topic": "Inspección",
+      "description": "Muestra todos los atributos guardados de un recurso.",
+      "examples": [
+        {
+          "description": "Instancia de un for_each",
+          "code": "terraform state show 'aws_s3_bucket.this[\"logs\"]'"
+        },
+        {
+          "description": "Atributo concreto con jq desde el estado JSON",
+          "code": "terraform show -json | jq '.values.root_module.resources[] | select(.address==\"aws_instance.web\") | .values.private_ip'"
+        }
+      ],
+      "tags": [
+        "state",
+        "show"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Mover o renombrar en el estado",
+      "command": "terraform state mv aws_instance.web aws_instance.app",
+      "section": "Estado",
+      "topic": "Refactorización",
+      "description": "Cambia la dirección de un recurso en el estado sin destruirlo, por ejemplo al renombrar o moverlo a un módulo.",
+      "examples": [
+        {
+          "description": "Mover a un módulo",
+          "code": "terraform state mv aws_vpc.main module.network.aws_vpc.this"
+        },
+        {
+          "description": "Simular",
+          "code": "terraform state mv -dry-run aws_instance.web aws_instance.app"
+        }
+      ],
+      "tags": [
+        "state",
+        "mv",
+        "refactor"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Prefiere el bloque moved {}: queda en el código, se revisa en el plan y lo aplican todos los entornos."
+    },
+    {
+      "title": "Quitar un recurso del estado",
+      "command": "terraform state rm aws_instance.legado",
+      "section": "Estado",
+      "topic": "Refactorización",
+      "description": "Deja de gestionar un recurso sin destruirlo en el proveedor.",
+      "examples": [
+        {
+          "description": "Quitar un módulo completo",
+          "code": "terraform state rm module.antiguo"
+        }
+      ],
+      "tags": [
+        "state",
+        "rm"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Desde Terraform 1.7 el bloque removed { lifecycle { destroy = false } } hace lo mismo de forma declarativa y revisable."
+    },
+    {
+      "title": "Descargar y subir el estado",
+      "command": "terraform state pull > respaldo.tfstate",
+      "section": "Estado",
+      "topic": "Backends",
+      "description": "pull obtiene el estado remoto en JSON; push lo sobrescribe. Útil para respaldos o reparaciones manuales.",
+      "examples": [
+        {
+          "description": "Inspeccionar el serial y la versión",
+          "code": "terraform state pull | jq '{serial, terraform_version, lineage}'"
+        },
+        {
+          "description": "Restaurar un respaldo (con mucho cuidado)",
+          "code": "terraform state push respaldo.tfstate"
+        }
+      ],
+      "tags": [
+        "state",
+        "pull",
+        "push",
+        "backup"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "push rechaza estados con lineage distinto o serial menor salvo -force. Respalda antes de cualquier cirugía de estado."
+    },
+    {
+      "title": "Cambiar el provider de recursos en el estado",
+      "command": "terraform state replace-provider registry.terraform.io/-/aws registry.terraform.io/hashicorp/aws",
+      "section": "Estado",
+      "topic": "Refactorización",
+      "description": "Reasigna recursos a otra dirección de provider, típico al migrar a OpenTofu o a un fork.",
+      "examples": [
+        {
+          "description": "Migrar a un registro de OpenTofu",
+          "code": "terraform state replace-provider registry.terraform.io/hashicorp/aws registry.opentofu.org/hashicorp/aws"
+        }
+      ],
+      "tags": [
+        "state",
+        "providers",
+        "migracion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Backend S3 con bloqueo nativo",
+      "command": "terraform init -backend-config=backends/prod.s3.tfbackend",
+      "section": "Estado",
+      "topic": "Backends",
+      "description": "El backend S3 guarda el estado cifrado y versionado. Con use_lockfile = true el bloqueo usa un objeto .tflock en el mismo bucket, sin DynamoDB.",
+      "examples": [
+        {
+          "description": "Bloque backend",
+          "code": "terraform {\n  backend \"s3\" {\n    bucket       = \"nicocano-tfstate\"\n    key          = \"tienda/prod/terraform.tfstate\"\n    region       = \"us-east-1\"\n    encrypt      = true\n    use_lockfile = true\n  }\n}"
+        },
+        {
+          "description": "Bucket de estado endurecido",
+          "code": "resource \"aws_s3_bucket\" \"state\" {\n  bucket = \"nicocano-tfstate\"\n  lifecycle { prevent_destroy = true }\n}\nresource \"aws_s3_bucket_versioning\" \"state\" {\n  bucket = aws_s3_bucket.state.id\n  versioning_configuration { status = \"Enabled\" }\n}\nresource \"aws_s3_bucket_public_access_block\" \"state\" {\n  bucket                  = aws_s3_bucket.state.id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}"
+        },
+        {
+          "description": "Archivo de backend parcial por entorno",
+          "code": "# backends/prod.s3.tfbackend\nbucket = \"nicocano-tfstate\"\nkey    = \"tienda/prod/terraform.tfstate\"\nregion = \"us-east-1\""
+        }
+      ],
+      "tags": [
+        "backend",
+        "s3",
+        "lock",
+        "aws"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El bloqueo con DynamoDB (dynamodb_table) está obsoleto desde Terraform 1.11. Para migrar, activa use_lockfile junto al DynamoDB un tiempo y luego quita la tabla."
+    },
+    {
+      "title": "Backend en GCS y Azure",
+      "command": "terraform init -migrate-state",
+      "section": "Estado",
+      "topic": "Backends",
+      "description": "Google Cloud Storage y Azure Blob Storage tienen backends con bloqueo integrado.",
+      "examples": [
+        {
+          "description": "Backend GCS",
+          "code": "terraform {\n  backend \"gcs\" {\n    bucket = \"nicocano-tfstate\"\n    prefix = \"tienda/prod\"\n  }\n}"
+        },
+        {
+          "description": "Backend azurerm",
+          "code": "terraform {\n  backend \"azurerm\" {\n    resource_group_name  = \"rg-tfstate\"\n    storage_account_name = \"nicocanotfstate\"\n    container_name       = \"tfstate\"\n    key                  = \"tienda/prod.tfstate\"\n    use_azuread_auth     = true\n  }\n}"
+        }
+      ],
+      "tags": [
+        "backend",
+        "gcs",
+        "azure"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Importar recursos existentes con bloque import",
+      "command": "terraform plan -generate-config-out=generado.tf",
+      "section": "Estado",
+      "topic": "Importación",
+      "description": "El bloque import {} trae recursos creados a mano al estado de forma declarativa; con -generate-config-out Terraform escribe el HCL inicial.",
+      "examples": [
+        {
+          "description": "Bloque import",
+          "code": "import {\n  to = aws_s3_bucket.logs\n  id = \"nicocano-logs-prod\"\n}"
+        },
+        {
+          "description": "Importar varios con for_each",
+          "code": "locals {\n  buckets = { logs = \"nicocano-logs\", media = \"nicocano-media\" }\n}\nimport {\n  for_each = local.buckets\n  to       = aws_s3_bucket.this[each.key]\n  id       = each.value\n}"
+        },
+        {
+          "description": "Comando CLI clásico (imperativo)",
+          "code": "terraform import aws_instance.web i-0abc123def456"
+        }
+      ],
+      "tags": [
+        "import",
+        "generate-config"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Revisa y limpia el HCL generado (quita atributos calculados) antes del apply. Tras importar, el bloque import puede borrarse."
+    },
+    {
+      "title": "Refactorizar con bloque moved",
+      "command": "terraform plan",
+      "section": "Estado",
+      "topic": "Refactorización",
+      "description": "moved {} indica que un recurso cambió de dirección (renombre, módulo, count a for_each) para que Terraform lo mueva en el estado en vez de recrearlo.",
+      "examples": [
+        {
+          "description": "Renombrar un recurso",
+          "code": "moved {\n  from = aws_instance.web\n  to   = aws_instance.app\n}"
+        },
+        {
+          "description": "De count a for_each",
+          "code": "moved {\n  from = aws_subnet.private[0]\n  to   = aws_subnet.private[\"us-east-1a\"]\n}"
+        },
+        {
+          "description": "Extraer a un módulo",
+          "code": "moved {\n  from = aws_vpc.main\n  to   = module.network.aws_vpc.this\n}"
+        }
+      ],
+      "tags": [
+        "moved",
+        "refactor"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Dejar de gestionar con bloque removed",
+      "command": "terraform plan",
+      "section": "Estado",
+      "topic": "Refactorización",
+      "description": "removed {} saca un recurso del estado sin destruirlo (destroy = false) o confirma su destrucción, de forma declarativa.",
+      "examples": [
+        {
+          "description": "Olvidar sin destruir",
+          "code": "removed {\n  from = aws_instance.legado\n  lifecycle {\n    destroy = false\n  }\n}"
+        },
+        {
+          "description": "Quitar un módulo entero del estado",
+          "code": "removed {\n  from = module.antiguo\n  lifecycle { destroy = false }\n}"
+        }
+      ],
+      "tags": [
+        "removed",
+        "refactor",
+        "estado"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    }
+  ]
+}

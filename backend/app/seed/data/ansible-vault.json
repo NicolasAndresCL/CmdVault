@@ -1,0 +1,266 @@
+{
+  "category": {
+    "slug": "ansible",
+    "name": "Ansible",
+    "icon": "settings_suggest",
+    "order": 8,
+    "description": "Gestión de configuración con Ansible: ad-hoc, playbooks, inventarios, roles, Vault y calidad."
+  },
+  "commands": [
+    {
+      "title": "Crear un archivo cifrado con Vault",
+      "command": "ansible-vault create group_vars/db/vault.yml",
+      "section": "Vault y secretos",
+      "topic": "Archivos cifrados",
+      "description": "Crea un archivo YAML cifrado con AES256 y lo abre en el editor. Ideal para contraseñas por grupo.",
+      "examples": [
+        {
+          "description": "Con un archivo de contraseña",
+          "code": "ansible-vault create --vault-password-file ~/.vault_pass group_vars/db/vault.yml"
+        },
+        {
+          "description": "Patrón vars + vault para buscar fácil las variables",
+          "code": "# group_vars/db/vault.yml (cifrado)\nvault_db_password: \"S3cr3t0!\"\n# group_vars/db/main.yml (en claro)\ndb_password: \"{{ vault_db_password }}\""
+        }
+      ],
+      "tags": [
+        "vault",
+        "cifrado",
+        "secretos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El patrón vault_* permite hacer grep de qué variables existen sin descifrar nada."
+    },
+    {
+      "title": "Editar y ver archivos cifrados",
+      "command": "ansible-vault edit group_vars/db/vault.yml",
+      "section": "Vault y secretos",
+      "topic": "Archivos cifrados",
+      "description": "edit descifra temporalmente en el editor y vuelve a cifrar al guardar; view solo muestra el contenido.",
+      "examples": [
+        {
+          "description": "Ver sin editar",
+          "code": "ansible-vault view group_vars/db/vault.yml"
+        },
+        {
+          "description": "Usar VS Code como editor",
+          "code": "EDITOR='code --wait' ansible-vault edit group_vars/db/vault.yml"
+        }
+      ],
+      "tags": [
+        "vault",
+        "edit",
+        "view"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Cifrar y descifrar archivos existentes",
+      "command": "ansible-vault encrypt secrets.yml",
+      "section": "Vault y secretos",
+      "topic": "Archivos cifrados",
+      "description": "encrypt cifra in situ archivos ya escritos; decrypt los deja en claro (con cuidado de no commitearlos).",
+      "examples": [
+        {
+          "description": "Varios archivos",
+          "code": "ansible-vault encrypt host_vars/*/vault.yml"
+        },
+        {
+          "description": "Descifrar a stdout sin tocar el archivo",
+          "code": "ansible-vault decrypt --output - secrets.yml"
+        },
+        {
+          "description": "Cifrar un archivo binario como una llave TLS",
+          "code": "ansible-vault encrypt files/server.key"
+        }
+      ],
+      "tags": [
+        "vault",
+        "encrypt",
+        "decrypt"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los archivos cifrados empiezan con $ANSIBLE_VAULT;1.1;AES256. Un hook de pre-commit que lo verifique evita subir secretos en claro."
+    },
+    {
+      "title": "Cifrar un solo valor con encrypt_string",
+      "command": "ansible-vault encrypt_string 'S3cr3t0!' --name db_password",
+      "section": "Vault y secretos",
+      "topic": "Valores cifrados",
+      "description": "Genera un bloque !vault para pegar dentro de un YAML en claro, cifrando solo esa variable.",
+      "examples": [
+        {
+          "description": "Leer el valor desde stdin para que no quede en el historial",
+          "code": "ansible-vault encrypt_string --stdin-name api_token"
+        },
+        {
+          "description": "Resultado para pegar en vars",
+          "code": "db_password: !vault |\n  $ANSIBLE_VAULT;1.1;AES256\n  6231386265336664..."
+        },
+        {
+          "description": "Ver el valor de una variable cifrada",
+          "code": "ansible localhost -m ansible.builtin.debug -a var=db_password -e @group_vars/db/main.yml --ask-vault-pass"
+        }
+      ],
+      "tags": [
+        "vault",
+        "encrypt_string"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Cambiar la contraseña de Vault",
+      "command": "ansible-vault rekey group_vars/*/vault.yml",
+      "section": "Vault y secretos",
+      "topic": "Gestión de claves",
+      "description": "Vuelve a cifrar archivos con una contraseña nueva. Necesario al rotar o cuando alguien deja el equipo.",
+      "examples": [
+        {
+          "description": "Con archivos de contraseña antigua y nueva",
+          "code": "ansible-vault rekey --vault-password-file old.pass --new-vault-password-file new.pass group_vars/*/vault.yml"
+        }
+      ],
+      "tags": [
+        "vault",
+        "rekey",
+        "rotacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "rekey no re-cifra variables embebidas con encrypt_string dentro de archivos en claro; esas hay que regenerarlas."
+    },
+    {
+      "title": "Proporcionar la contraseña de Vault",
+      "command": "ansible-playbook site.yml --ask-vault-pass",
+      "section": "Vault y secretos",
+      "topic": "Gestión de claves",
+      "description": "La contraseña se pide interactivamente, se lee de un archivo o la entrega un script (gestor de contraseñas).",
+      "examples": [
+        {
+          "description": "Archivo de contraseña",
+          "code": "ansible-playbook site.yml --vault-password-file ~/.vault_pass"
+        },
+        {
+          "description": "Script que la obtiene de un gestor",
+          "code": "#!/usr/bin/env bash\n# vault-pass.sh (ejecutable)\npass show ansible/vault"
+        },
+        {
+          "description": "Fijarlo en ansible.cfg o por variable",
+          "code": "[defaults]\nvault_password_file = ./vault-pass.sh\n# o: export ANSIBLE_VAULT_PASSWORD_FILE=./vault-pass.sh"
+        }
+      ],
+      "tags": [
+        "vault",
+        "password-file"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El archivo de contraseña debe tener permisos 600 y estar en .gitignore."
+    },
+    {
+      "title": "Varias identidades con vault-id",
+      "command": "ansible-playbook site.yml --vault-id dev@prompt --vault-id prod@~/.vault_prod",
+      "section": "Vault y secretos",
+      "topic": "Gestión de claves",
+      "description": "--vault-id etiqueta contraseñas distintas por entorno; cada archivo cifrado recuerda su etiqueta.",
+      "examples": [
+        {
+          "description": "Cifrar con una identidad concreta",
+          "code": "ansible-vault encrypt --vault-id prod@~/.vault_prod inventories/prod/group_vars/all/vault.yml"
+        },
+        {
+          "description": "Cifrar un valor con identidad",
+          "code": "ansible-vault encrypt_string --vault-id dev@prompt 'clave-dev' --name db_password"
+        }
+      ],
+      "tags": [
+        "vault",
+        "vault-id",
+        "entornos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ocultar secretos en la salida con no_log",
+      "command": "ansible-playbook site.yml -v",
+      "section": "Vault y secretos",
+      "topic": "Buenas prácticas",
+      "description": "no_log: true evita que parámetros y resultados de una tarea aparezcan en la salida o en los logs, incluso con -vvv.",
+      "examples": [
+        {
+          "description": "Crear usuario de base de datos sin exponer la contraseña",
+          "code": "- name: Usuario de la aplicación\n  community.postgresql.postgresql_user:\n    name: app\n    password: \"{{ db_password }}\"\n  become: true\n  become_user: postgres\n  no_log: true"
+        }
+      ],
+      "tags": [
+        "no_log",
+        "secretos",
+        "logs"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "no_log también oculta el error si la tarea falla: actívalo condicionalmente con no_log: \"{{ not depurar | default(false) }}\" al depurar."
+    },
+    {
+      "title": "Leer secretos de gestores externos",
+      "command": "ansible-playbook site.yml",
+      "section": "Vault y secretos",
+      "topic": "Buenas prácticas",
+      "description": "Los lookups traen secretos en tiempo de ejecución desde variables de entorno, AWS Secrets Manager o HashiCorp Vault, sin guardarlos en el repositorio.",
+      "examples": [
+        {
+          "description": "Variable de entorno",
+          "code": "api_token: \"{{ lookup('ansible.builtin.env', 'API_TOKEN') }}\""
+        },
+        {
+          "description": "AWS Secrets Manager",
+          "code": "db_password: \"{{ lookup('amazon.aws.aws_secret', 'prod/tienda/db', region='us-east-1') }}\""
+        },
+        {
+          "description": "HashiCorp Vault (KV v2)",
+          "code": "db_password: \"{{ lookup('community.hashi_vault.vault_kv2_get', 'tienda/db', engine_mount_point='secret').secret.password }}\""
+        }
+      ],
+      "tags": [
+        "lookup",
+        "secrets-manager",
+        "hashicorp-vault"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    }
+  ]
+}

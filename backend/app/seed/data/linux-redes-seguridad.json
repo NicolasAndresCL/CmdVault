@@ -1,0 +1,1095 @@
+{
+  "category": {
+    "slug": "linux",
+    "name": "Linux",
+    "icon": "terminal",
+    "order": 1,
+    "description": "Administración de servidores Linux: Ubuntu (Debian) y AlmaLinux (RHEL), del día a día a troubleshooting SRE."
+  },
+  "commands": [
+    {
+      "title": "Ver direcciones e interfaces",
+      "command": "ip addr",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Muestra las interfaces de red y sus direcciones IPv4/IPv6. Reemplaza al antiguo ifconfig.",
+      "syntax": "ip [objeto] [comando]",
+      "examples": [
+        {
+          "description": "Resumen compacto",
+          "code": "ip -br addr"
+        },
+        {
+          "description": "Estado de enlaces",
+          "code": "ip -br link"
+        },
+        {
+          "description": "Agregar una IP temporal",
+          "code": "sudo ip addr add 10.0.0.50/24 dev eth0"
+        },
+        {
+          "description": "Salida en JSON para scripts",
+          "code": "ip -j addr show eth0 | jq -r '.[0].addr_info[0].local'"
+        }
+      ],
+      "tags": [
+        "redes",
+        "interfaces"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los cambios hechos con 'ip' no persisten tras reiniciar: usa netplan (Ubuntu) o nmcli (AlmaLinux)."
+    },
+    {
+      "title": "Tabla de rutas",
+      "command": "ip route",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Muestra y modifica la tabla de enrutamiento: gateway por defecto y rutas estáticas.",
+      "examples": [
+        {
+          "description": "Ver rutas",
+          "code": "ip route"
+        },
+        {
+          "description": "¿Por qué interfaz sale el tráfico hacia una IP?",
+          "code": "ip route get 8.8.8.8"
+        },
+        {
+          "description": "Agregar una ruta temporal",
+          "code": "sudo ip route add 192.168.50.0/24 via 10.0.0.1"
+        }
+      ],
+      "tags": [
+        "redes",
+        "rutas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Sockets y puertos en escucha",
+      "command": "ss -tulpn",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Lista sockets TCP/UDP en escucha y el proceso que los abrió. Reemplaza a netstat.",
+      "syntax": "ss [opciones] [filtro]",
+      "examples": [
+        {
+          "description": "Puertos en escucha con proceso",
+          "code": "sudo ss -tulpn"
+        },
+        {
+          "description": "¿Quién usa el puerto 8080?",
+          "code": "sudo ss -ltnp 'sport = :8080'"
+        },
+        {
+          "description": "Conexiones establecidas a PostgreSQL",
+          "code": "ss -tn state established '( dport = :5432 or sport = :5432 )'"
+        },
+        {
+          "description": "Resumen de sockets por estado",
+          "code": "ss -s"
+        }
+      ],
+      "tags": [
+        "redes",
+        "puertos",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Peticiones HTTP con curl",
+      "command": "curl",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Cliente HTTP de línea de comandos para probar APIs, descargar archivos y medir tiempos de respuesta.",
+      "syntax": "curl [opciones] URL",
+      "examples": [
+        {
+          "description": "Solo cabeceras siguiendo redirecciones",
+          "code": "curl -sIL https://ejemplo.cl"
+        },
+        {
+          "description": "POST con JSON",
+          "code": "curl -s -X POST https://api.ejemplo.cl/items -H 'Content-Type: application/json' -d '{\"nombre\":\"demo\"}'"
+        },
+        {
+          "description": "Medir tiempos de conexión y respuesta",
+          "code": "curl -o /dev/null -s -w 'dns=%{time_namelookup} tcp=%{time_connect} tls=%{time_appconnect} total=%{time_total} code=%{http_code}\\n' https://ejemplo.cl"
+        },
+        {
+          "description": "Probar un vhost apuntando a una IP específica",
+          "code": "curl -s --resolve app.ejemplo.cl:443:10.0.0.5 https://app.ejemplo.cl/health"
+        }
+      ],
+      "tags": [
+        "redes",
+        "http",
+        "api"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Usa -f en scripts para que curl falle (exit != 0) ante códigos HTTP >= 400."
+    },
+    {
+      "title": "Descargar archivos con wget",
+      "command": "wget",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Descarga archivos por HTTP/HTTPS/FTP con reintentos y reanudación.",
+      "examples": [
+        {
+          "description": "Descargar reanudando si se corta",
+          "code": "wget -c https://ejemplo.cl/imagen.iso"
+        },
+        {
+          "description": "Guardar con otro nombre en silencio",
+          "code": "wget -qO /tmp/instalar.sh https://ejemplo.cl/install.sh"
+        }
+      ],
+      "tags": [
+        "redes",
+        "descargas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Consultas DNS con dig",
+      "command": "dig",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Consulta servidores DNS para depurar resolución de nombres, registros y propagación.",
+      "syntax": "dig [@servidor] nombre [tipo]",
+      "examples": [
+        {
+          "description": "Solo la respuesta",
+          "code": "dig +short app.ejemplo.cl"
+        },
+        {
+          "description": "Registro MX contra un servidor concreto",
+          "code": "dig @1.1.1.1 ejemplo.cl MX"
+        },
+        {
+          "description": "Seguir la delegación desde la raíz",
+          "code": "dig +trace ejemplo.cl"
+        },
+        {
+          "description": "Resolución inversa",
+          "code": "dig -x 8.8.8.8 +short"
+        }
+      ],
+      "tags": [
+        "redes",
+        "dns",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En Ubuntu viene en 'dnsutils' (o 'bind9-dnsutils'); en AlmaLinux en 'bind-utils'. Para ver el DNS que usa el sistema: 'resolvectl status' (Ubuntu)."
+    },
+    {
+      "title": "Probar conectividad",
+      "command": "ping / tracepath / mtr",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Verifica alcanzabilidad, latencia y la ruta hacia un host; mtr combina ping y traceroute de forma continua.",
+      "examples": [
+        {
+          "description": "4 paquetes",
+          "code": "ping -c 4 10.0.0.1"
+        },
+        {
+          "description": "Ruta y MTU",
+          "code": "tracepath ejemplo.cl"
+        },
+        {
+          "description": "Informe de pérdida por salto",
+          "code": "mtr -rwc 100 ejemplo.cl"
+        },
+        {
+          "description": "¿Puerto TCP abierto? (sin telnet)",
+          "code": "nc -zv db01 5432"
+        }
+      ],
+      "tags": [
+        "redes",
+        "diagnóstico",
+        "latencia"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Capturar tráfico con tcpdump",
+      "command": "sudo tcpdump",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Captura y analiza paquetes de red; indispensable para depurar problemas de conectividad, TLS o balanceadores.",
+      "syntax": "tcpdump [opciones] [filtro]",
+      "examples": [
+        {
+          "description": "Tráfico a un puerto en una interfaz",
+          "code": "sudo tcpdump -i eth0 -nn port 443"
+        },
+        {
+          "description": "Filtrar por host y guardar para Wireshark",
+          "code": "sudo tcpdump -i any -nn host 10.0.0.5 -w captura.pcap"
+        },
+        {
+          "description": "Ver payload HTTP en ASCII",
+          "code": "sudo tcpdump -i lo -A -s0 'tcp port 8000'"
+        },
+        {
+          "description": "Solo SYN (intentos de conexión)",
+          "code": "sudo tcpdump -nn 'tcp[tcpflags] & tcp-syn != 0 and tcp[tcpflags] & tcp-ack == 0'"
+        }
+      ],
+      "tags": [
+        "redes",
+        "captura",
+        "diagnóstico"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "-nn evita resolver nombres y puertos (más rápido y no genera tráfico DNS extra)."
+    },
+    {
+      "title": "Escanear puertos con nmap",
+      "command": "nmap",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Escanea hosts y puertos para auditar qué servicios están expuestos.",
+      "examples": [
+        {
+          "description": "Puertos más comunes de un host",
+          "code": "nmap -sV 10.0.0.5"
+        },
+        {
+          "description": "Descubrir hosts vivos en una red",
+          "code": "nmap -sn 10.0.0.0/24"
+        },
+        {
+          "description": "Puertos específicos",
+          "code": "nmap -p 22,80,443,5432 servidor.ejemplo.cl"
+        }
+      ],
+      "tags": [
+        "redes",
+        "seguridad",
+        "auditoría"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Escanea solo redes propias o con autorización explícita."
+    },
+    {
+      "title": "Resolución local de nombres",
+      "command": "getent hosts",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Consulta cómo resuelve el sistema un nombre siguiendo /etc/nsswitch.conf (incluye /etc/hosts), a diferencia de dig que solo consulta DNS.",
+      "examples": [
+        {
+          "description": "Resolver como lo haría una app",
+          "code": "getent hosts db01"
+        },
+        {
+          "description": "Agregar un alias local",
+          "code": "echo '10.0.0.10 db01.interno db01' | sudo tee -a /etc/hosts"
+        }
+      ],
+      "tags": [
+        "redes",
+        "dns"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Configurar red con netplan",
+      "command": "sudo netplan apply",
+      "section": "Ubuntu",
+      "topic": "Redes",
+      "description": "Ubuntu configura la red con archivos YAML en /etc/netplan/ que netplan traduce a systemd-networkd o NetworkManager.",
+      "examples": [
+        {
+          "description": "IP estática (/etc/netplan/50-static.yaml)",
+          "code": "network:\n  version: 2\n  ethernets:\n    eth0:\n      dhcp4: false\n      addresses: [10.0.0.20/24]\n      routes:\n        - to: default\n          via: 10.0.0.1\n      nameservers:\n        addresses: [1.1.1.1, 8.8.8.8]"
+        },
+        {
+          "description": "Probar con reversión automática",
+          "code": "sudo netplan try"
+        },
+        {
+          "description": "Aplicar",
+          "code": "sudo netplan apply"
+        },
+        {
+          "description": "Ver la configuración efectiva",
+          "code": "sudo netplan get"
+        }
+      ],
+      "tags": [
+        "redes",
+        "netplan",
+        "ubuntu"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los archivos deben tener permisos 600. 'netplan try' revierte en 120 s si pierdes la conexión: úsalo siempre por SSH."
+    },
+    {
+      "title": "Configurar red con nmcli",
+      "command": "nmcli",
+      "section": "AlmaLinux",
+      "topic": "Redes",
+      "description": "AlmaLinux gestiona la red con NetworkManager; nmcli permite configurarla de forma persistente desde la terminal.",
+      "examples": [
+        {
+          "description": "Ver conexiones y dispositivos",
+          "code": "nmcli con show\nnmcli dev status"
+        },
+        {
+          "description": "IP estática en una conexión",
+          "code": "sudo nmcli con mod eth0 ipv4.method manual ipv4.addresses 10.0.0.20/24 ipv4.gateway 10.0.0.1 ipv4.dns '1.1.1.1 8.8.8.8'\nsudo nmcli con up eth0"
+        },
+        {
+          "description": "Volver a DHCP",
+          "code": "sudo nmcli con mod eth0 ipv4.method auto && sudo nmcli con up eth0"
+        }
+      ],
+      "tags": [
+        "redes",
+        "networkmanager",
+        "almalinux"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Desde AlmaLinux 9 las conexiones se guardan como keyfiles en /etc/NetworkManager/system-connections/; los ifcfg-* están obsoletos. 'nmtui' ofrece una interfaz de texto."
+    },
+    {
+      "title": "Firewall con ufw",
+      "command": "sudo ufw",
+      "section": "Ubuntu",
+      "topic": "Firewall",
+      "description": "Uncomplicated Firewall: interfaz simple de nftables/iptables en Ubuntu.",
+      "syntax": "ufw [allow|deny|delete|status] ...",
+      "examples": [
+        {
+          "description": "Permitir SSH antes de activar",
+          "code": "sudo ufw allow OpenSSH\nsudo ufw enable"
+        },
+        {
+          "description": "Abrir HTTP y HTTPS",
+          "code": "sudo ufw allow 80,443/tcp"
+        },
+        {
+          "description": "Permitir PostgreSQL solo desde una subred",
+          "code": "sudo ufw allow from 10.0.0.0/24 to any port 5432 proto tcp"
+        },
+        {
+          "description": "Ver reglas numeradas y borrar una",
+          "code": "sudo ufw status numbered\nsudo ufw delete 3"
+        }
+      ],
+      "tags": [
+        "firewall",
+        "seguridad",
+        "ubuntu"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Ojo: Docker publica puertos saltándose ufw (escribe sus propias reglas). Publica en 127.0.0.1 o usa la cadena DOCKER-USER."
+    },
+    {
+      "title": "Firewall con firewall-cmd",
+      "command": "sudo firewall-cmd",
+      "section": "AlmaLinux",
+      "topic": "Firewall",
+      "description": "firewalld gestiona el firewall de AlmaLinux por zonas y servicios. Los cambios sin --permanent se pierden al recargar.",
+      "syntax": "firewall-cmd [--permanent] [--zone=z] opción",
+      "examples": [
+        {
+          "description": "Estado y reglas de la zona activa",
+          "code": "sudo firewall-cmd --state\nsudo firewall-cmd --list-all"
+        },
+        {
+          "description": "Abrir HTTP/HTTPS de forma permanente",
+          "code": "sudo firewall-cmd --permanent --add-service={http,https}\nsudo firewall-cmd --reload"
+        },
+        {
+          "description": "Abrir un puerto",
+          "code": "sudo firewall-cmd --permanent --add-port=8080/tcp && sudo firewall-cmd --reload"
+        },
+        {
+          "description": "Regla enriquecida: PostgreSQL solo desde una subred",
+          "code": "sudo firewall-cmd --permanent --add-rich-rule='rule family=\"ipv4\" source address=\"10.0.0.0/24\" port port=\"5432\" protocol=\"tcp\" accept'\nsudo firewall-cmd --reload"
+        }
+      ],
+      "tags": [
+        "firewall",
+        "seguridad",
+        "almalinux"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Truco: prueba sin --permanent y, si funciona, guarda con 'firewall-cmd --runtime-to-permanent'."
+    },
+    {
+      "title": "Zonas de firewalld",
+      "command": "firewall-cmd --get-active-zones",
+      "section": "AlmaLinux",
+      "topic": "Firewall",
+      "description": "Las zonas agrupan reglas según la confianza de la red; cada interfaz o subred se asigna a una zona.",
+      "examples": [
+        {
+          "description": "Ver zonas activas",
+          "code": "sudo firewall-cmd --get-active-zones"
+        },
+        {
+          "description": "Mover una interfaz a otra zona",
+          "code": "sudo firewall-cmd --permanent --zone=internal --change-interface=eth1 && sudo firewall-cmd --reload"
+        },
+        {
+          "description": "Servicios predefinidos",
+          "code": "sudo firewall-cmd --get-services"
+        }
+      ],
+      "tags": [
+        "firewall",
+        "zonas",
+        "almalinux"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Estado de SELinux",
+      "command": "getenforce / sestatus",
+      "section": "AlmaLinux",
+      "topic": "SELinux y AppArmor",
+      "description": "Muestra si SELinux está en modo Enforcing, Permissive o Disabled y su política.",
+      "examples": [
+        {
+          "description": "Modo actual",
+          "code": "getenforce"
+        },
+        {
+          "description": "Detalle completo",
+          "code": "sestatus"
+        },
+        {
+          "description": "Pasar a permisivo temporalmente para diagnosticar",
+          "code": "sudo setenforce 0"
+        }
+      ],
+      "tags": [
+        "selinux",
+        "seguridad",
+        "almalinux"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "No deshabilites SELinux para 'arreglar' algo: diagnostica con audit2why y corrige contextos o booleans. El modo persistente está en /etc/selinux/config."
+    },
+    {
+      "title": "Restaurar contextos SELinux",
+      "command": "sudo restorecon -Rv",
+      "section": "AlmaLinux",
+      "topic": "SELinux y AppArmor",
+      "description": "Reaplica el contexto SELinux correcto a archivos según la política; típico tras mover (mv) archivos a /var/www o a un home.",
+      "examples": [
+        {
+          "description": "Restaurar en el docroot",
+          "code": "sudo restorecon -Rv /var/www/html"
+        },
+        {
+          "description": "Ver contexto de archivos",
+          "code": "ls -Z /var/www/html"
+        },
+        {
+          "description": "Ver el contexto esperado para una ruta",
+          "code": "matchpathcon /srv/app"
+        }
+      ],
+      "tags": [
+        "selinux",
+        "contextos",
+        "almalinux"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "'mv' conserva el contexto de origen y 'cp' toma el del destino: por eso los archivos movidos dan 403 en Nginx."
+    },
+    {
+      "title": "Definir contextos con semanage",
+      "command": "sudo semanage fcontext",
+      "section": "AlmaLinux",
+      "topic": "SELinux y AppArmor",
+      "description": "Registra de forma persistente qué contexto SELinux debe tener una ruta no estándar y qué puertos puede usar un servicio.",
+      "examples": [
+        {
+          "description": "Servir contenido web desde /srv/app",
+          "code": "sudo semanage fcontext -a -t httpd_sys_content_t '/srv/app(/.*)?'\nsudo restorecon -Rv /srv/app"
+        },
+        {
+          "description": "Permitir SSH en el puerto 2222",
+          "code": "sudo semanage port -a -t ssh_port_t -p tcp 2222"
+        },
+        {
+          "description": "Puertos permitidos para HTTP",
+          "code": "sudo semanage port -l | grep http_port_t"
+        }
+      ],
+      "tags": [
+        "selinux",
+        "contextos",
+        "almalinux"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "semanage viene en policycoreutils-python-utils."
+    },
+    {
+      "title": "Booleans de SELinux",
+      "command": "setsebool -P",
+      "section": "AlmaLinux",
+      "topic": "SELinux y AppArmor",
+      "description": "Los booleans habilitan comportamientos opcionales de la política, como permitir que Nginx haga proxy a otro puerto.",
+      "examples": [
+        {
+          "description": "Permitir que Nginx/httpd se conecte a la red (reverse proxy)",
+          "code": "sudo setsebool -P httpd_can_network_connect on"
+        },
+        {
+          "description": "Buscar booleans relacionados",
+          "code": "getsebool -a | grep httpd"
+        },
+        {
+          "description": "Permitir conexión a bases de datos",
+          "code": "sudo setsebool -P httpd_can_network_connect_db on"
+        }
+      ],
+      "tags": [
+        "selinux",
+        "booleans",
+        "almalinux"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Sin -P el cambio se pierde al reiniciar. El típico '502 Bad Gateway' de Nginx en AlmaLinux suele ser httpd_can_network_connect desactivado."
+    },
+    {
+      "title": "Diagnosticar denegaciones SELinux",
+      "command": "audit2why",
+      "section": "AlmaLinux",
+      "topic": "SELinux y AppArmor",
+      "description": "Analiza los mensajes AVC del log de auditoría y explica por qué SELinux denegó una acción y cómo solucionarlo.",
+      "examples": [
+        {
+          "description": "Explicar denegaciones recientes",
+          "code": "sudo ausearch -m AVC -ts recent | audit2why"
+        },
+        {
+          "description": "Ver denegaciones de hoy",
+          "code": "sudo ausearch -m AVC,USER_AVC -ts today"
+        },
+        {
+          "description": "Generar un módulo local (último recurso)",
+          "code": "sudo ausearch -m AVC -ts recent | audit2allow -M mi_politica\nsudo semodule -i mi_politica.pp"
+        }
+      ],
+      "tags": [
+        "selinux",
+        "diagnóstico",
+        "almalinux"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Revisa el módulo generado por audit2allow antes de instalarlo: puede abrir mucho más de lo necesario. 'sealert' (setroubleshoot-server) da explicaciones más legibles."
+    },
+    {
+      "title": "Estado de AppArmor",
+      "command": "sudo aa-status",
+      "section": "Ubuntu",
+      "topic": "SELinux y AppArmor",
+      "description": "AppArmor es el sistema de control de acceso obligatorio de Ubuntu: confina programas según perfiles por ruta.",
+      "examples": [
+        {
+          "description": "Perfiles cargados y su modo",
+          "code": "sudo aa-status"
+        },
+        {
+          "description": "Pasar un perfil a modo complain",
+          "code": "sudo aa-complain /etc/apparmor.d/usr.sbin.nginx"
+        },
+        {
+          "description": "Volver a enforce",
+          "code": "sudo aa-enforce /etc/apparmor.d/usr.sbin.nginx"
+        },
+        {
+          "description": "Ver denegaciones",
+          "code": "sudo journalctl -k | grep -i 'apparmor=\"DENIED\"'"
+        }
+      ],
+      "tags": [
+        "apparmor",
+        "seguridad",
+        "ubuntu"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "aa-complain y aa-enforce vienen en el paquete apparmor-utils."
+    },
+    {
+      "title": "Conectarse por SSH",
+      "command": "ssh",
+      "section": "Común",
+      "topic": "SSH y transferencia",
+      "description": "Abre una sesión remota cifrada. Permite ejecutar comandos remotos, usar saltos (bastion) y túneles.",
+      "syntax": "ssh [opciones] usuario@host [comando]",
+      "examples": [
+        {
+          "description": "Conectar con llave y puerto",
+          "code": "ssh -i ~/.ssh/id_ed25519 -p 2222 deploy@10.0.0.5"
+        },
+        {
+          "description": "Ejecutar un comando remoto",
+          "code": "ssh web01 'sudo systemctl status nginx --no-pager'"
+        },
+        {
+          "description": "Pasar por un bastión",
+          "code": "ssh -J bastion.ejemplo.cl deploy@10.0.1.20"
+        },
+        {
+          "description": "Depurar problemas de autenticación",
+          "code": "ssh -vvv deploy@10.0.0.5"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "remoto"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Generar y copiar llaves SSH",
+      "command": "ssh-keygen -t ed25519",
+      "section": "Común",
+      "topic": "SSH y transferencia",
+      "description": "Crea un par de llaves para autenticación sin contraseña y la instala en el servidor remoto.",
+      "examples": [
+        {
+          "description": "Generar llave Ed25519 con comentario",
+          "code": "ssh-keygen -t ed25519 -C 'nicolas@laptop'"
+        },
+        {
+          "description": "Instalar la llave pública en el servidor",
+          "code": "ssh-copy-id -i ~/.ssh/id_ed25519.pub deploy@10.0.0.5"
+        },
+        {
+          "description": "Ver la huella de una llave",
+          "code": "ssh-keygen -lf ~/.ssh/id_ed25519.pub"
+        },
+        {
+          "description": "Quitar un host de known_hosts tras reinstalarlo",
+          "code": "ssh-keygen -R 10.0.0.5"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "llaves",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Permisos: ~/.ssh 700, authorized_keys 600 y la llave privada 600, o el servidor rechazará la autenticación."
+    },
+    {
+      "title": "Configurar hosts en ~/.ssh/config",
+      "command": "~/.ssh/config",
+      "section": "Común",
+      "topic": "SSH y transferencia",
+      "description": "Define alias con usuario, puerto, llave y saltos para no repetir opciones en cada conexión (lo usan también scp, rsync y git).",
+      "examples": [
+        {
+          "description": "Alias con bastión",
+          "code": "Host bastion\n    HostName bastion.ejemplo.cl\n    User nicolas\n    IdentityFile ~/.ssh/id_ed25519\n\nHost web01\n    HostName 10.0.1.20\n    User deploy\n    ProxyJump bastion"
+        },
+        {
+          "description": "Mantener viva la conexión",
+          "code": "Host *\n    ServerAliveInterval 30\n    ServerAliveCountMax 3"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "configuración"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Túneles SSH",
+      "command": "ssh -L",
+      "section": "Común",
+      "topic": "SSH y transferencia",
+      "description": "Redirige puertos a través de SSH para acceder a servicios internos (bases de datos, paneles) sin exponerlos.",
+      "examples": [
+        {
+          "description": "Acceder a PostgreSQL remoto en localhost:15432",
+          "code": "ssh -N -L 15432:localhost:5432 deploy@db01"
+        },
+        {
+          "description": "Exponer un puerto local en el servidor (túnel inverso)",
+          "code": "ssh -N -R 9000:localhost:3000 deploy@servidor"
+        },
+        {
+          "description": "Proxy SOCKS dinámico",
+          "code": "ssh -N -D 1080 bastion"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "túneles",
+        "redes"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Endurecer el servidor SSH",
+      "command": "sudo sshd -t",
+      "section": "Común",
+      "topic": "SSH y transferencia",
+      "description": "Desactiva el login de root y por contraseña en sshd. Valida siempre la configuración antes de reiniciar para no quedarte fuera.",
+      "examples": [
+        {
+          "description": "Drop-in de endurecimiento (/etc/ssh/sshd_config.d/10-hardening.conf)",
+          "code": "PermitRootLogin no\nPasswordAuthentication no\nKbdInteractiveAuthentication no\nMaxAuthTries 3"
+        },
+        {
+          "description": "Validar y recargar",
+          "code": "sudo sshd -t && sudo systemctl reload ssh     # Ubuntu\nsudo sshd -t && sudo systemctl reload sshd    # AlmaLinux"
+        },
+        {
+          "description": "Configuración efectiva",
+          "code": "sudo sshd -T | grep -Ei 'permitroot|passwordauth'"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "seguridad",
+        "hardening"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Mantén abierta una sesión mientras pruebas en otra. En Ubuntu 24.04 ssh se activa por socket (ssh.socket): cambiar el puerto requiere 'systemctl daemon-reload' y reiniciar ssh.socket."
+    },
+    {
+      "title": "Copiar archivos con scp",
+      "command": "scp",
+      "section": "Común",
+      "topic": "SSH y transferencia",
+      "description": "Copia archivos entre máquinas sobre SSH.",
+      "syntax": "scp [opciones] origen destino",
+      "examples": [
+        {
+          "description": "Subir un archivo",
+          "code": "scp app.tar.gz deploy@web01:/tmp/"
+        },
+        {
+          "description": "Descargar un directorio",
+          "code": "scp -r deploy@web01:/var/log/app ./logs-web01"
+        },
+        {
+          "description": "Usando un alias de ~/.ssh/config",
+          "code": "scp dump.sql.zst db01:/backup/"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "transferencia"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Las versiones modernas de OpenSSH usan el protocolo SFTP por debajo; para sincronizar o reanudar transferencias, rsync es mejor."
+    },
+    {
+      "title": "Sincronizar con rsync",
+      "command": "rsync -avz",
+      "section": "Común",
+      "topic": "SSH y transferencia",
+      "description": "Sincroniza directorios local o remotamente transfiriendo solo las diferencias; ideal para despliegues y respaldos.",
+      "syntax": "rsync [opciones] origen destino",
+      "examples": [
+        {
+          "description": "Sincronizar a un servidor",
+          "code": "rsync -avz --progress ./dist/ deploy@web01:/var/www/app/"
+        },
+        {
+          "description": "Espejo exacto (borra lo que sobra) en simulación",
+          "code": "rsync -avz --delete --dry-run ./dist/ deploy@web01:/var/www/app/"
+        },
+        {
+          "description": "Excluir patrones y limitar ancho de banda",
+          "code": "rsync -az --exclude='.git' --exclude='*.log' --bwlimit=5000 /srv/ backup01:/backup/srv/"
+        },
+        {
+          "description": "Usar un puerto SSH distinto",
+          "code": "rsync -az -e 'ssh -p 2222' /etc/nginx/ backup01:/backup/nginx/"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "sincronización",
+        "respaldo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "La barra final importa: 'dir/' copia el contenido; 'dir' copia el directorio en sí. Prueba siempre --delete con --dry-run."
+    },
+    {
+      "title": "Bloquear ataques con fail2ban",
+      "command": "sudo fail2ban-client status",
+      "section": "Común",
+      "topic": "Seguridad",
+      "description": "fail2ban vigila logs y banea IPs con demasiados intentos fallidos (SSH, Nginx, etc.).",
+      "examples": [
+        {
+          "description": "Jail de SSH (/etc/fail2ban/jail.local)",
+          "code": "[sshd]\nenabled = true\nmaxretry = 5\nfindtime = 10m\nbantime = 1h"
+        },
+        {
+          "description": "Estado de una jail",
+          "code": "sudo fail2ban-client status sshd"
+        },
+        {
+          "description": "Desbanear una IP",
+          "code": "sudo fail2ban-client set sshd unbanip 203.0.113.10"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "fail2ban",
+        "ssh"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Nunca edites jail.conf: crea jail.local. En AlmaLinux se instala desde EPEL y usa el backend systemd para leer el journal."
+    },
+    {
+      "title": "Políticas de expiración de contraseñas",
+      "command": "sudo chage",
+      "section": "Común",
+      "topic": "Seguridad",
+      "description": "Consulta y define cuándo expira la contraseña de un usuario y cada cuánto debe cambiarla.",
+      "examples": [
+        {
+          "description": "Ver la política de un usuario",
+          "code": "sudo chage -l nicolas"
+        },
+        {
+          "description": "Máximo 90 días y aviso 7 días antes",
+          "code": "sudo chage -M 90 -W 7 nicolas"
+        },
+        {
+          "description": "Expirar la cuenta en una fecha",
+          "code": "sudo chage -E 2026-12-31 contratista"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "usuarios",
+        "contraseñas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Verificar certificados TLS",
+      "command": "openssl s_client",
+      "section": "Común",
+      "topic": "Seguridad",
+      "description": "Inspecciona el certificado que entrega un servidor: emisor, fechas de validez y cadena.",
+      "examples": [
+        {
+          "description": "Fechas de vencimiento de un sitio",
+          "code": "echo | openssl s_client -connect ejemplo.cl:443 -servername ejemplo.cl 2>/dev/null | openssl x509 -noout -dates -issuer -subject"
+        },
+        {
+          "description": "Inspeccionar un certificado local",
+          "code": "openssl x509 -in cert.pem -noout -text"
+        },
+        {
+          "description": "Generar un certificado autofirmado de prueba",
+          "code": "openssl req -x509 -newkey rsa:4096 -nodes -keyout key.pem -out cert.pem -days 365 -subj '/CN=localhost'"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "tls",
+        "certificados"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Certificados con certbot",
+      "command": "sudo certbot",
+      "section": "Común",
+      "topic": "Seguridad",
+      "description": "Obtiene y renueva certificados gratuitos de Let's Encrypt, configurando Nginx automáticamente.",
+      "examples": [
+        {
+          "description": "Obtener y configurar en Nginx",
+          "code": "sudo certbot --nginx -d ejemplo.cl -d www.ejemplo.cl"
+        },
+        {
+          "description": "Probar la renovación",
+          "code": "sudo certbot renew --dry-run"
+        },
+        {
+          "description": "Ver certificados emitidos",
+          "code": "sudo certbot certificates"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "tls",
+        "nginx"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "En Ubuntu se recomienda instalarlo como snap ('snap install --classic certbot'); en AlmaLinux viene en EPEL junto a python3-certbot-nginx."
+    },
+    {
+      "title": "Generar hashes y verificar integridad",
+      "command": "sha256sum",
+      "section": "Común",
+      "topic": "Seguridad",
+      "description": "Calcula y verifica sumas SHA-256 para comprobar que un archivo descargado no fue alterado.",
+      "examples": [
+        {
+          "description": "Calcular el hash",
+          "code": "sha256sum terraform_linux_amd64.zip"
+        },
+        {
+          "description": "Verificar contra un archivo de sumas",
+          "code": "sha256sum -c --ignore-missing SHA256SUMS"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "integridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    }
+  ]
+}

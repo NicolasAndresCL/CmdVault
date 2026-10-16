@@ -1,0 +1,669 @@
+{
+  "category": {
+    "slug": "docker",
+    "name": "Docker",
+    "icon": "directions_boat",
+    "order": 5,
+    "description": "Contenedores con Docker Engine y Compose actualizados: imágenes, buildx, redes, volúmenes, seguridad y diagnóstico."
+  },
+  "commands": [
+    {
+      "title": "Crear red definida por el usuario",
+      "command": "docker network create backend",
+      "section": "Redes y volúmenes",
+      "topic": "Redes",
+      "description": "Crea una red bridge propia con DNS interno: los contenedores conectados se resuelven por nombre, cosa que no ocurre en el bridge por defecto.",
+      "examples": [
+        {
+          "description": "Con subred y gateway fijos",
+          "code": "docker network create --driver bridge --subnet 172.30.0.0/24 --gateway 172.30.0.1 backend"
+        },
+        {
+          "description": "Red interna sin salida a internet",
+          "code": "docker network create --internal datos"
+        },
+        {
+          "description": "Con IPv6",
+          "code": "docker network create --ipv6 --subnet fd00:dead:beef::/64 dual"
+        }
+      ],
+      "tags": [
+        "red",
+        "network",
+        "bridge"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Conectar y desconectar contenedores de redes",
+      "command": "docker network connect backend api",
+      "section": "Redes y volúmenes",
+      "topic": "Redes",
+      "description": "Añade o quita en caliente una red a un contenedor existente; un contenedor puede estar en varias redes.",
+      "examples": [
+        {
+          "description": "Conectar con alias e IP fija",
+          "code": "docker network connect --alias api-interna --ip 172.30.0.10 backend api"
+        },
+        {
+          "description": "Desconectar",
+          "code": "docker network disconnect bridge api"
+        }
+      ],
+      "tags": [
+        "red",
+        "connect"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Listar e inspeccionar redes",
+      "command": "docker network ls",
+      "section": "Redes y volúmenes",
+      "topic": "Redes",
+      "description": "Lista redes y muestra sus contenedores conectados, subred y opciones del driver.",
+      "examples": [
+        {
+          "description": "Contenedores conectados y sus IP",
+          "code": "docker network inspect -f '{{range .Containers}}{{.Name}} {{.IPv4Address}}{{println}}{{end}}' backend"
+        },
+        {
+          "description": "Subred de una red",
+          "code": "docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' backend"
+        },
+        {
+          "description": "Filtrar por driver",
+          "code": "docker network ls --filter driver=bridge"
+        }
+      ],
+      "tags": [
+        "red",
+        "inspect"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Eliminar redes",
+      "command": "docker network rm backend",
+      "section": "Redes y volúmenes",
+      "topic": "Redes",
+      "description": "Borra redes sin contenedores conectados; prune elimina todas las que no se usan.",
+      "examples": [
+        {
+          "description": "Limpiar redes sin uso",
+          "code": "docker network prune -f"
+        },
+        {
+          "description": "Redes sin uso creadas hace más de un día",
+          "code": "docker network prune -f --filter until=24h"
+        }
+      ],
+      "tags": [
+        "red",
+        "limpieza"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Probar DNS y conectividad entre contenedores",
+      "command": "docker run --rm --network backend nicolaka/netshoot dig api",
+      "section": "Redes y volúmenes",
+      "topic": "Redes",
+      "description": "Lanza un contenedor de herramientas de red en la misma red para verificar resolución de nombres y puertos.",
+      "examples": [
+        {
+          "description": "Probar un puerto TCP",
+          "code": "docker run --rm --network backend nicolaka/netshoot nc -zv db 5432"
+        },
+        {
+          "description": "Petición HTTP al servicio por nombre",
+          "code": "docker run --rm --network backend curlimages/curl -s http://api:8000/health"
+        }
+      ],
+      "tags": [
+        "red",
+        "dns",
+        "troubleshooting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "El DNS embebido de Docker escucha en 127.0.0.11 dentro de cada contenedor de redes definidas por el usuario."
+    },
+    {
+      "title": "Crear y listar volúmenes",
+      "command": "docker volume create pgdata",
+      "section": "Redes y volúmenes",
+      "topic": "Volúmenes",
+      "description": "Crea volúmenes nombrados gestionados por Docker, que sobreviven a la eliminación de contenedores.",
+      "examples": [
+        {
+          "description": "Listar volúmenes colgantes",
+          "code": "docker volume ls -f dangling=true"
+        },
+        {
+          "description": "Volumen con etiqueta",
+          "code": "docker volume create --label proyecto=cmdvault pgdata"
+        },
+        {
+          "description": "Volumen local montando un recurso NFS",
+          "code": "docker volume create --driver local --opt type=nfs --opt o=addr=10.0.0.5,rw,nfsvers=4 --opt device=:/exports/data nfsdata"
+        }
+      ],
+      "tags": [
+        "volumen",
+        "persistencia"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Inspeccionar volumen",
+      "command": "docker volume inspect pgdata",
+      "section": "Redes y volúmenes",
+      "topic": "Volúmenes",
+      "description": "Muestra driver, punto de montaje en el host, etiquetas y opciones del volumen.",
+      "examples": [
+        {
+          "description": "Ruta en el host",
+          "code": "docker volume inspect -f '{{.Mountpoint}}' pgdata"
+        },
+        {
+          "description": "Qué contenedores usan un volumen",
+          "code": "docker ps -a --filter volume=pgdata --format '{{.Names}}'"
+        }
+      ],
+      "tags": [
+        "volumen",
+        "inspect"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En Docker Desktop el Mountpoint está dentro de la VM, no en tu disco de Windows/macOS."
+    },
+    {
+      "title": "Eliminar volúmenes sin uso",
+      "command": "docker volume prune",
+      "section": "Redes y volúmenes",
+      "topic": "Volúmenes",
+      "description": "Desde Engine 23 prune borra solo volúmenes anónimos sin uso; con -a también los nombrados no referenciados.",
+      "examples": [
+        {
+          "description": "Incluir volúmenes nombrados (cuidado)",
+          "code": "docker volume prune -a -f"
+        },
+        {
+          "description": "Borrar un volumen concreto",
+          "code": "docker volume rm pgdata"
+        }
+      ],
+      "tags": [
+        "volumen",
+        "limpieza",
+        "prune"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Destructivo: un volumen nombrado de una base de datos detenida cuenta como 'sin uso' con -a."
+    },
+    {
+      "title": "Respaldar un volumen con tar",
+      "command": "docker run --rm -v pgdata:/data:ro -v \"$PWD\":/backup alpine tar czf /backup/pgdata-$(date +%F).tar.gz -C /data .",
+      "section": "Redes y volúmenes",
+      "topic": "Respaldo",
+      "description": "Monta el volumen en solo lectura en un contenedor alpine efímero y lo empaqueta en un tar.gz del host.",
+      "examples": [
+        {
+          "description": "Restaurar el respaldo en un volumen nuevo",
+          "code": "docker volume create pgdata-restore && docker run --rm -v pgdata-restore:/data -v \"$PWD\":/backup alpine sh -c 'tar xzf /backup/pgdata-2026-10-16.tar.gz -C /data'"
+        },
+        {
+          "description": "Copiar un volumen a otro",
+          "code": "docker run --rm -v pgdata:/from:ro -v pgdata-copy:/to alpine sh -c 'cp -a /from/. /to/'"
+        },
+        {
+          "description": "Versión PowerShell",
+          "code": "docker run --rm -v pgdata:/data:ro -v ${PWD}:/backup alpine tar czf /backup/pgdata.tar.gz -C /data ."
+        }
+      ],
+      "tags": [
+        "volumen",
+        "backup",
+        "restore"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para bases de datos detén el contenedor o usa la herramienta nativa (pg_dump) para obtener un respaldo consistente."
+    },
+    {
+      "title": "Bind mount frente a volumen nombrado",
+      "command": "docker run -d -v pgdata:/var/lib/postgresql postgres:18",
+      "section": "Redes y volúmenes",
+      "topic": "Volúmenes",
+      "description": "Volumen nombrado: Docker gestiona la ubicación, ideal para datos de servicios. Bind mount: una ruta del host, ideal para código en desarrollo o configuración.",
+      "examples": [
+        {
+          "description": "Volumen nombrado para datos",
+          "code": "docker run -d --name pg -v pgdata:/var/lib/postgresql postgres:18"
+        },
+        {
+          "description": "Bind mount para código en desarrollo",
+          "code": "docker run -d -v \"$PWD\"/src:/app/src -p 8000:8000 api:dev"
+        }
+      ],
+      "tags": [
+        "volumen",
+        "bind",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "En Docker Desktop los bind mounts del disco de Windows/macOS son lentos; en WSL2 guarda el proyecto dentro del sistema de archivos de Linux o usa compose watch."
+    },
+    {
+      "title": "Volúmenes y redes en Compose",
+      "command": "docker compose up -d",
+      "section": "Redes y volúmenes",
+      "topic": "Compose",
+      "description": "Declaración de volúmenes nombrados, redes y volúmenes externos creados fuera del proyecto.",
+      "examples": [
+        {
+          "description": "Snippet compose.yaml",
+          "code": "services:\n  db:\n    image: postgres:18\n    volumes:\n      - pgdata:/var/lib/postgresql\n    networks: [datos]\n  api:\n    image: ghcr.io/nicocano/api:1.0\n    networks: [datos, publica]\nvolumes:\n  pgdata:\n  compartido:\n    external: true\nnetworks:\n  datos:\n    internal: true\n  publica:"
+        }
+      ],
+      "tags": [
+        "compose",
+        "volumen",
+        "red",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Información de la instalación",
+      "command": "docker info",
+      "section": "Sistema y diagnóstico",
+      "topic": "Motor",
+      "description": "Muestra versión del servidor, storage driver, almacén de imágenes, cgroup driver, número de contenedores y advertencias de configuración.",
+      "examples": [
+        {
+          "description": "Campos concretos",
+          "code": "docker info -f '{{.ServerVersion}} {{.Driver}} {{.CgroupDriver}}'"
+        },
+        {
+          "description": "Versiones de cliente y servidor",
+          "code": "docker version"
+        },
+        {
+          "description": "Solo la versión del servidor",
+          "code": "docker version -f '{{.Server.Version}}'"
+        }
+      ],
+      "tags": [
+        "info",
+        "version",
+        "motor"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Uso de disco de Docker",
+      "command": "docker system df",
+      "section": "Sistema y diagnóstico",
+      "topic": "Limpieza",
+      "description": "Resume el espacio usado por imágenes, contenedores, volúmenes y caché de build, y cuánto es recuperable.",
+      "examples": [
+        {
+          "description": "Detalle por objeto",
+          "code": "docker system df -v"
+        },
+        {
+          "description": "Uso de cada volumen",
+          "code": "docker system df -v --format '{{json .Volumes}}' | jq -r '.[] | \"\\(.Size)\\t\\(.Name)\"'"
+        }
+      ],
+      "tags": [
+        "disco",
+        "df"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Limpieza general del sistema",
+      "command": "docker system prune",
+      "section": "Sistema y diagnóstico",
+      "topic": "Limpieza",
+      "description": "Elimina contenedores detenidos, redes sin uso, imágenes colgantes y caché de build. Con -a todas las imágenes sin contenedor y con --volumes también volúmenes anónimos.",
+      "examples": [
+        {
+          "description": "Limpieza agresiva en un runner de CI",
+          "code": "docker system prune -a -f --volumes"
+        },
+        {
+          "description": "Solo lo más antiguo de una semana",
+          "code": "docker system prune -a -f --filter until=168h"
+        }
+      ],
+      "tags": [
+        "prune",
+        "limpieza",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Revisa docker system df antes: -a borrará imágenes que tendrás que volver a descargar."
+    },
+    {
+      "title": "Eventos del motor Docker",
+      "command": "docker events",
+      "section": "Sistema y diagnóstico",
+      "topic": "Diagnóstico",
+      "description": "Transmite en vivo los eventos del daemon (create, start, die, oom, health_status...). Útil para entender reinicios inesperados.",
+      "examples": [
+        {
+          "description": "Solo muertes y OOM de contenedores",
+          "code": "docker events --filter type=container --filter event=die --filter event=oom"
+        },
+        {
+          "description": "Eventos de la última hora en JSON",
+          "code": "docker events --since 1h --until 0s --format '{{json .}}'"
+        },
+        {
+          "description": "Cambios de salud de un contenedor",
+          "code": "docker events --filter container=api --filter event=health_status"
+        }
+      ],
+      "tags": [
+        "events",
+        "diagnostico"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Depurar contenedores con docker debug",
+      "command": "docker debug api",
+      "section": "Sistema y diagnóstico",
+      "topic": "Diagnóstico",
+      "description": "Abre una shell con herramientas (vim, curl, htop, nix) dentro de cualquier contenedor o imagen, incluso slim o distroless, sin modificarlo.",
+      "examples": [
+        {
+          "description": "Depurar una imagen sin arrancar un contenedor",
+          "code": "docker debug python:3.14-slim"
+        },
+        {
+          "description": "Ejecutar un comando puntual",
+          "code": "docker debug --shell bash api"
+        }
+      ],
+      "tags": [
+        "debug",
+        "distroless",
+        "troubleshooting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Es una función de Docker Desktop; en Engine Linux puro usa un contenedor que comparta namespaces (--pid y --network container:NOMBRE)."
+    },
+    {
+      "title": "Contextos de Docker",
+      "command": "docker context ls",
+      "section": "Sistema y diagnóstico",
+      "topic": "Motor",
+      "description": "Un contexto guarda a qué daemon se conecta la CLI (local, remoto por SSH, Desktop). Permite operar servidores remotos sin entrar por SSH.",
+      "examples": [
+        {
+          "description": "Crear contexto hacia un servidor por SSH",
+          "code": "docker context create prod --docker host=ssh://deploy@srv.ejemplo.cl"
+        },
+        {
+          "description": "Cambiar el contexto activo",
+          "code": "docker context use prod"
+        },
+        {
+          "description": "Ejecutar un comando en otro contexto sin cambiar",
+          "code": "docker --context prod ps"
+        },
+        {
+          "description": "Volver al local",
+          "code": "docker context use default"
+        }
+      ],
+      "tags": [
+        "context",
+        "remoto",
+        "ssh"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "DOCKER_HOST y DOCKER_CONTEXT tienen prioridad sobre el contexto activo; si algo apunta al servidor equivocado, revisa esas variables."
+    },
+    {
+      "title": "Rotación de logs del daemon",
+      "command": "sudo systemctl restart docker",
+      "section": "Sistema y diagnóstico",
+      "topic": "Motor",
+      "description": "Configura en daemon.json el driver de logs por defecto con rotación para que los contenedores no llenen el disco.",
+      "examples": [
+        {
+          "description": "/etc/docker/daemon.json",
+          "code": "{\n  \"log-driver\": \"local\",\n  \"log-opts\": { \"max-size\": \"20m\", \"max-file\": \"5\" },\n  \"live-restore\": true\n}"
+        },
+        {
+          "description": "Por contenedor",
+          "code": "docker run -d --log-opt max-size=10m --log-opt max-file=3 app:1.0"
+        },
+        {
+          "description": "Ver el driver de un contenedor",
+          "code": "docker inspect -f '{{.HostConfig.LogConfig.Type}}' api"
+        }
+      ],
+      "tags": [
+        "daemon",
+        "logs",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "El cambio solo aplica a contenedores creados después. live-restore mantiene los contenedores vivos durante un reinicio del daemon."
+    },
+    {
+      "title": "Logs del servicio Docker",
+      "command": "journalctl -u docker --since '1 hour ago'",
+      "section": "Sistema y diagnóstico",
+      "topic": "Motor",
+      "description": "Revisa los logs del daemon dockerd (y de containerd) en sistemas con systemd, para fallos de arranque o de red.",
+      "examples": [
+        {
+          "description": "Seguir en vivo",
+          "code": "journalctl -u docker -f"
+        },
+        {
+          "description": "Logs de containerd",
+          "code": "journalctl -u containerd -n 200"
+        },
+        {
+          "description": "Estado del servicio",
+          "code": "systemctl status docker"
+        }
+      ],
+      "tags": [
+        "daemon",
+        "journalctl",
+        "systemd"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ]
+    },
+    {
+      "title": "Usuario sin sudo para Docker",
+      "command": "sudo usermod -aG docker $USER && newgrp docker",
+      "section": "Sistema y diagnóstico",
+      "topic": "Motor",
+      "description": "Agrega tu usuario al grupo docker para usar la CLI sin sudo.",
+      "examples": [
+        {
+          "description": "Verificar pertenencia",
+          "code": "id -nG | tr ' ' '\\n' | grep docker"
+        }
+      ],
+      "tags": [
+        "permisos",
+        "grupo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "El grupo docker equivale a root en el host. Alternativa más segura: Docker en modo rootless (dockerd-rootless-setuptool.sh install)."
+    },
+    {
+      "title": "Instalar Docker Engine en Ubuntu",
+      "command": "curl -fsSL https://get.docker.com | sh",
+      "section": "Sistema y diagnóstico",
+      "topic": "Motor",
+      "description": "Instala Docker Engine, CLI, containerd, buildx y el plugin compose desde el repositorio oficial.",
+      "examples": [
+        {
+          "description": "Instalación desde el repositorio apt oficial",
+          "code": "sudo install -m 0755 -d /etc/apt/keyrings\nsudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc\necho \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable\" | sudo tee /etc/apt/sources.list.d/docker.list\nsudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
+        },
+        {
+          "description": "AlmaLinux / RHEL",
+          "code": "sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo\nsudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin\nsudo systemctl enable --now docker"
+        }
+      ],
+      "tags": [
+        "instalacion",
+        "ubuntu",
+        "almalinux"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El script get.docker.com es cómodo para laboratorios; en producción prefiere el repositorio con versiones fijadas. En AlmaLinux quita antes podman-docker si está instalado."
+    },
+    {
+      "title": "Estado de salud de contenedores",
+      "command": "docker ps --format 'table {{.Names}}\\t{{.Status}}'",
+      "section": "Sistema y diagnóstico",
+      "topic": "Diagnóstico",
+      "description": "La columna Status incluye (healthy), (unhealthy) o (health: starting). Inspect muestra la salida de los últimos chequeos.",
+      "examples": [
+        {
+          "description": "Salida del último chequeo",
+          "code": "docker inspect -f '{{(index .State.Health.Log 0).Output}}' api"
+        },
+        {
+          "description": "Esperar en un script hasta healthy",
+          "code": "until [ \"$(docker inspect -f '{{.State.Health.Status}}' api)\" = healthy ]; do sleep 2; done"
+        }
+      ],
+      "tags": [
+        "healthcheck",
+        "diagnostico"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Diagnosticar contenedor que se reinicia",
+      "command": "docker inspect -f '{{.State.ExitCode}} {{.State.OOMKilled}} {{.State.Error}} {{.RestartCount}}' api",
+      "section": "Sistema y diagnóstico",
+      "topic": "Diagnóstico",
+      "description": "Ante un contenedor en bucle de reinicio, revisa código de salida, OOM, último error y logs previos.",
+      "examples": [
+        {
+          "description": "Logs de la ejecución anterior",
+          "code": "docker logs --tail 50 api"
+        },
+        {
+          "description": "Arrancar con shell para investigar manualmente",
+          "code": "docker run --rm -it --entrypoint sh app:1.0"
+        },
+        {
+          "description": "Ver el comando efectivo",
+          "code": "docker inspect -f '{{json .Config.Entrypoint}} {{json .Config.Cmd}}' api"
+        }
+      ],
+      "tags": [
+        "troubleshooting",
+        "restart",
+        "exitcode"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Códigos frecuentes: 137 = SIGKILL (a menudo OOM), 143 = SIGTERM, 126 = no ejecutable, 127 = comando no encontrado."
+    }
+  ]
+}

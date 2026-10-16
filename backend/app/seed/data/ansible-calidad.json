@@ -1,0 +1,429 @@
+{
+  "category": {
+    "slug": "ansible",
+    "name": "Ansible",
+    "icon": "settings_suggest",
+    "order": 8,
+    "description": "Gestión de configuración con Ansible: ad-hoc, playbooks, inventarios, roles, Vault y calidad."
+  },
+  "commands": [
+    {
+      "title": "Configuración efectiva de Ansible",
+      "command": "ansible-config dump --only-changed",
+      "section": "Calidad y depuración",
+      "topic": "Configuración",
+      "description": "Muestra solo los ajustes distintos del valor por defecto y de dónde vienen (ansible.cfg, variables de entorno).",
+      "examples": [
+        {
+          "description": "Qué ansible.cfg se está usando",
+          "code": "ansible --version"
+        },
+        {
+          "description": "Generar un ansible.cfg comentado con todas las opciones",
+          "code": "ansible-config init --disabled -t all > ansible.cfg"
+        },
+        {
+          "description": "Documentación de una opción",
+          "code": "ansible-config list | grep -A5 DEFAULT_FORKS"
+        }
+      ],
+      "tags": [
+        "ansible-config",
+        "configuracion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Orden de búsqueda: ANSIBLE_CONFIG, ./ansible.cfg, ~/.ansible.cfg y /etc/ansible/ansible.cfg. Ansible ignora un ansible.cfg en un directorio escribible por todos."
+    },
+    {
+      "title": "Archivo ansible.cfg recomendado",
+      "command": "cat ansible.cfg",
+      "section": "Calidad y depuración",
+      "topic": "Configuración",
+      "description": "Un ansible.cfg en la raíz del proyecto fija inventario, rutas, rendimiento SSH y formato de salida para todo el equipo.",
+      "examples": [
+        {
+          "description": "ansible.cfg",
+          "code": "[defaults]\ninventory = inventories/prod/hosts.yml\nroles_path = ./roles\ncollections_path = ./collections\nforks = 20\nhost_key_checking = True\ncallback_result_format = yaml\ncallbacks_enabled = ansible.posix.profile_tasks\ninterpreter_python = auto_silent\n\n[ssh_connection]\npipelining = True\nssh_args = -o ControlMaster=auto -o ControlPersist=60s"
+        }
+      ],
+      "tags": [
+        "ansible.cfg",
+        "rendimiento",
+        "ssh"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "pipelining acelera mucho la ejecución, pero con become requiere que sudoers no tenga 'requiretty' (por defecto no lo tiene en Ubuntu ni AlmaLinux modernos)."
+    },
+    {
+      "title": "Documentación de módulos con ansible-doc",
+      "command": "ansible-doc ansible.builtin.template",
+      "section": "Calidad y depuración",
+      "topic": "Documentación",
+      "description": "Muestra parámetros, valores de retorno y ejemplos de cualquier módulo o plugin instalado, sin salir de la terminal.",
+      "examples": [
+        {
+          "description": "Snippet listo para pegar",
+          "code": "ansible-doc -s community.general.ufw"
+        },
+        {
+          "description": "Listar módulos de una colección",
+          "code": "ansible-doc -l community.docker"
+        },
+        {
+          "description": "Documentación de un lookup o filtro",
+          "code": "ansible-doc -t lookup ansible.builtin.env && ansible-doc -t filter ansible.builtin.combine"
+        }
+      ],
+      "tags": [
+        "ansible-doc",
+        "documentacion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Lint de playbooks con ansible-lint",
+      "command": "ansible-lint",
+      "section": "Calidad y depuración",
+      "topic": "Lint",
+      "description": "Revisa playbooks y roles contra buenas prácticas: FQCN, nombres de tareas, idempotencia, uso de shell, YAML. Tiene perfiles de exigencia creciente.",
+      "examples": [
+        {
+          "description": "Perfil de producción",
+          "code": "ansible-lint --profile production"
+        },
+        {
+          "description": "Corregir automáticamente lo posible",
+          "code": "ansible-lint --fix"
+        },
+        {
+          "description": "Configuración .ansible-lint",
+          "code": "profile: production\nexclude_paths:\n  - collections/\nskip_list:\n  - yaml[line-length]\nwarn_list:\n  - experimental"
+        },
+        {
+          "description": "Salida SARIF para GitHub",
+          "code": "ansible-lint -f sarif > ansible-lint.sarif"
+        }
+      ],
+      "tags": [
+        "ansible-lint",
+        "lint",
+        "calidad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Silencia un hallazgo puntual con un comentario '# noqa: regla' en la línea; documenta el porqué."
+    },
+    {
+      "title": "Probar roles con Molecule",
+      "command": "molecule test",
+      "section": "Calidad y depuración",
+      "topic": "Testing",
+      "description": "Molecule crea instancias (contenedores Docker/Podman o VMs), aplica el rol, comprueba idempotencia y verifica el resultado.",
+      "examples": [
+        {
+          "description": "Crear un escenario en un rol existente",
+          "code": "cd roles/nginx && molecule init scenario default"
+        },
+        {
+          "description": "Ciclo de desarrollo rápido",
+          "code": "molecule converge && molecule verify"
+        },
+        {
+          "description": "Entrar a la instancia de prueba",
+          "code": "molecule login"
+        },
+        {
+          "description": "Destruir el entorno",
+          "code": "molecule destroy"
+        }
+      ],
+      "tags": [
+        "molecule",
+        "testing",
+        "roles"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "molecule test ejecuta la secuencia completa (dependency, create, converge, idempotence, verify, destroy); la etapa idempotence falla si el segundo converge reporta cambios."
+    },
+    {
+      "title": "Escenario de Molecule con Docker para Ubuntu y AlmaLinux",
+      "command": "molecule test -s default",
+      "section": "Calidad y depuración",
+      "topic": "Testing",
+      "description": "molecule.yml declara las plataformas de prueba; con el driver de Docker se prueban ambas distribuciones en paralelo.",
+      "examples": [
+        {
+          "description": "molecule/default/molecule.yml",
+          "code": "driver:\n  name: docker\nplatforms:\n  - name: ubuntu2404\n    image: geerlingguy/docker-ubuntu2404-ansible\n    pre_build_image: true\n    privileged: false\n    command: \"\"\n    volumes: [\"/sys/fs/cgroup:/sys/fs/cgroup:rw\"]\n    cgroupns_mode: host\n  - name: alma10\n    image: almalinux:10\n    pre_build_image: false\nprovisioner:\n  name: ansible\nverifier:\n  name: ansible"
+        },
+        {
+          "description": "verify.yml",
+          "code": "- name: Verificar\n  hosts: all\n  gather_facts: false\n  tasks:\n    - name: nginx responde\n      ansible.builtin.uri:\n        url: http://localhost\n        status_code: 200"
+        }
+      ],
+      "tags": [
+        "molecule",
+        "docker",
+        "testing"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Para probar servicios systemd dentro de contenedores necesitas imágenes preparadas con systemd como PID 1."
+    },
+    {
+      "title": "Ejecutar con ansible-navigator",
+      "command": "ansible-navigator run site.yml -m stdout",
+      "section": "Calidad y depuración",
+      "topic": "Herramientas",
+      "description": "ansible-navigator ejecuta playbooks dentro de un Execution Environment (imagen de contenedor con ansible-core, colecciones y dependencias), garantizando el mismo entorno en local y CI.",
+      "examples": [
+        {
+          "description": "Con una imagen de EE concreta",
+          "code": "ansible-navigator run site.yml -i inventories/prod --eei ghcr.io/ansible/community-ansible-dev-tools:latest -m stdout"
+        },
+        {
+          "description": "Modo interactivo para explorar resultados",
+          "code": "ansible-navigator run site.yml"
+        },
+        {
+          "description": "Sin contenedor, con el Ansible local",
+          "code": "ansible-navigator run site.yml --ee false -m stdout"
+        }
+      ],
+      "tags": [
+        "ansible-navigator",
+        "execution-environment"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los EE se construyen con ansible-builder a partir de un execution-environment.yml."
+    },
+    {
+      "title": "Aumentar la verbosidad",
+      "command": "ansible-playbook site.yml -vvv",
+      "section": "Calidad y depuración",
+      "topic": "Depuración",
+      "description": "-v muestra resultados, -vvv la conexión SSH y argumentos, -vvvv incluso los detalles de la conexión. Primer paso ante errores de conexión o permisos.",
+      "examples": [
+        {
+          "description": "Depurar SSH de un solo host",
+          "code": "ansible web01 -m ping -vvvv"
+        },
+        {
+          "description": "Guardar log de la ejecución",
+          "code": "ANSIBLE_LOG_PATH=./ansible.log ansible-playbook site.yml -vv"
+        }
+      ],
+      "tags": [
+        "verbose",
+        "debug",
+        "ssh"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Depurar tareas con debug y el depurador",
+      "command": "ANSIBLE_ENABLE_TASK_DEBUGGER=True ansible-playbook site.yml",
+      "section": "Calidad y depuración",
+      "topic": "Depuración",
+      "description": "El módulo debug imprime variables y el task debugger abre una consola interactiva cuando una tarea falla para inspeccionar y reintentar.",
+      "examples": [
+        {
+          "description": "Imprimir una variable registrada",
+          "code": "- ansible.builtin.debug:\n    var: resultado\n    verbosity: 1"
+        },
+        {
+          "description": "Activar el depurador en una play",
+          "code": "- hosts: web\n  debugger: on_failed\n  tasks: []"
+        },
+        {
+          "description": "Solo en una tarea concreta",
+          "code": "- name: Tarea problemática\n  ansible.builtin.command: /opt/app/bin/check\n  debugger: on_failed"
+        }
+      ],
+      "tags": [
+        "debug",
+        "debugger"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En el depurador: p task_vars['x'] imprime variables, r reintenta, c continúa y q sale."
+    },
+    {
+      "title": "Medir tiempos de tareas",
+      "command": "ANSIBLE_CALLBACKS_ENABLED=ansible.posix.profile_tasks ansible-playbook site.yml",
+      "section": "Calidad y depuración",
+      "topic": "Rendimiento",
+      "description": "El callback profile_tasks muestra la duración de cada tarea y un resumen de las más lentas.",
+      "examples": [
+        {
+          "description": "Tiempo por rol",
+          "code": "ANSIBLE_CALLBACKS_ENABLED=ansible.posix.profile_roles ansible-playbook site.yml"
+        },
+        {
+          "description": "Resultado en formato YAML legible",
+          "code": "ANSIBLE_CALLBACK_RESULT_FORMAT=yaml ansible-playbook site.yml"
+        }
+      ],
+      "tags": [
+        "profile_tasks",
+        "rendimiento",
+        "callbacks"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "El antiguo callback community.general.yaml quedó obsoleto: usa callback_result_format = yaml del callback por defecto."
+    },
+    {
+      "title": "Consola interactiva de Ansible",
+      "command": "ansible-console -i inventories/prod web",
+      "section": "Calidad y depuración",
+      "topic": "Herramientas",
+      "description": "REPL para ejecutar módulos ad-hoc sobre un grupo de hosts, cambiar de grupo y activar become sin reescribir el comando.",
+      "examples": [
+        {
+          "description": "Dentro de la consola",
+          "code": "web (2)[f:5]$ become true\nweb (2)[f:5]# ansible.builtin.service name=nginx state=reloaded\nweb (2)[f:5]# cd db"
+        }
+      ],
+      "tags": [
+        "ansible-console",
+        "repl"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ]
+    },
+    {
+      "title": "Modo pull para hosts autogestionados",
+      "command": "ansible-pull -U https://github.com/nicocano/ansible-config.git local.yml",
+      "section": "Calidad y depuración",
+      "topic": "Herramientas",
+      "description": "ansible-pull invierte el modelo: cada host clona el repositorio y se aplica el playbook a sí mismo, útil con cron o al arrancar instancias.",
+      "examples": [
+        {
+          "description": "Rama concreta y solo si hubo cambios en el repo",
+          "code": "ansible-pull -U https://github.com/nicocano/ansible-config.git -C main --only-if-changed local.yml"
+        },
+        {
+          "description": "Programarlo con cron",
+          "code": "- ansible.builtin.cron:\n    name: ansible-pull\n    minute: \"*/30\"\n    job: \"ansible-pull -U https://github.com/nicocano/ansible-config.git -o local.yml >> /var/log/ansible-pull.log 2>&1\""
+        }
+      ],
+      "tags": [
+        "ansible-pull",
+        "gitops"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Instalar ansible-core y herramientas",
+      "command": "pipx install --include-deps ansible",
+      "section": "Calidad y depuración",
+      "topic": "Configuración",
+      "description": "Instala Ansible en un entorno aislado. ansible trae ansible-core más una selección de colecciones; ansible-dev-tools agrupa lint, molecule y navigator.",
+      "examples": [
+        {
+          "description": "Solo ansible-core",
+          "code": "pipx install ansible-core"
+        },
+        {
+          "description": "Herramientas de desarrollo",
+          "code": "pipx install ansible-dev-tools"
+        },
+        {
+          "description": "Inyectar dependencias Python para colecciones",
+          "code": "pipx inject ansible boto3 botocore docker"
+        },
+        {
+          "description": "Paquete de la distribución en AlmaLinux",
+          "code": "sudo dnf install -y ansible-core"
+        }
+      ],
+      "tags": [
+        "instalacion",
+        "pipx",
+        "ansible-core"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los paquetes de distribución suelen ir varias versiones atrás; para ansible-core 2.19/2.20 usa pipx o un venv."
+    },
+    {
+      "title": "Cambios de ansible-core 2.19 en plantillas",
+      "command": "ansible-playbook site.yml --check",
+      "section": "Calidad y depuración",
+      "topic": "Depuración",
+      "description": "ansible-core 2.19 introdujo data tagging y un motor de plantillas más estricto: errores que antes se ignoraban ahora fallan, y los condicionales deben ser booleanos.",
+      "examples": [
+        {
+          "description": "Antes funcionaba, ahora falla: plantilla anidada en when",
+          "code": "# Incorrecto (2.19+ lo rechaza)\nwhen: \"{{ habilitado }}\"\n# Correcto\nwhen: habilitado | bool"
+        },
+        {
+          "description": "Comparar contra string vacío de forma explícita",
+          "code": "when: mi_variable | length > 0"
+        }
+      ],
+      "tags": [
+        "ansible-core",
+        "migracion",
+        "jinja"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Antes de actualizar el controlador, ejecuta tus playbooks con --check en un entorno de pruebas y corrige los avisos de obsolescencia."
+    }
+  ]
+}

@@ -1,0 +1,926 @@
+{
+  "category": {
+    "slug": "python",
+    "name": "Python",
+    "icon": "code",
+    "order": 2,
+    "description": "Python moderno y sus frameworks backend: Django, Django REST Framework y FastAPI."
+  },
+  "commands": [
+    {
+      "title": "Crear un proyecto Django",
+      "command": "django-admin startproject",
+      "section": "Django",
+      "topic": "Proyecto y servidor",
+      "description": "Genera la estructura base de un proyecto Django con settings, urls, wsgi y asgi.",
+      "syntax": "django-admin startproject <nombre> [directorio]",
+      "examples": [
+        {
+          "description": "Crear en el directorio actual (sin carpeta extra)",
+          "code": "python -m pip install \"django>=5.2,<6\"\ndjango-admin startproject config ."
+        },
+        {
+          "description": "Ver la versión instalada",
+          "code": "python -m django --version"
+        }
+      ],
+      "tags": [
+        "django",
+        "proyecto",
+        "inicio"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Usar 'config' como nombre y '.' como destino deja manage.py en la raíz y evita la carpeta duplicada proyecto/proyecto."
+    },
+    {
+      "title": "Crear una aplicación Django",
+      "command": "python manage.py startapp",
+      "section": "Django",
+      "topic": "Proyecto y servidor",
+      "description": "Crea una app con models, views, admin, tests y migraciones. Luego hay que registrarla en INSTALLED_APPS.",
+      "examples": [
+        {
+          "description": "Crear la app y registrarla",
+          "code": "python manage.py startapp pedidos\n# config/settings.py\nINSTALLED_APPS = [\n    # ...\n    \"pedidos\",\n]"
+        },
+        {
+          "description": "Crear la app dentro de un directorio apps/",
+          "code": "mkdir -p apps/pedidos\npython manage.py startapp pedidos apps/pedidos"
+        }
+      ],
+      "tags": [
+        "django",
+        "apps"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Si la creas en apps/, ajusta name = \"apps.pedidos\" en apps/pedidos/apps.py."
+    },
+    {
+      "title": "Servidor de desarrollo",
+      "command": "python manage.py runserver",
+      "section": "Django",
+      "topic": "Proyecto y servidor",
+      "description": "Levanta el servidor de desarrollo con recarga automática al cambiar el código.",
+      "examples": [
+        {
+          "description": "Accesible desde la red local",
+          "code": "python manage.py runserver 0.0.0.0:8000"
+        },
+        {
+          "description": "Con otro settings",
+          "code": "python manage.py runserver --settings=config.settings.dev"
+        },
+        {
+          "description": "Sin recarga automática",
+          "code": "python manage.py runserver --noreload"
+        }
+      ],
+      "tags": [
+        "django",
+        "servidor",
+        "desarrollo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "No es apto para producción: usa Gunicorn/Uvicorn detrás de Nginx."
+    },
+    {
+      "title": "Generar migraciones",
+      "command": "python manage.py makemigrations",
+      "section": "Django",
+      "topic": "Migraciones",
+      "description": "Detecta cambios en los modelos y crea archivos de migración versionables.",
+      "syntax": "makemigrations [app] [opciones]",
+      "examples": [
+        {
+          "description": "Para una app concreta con nombre descriptivo",
+          "code": "python manage.py makemigrations pedidos --name agrega_estado"
+        },
+        {
+          "description": "Ver qué generaría sin escribir",
+          "code": "python manage.py makemigrations --dry-run -v 3"
+        },
+        {
+          "description": "Fallar en CI si faltan migraciones",
+          "code": "python manage.py makemigrations --check --dry-run"
+        },
+        {
+          "description": "Migración vacía para datos",
+          "code": "python manage.py makemigrations pedidos --empty --name poblar_estados"
+        }
+      ],
+      "tags": [
+        "django",
+        "migraciones",
+        "ci"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Aplicar migraciones",
+      "command": "python manage.py migrate",
+      "section": "Django",
+      "topic": "Migraciones",
+      "description": "Aplica las migraciones pendientes a la base de datos. También permite volver a una migración anterior.",
+      "syntax": "migrate [app] [migración]",
+      "examples": [
+        {
+          "description": "Aplicar todo",
+          "code": "python manage.py migrate"
+        },
+        {
+          "description": "Revertir una app a una migración específica",
+          "code": "python manage.py migrate pedidos 0003"
+        },
+        {
+          "description": "Deshacer todas las migraciones de una app",
+          "code": "python manage.py migrate pedidos zero"
+        },
+        {
+          "description": "Marcar como aplicada sin ejecutar SQL",
+          "code": "python manage.py migrate pedidos 0004 --fake"
+        }
+      ],
+      "tags": [
+        "django",
+        "migraciones",
+        "base-de-datos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ],
+      "notes": "--fake es peligroso: solo úsalo cuando el esquema real ya coincide con la migración."
+    },
+    {
+      "title": "Ver el SQL de una migración",
+      "command": "python manage.py sqlmigrate",
+      "section": "Django",
+      "topic": "Migraciones",
+      "description": "Muestra el SQL exacto que ejecutará una migración; clave para revisar bloqueos de tablas grandes antes de producción.",
+      "examples": [
+        {
+          "description": "SQL de aplicar",
+          "code": "python manage.py sqlmigrate pedidos 0004"
+        },
+        {
+          "description": "SQL de revertir",
+          "code": "python manage.py sqlmigrate pedidos 0004 --backwards"
+        }
+      ],
+      "tags": [
+        "django",
+        "migraciones",
+        "sql"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Estado de las migraciones",
+      "command": "python manage.py showmigrations",
+      "section": "Django",
+      "topic": "Migraciones",
+      "description": "Lista las migraciones de cada app indicando cuáles están aplicadas ([X]) y cuáles pendientes.",
+      "examples": [
+        {
+          "description": "Por app",
+          "code": "python manage.py showmigrations pedidos"
+        },
+        {
+          "description": "Orden real de ejecución",
+          "code": "python manage.py showmigrations --plan"
+        },
+        {
+          "description": "Solo pendientes (en un script)",
+          "code": "python manage.py showmigrations --plan | grep '\\[ \\]'"
+        }
+      ],
+      "tags": [
+        "django",
+        "migraciones"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Compactar migraciones",
+      "command": "python manage.py squashmigrations",
+      "section": "Django",
+      "topic": "Migraciones",
+      "description": "Combina varias migraciones de una app en una sola para acelerar los tests y simplificar el historial.",
+      "examples": [
+        {
+          "description": "Compactar hasta la 0020",
+          "code": "python manage.py squashmigrations pedidos 0020"
+        },
+        {
+          "description": "Desde la 0005 hasta la 0020",
+          "code": "python manage.py squashmigrations pedidos 0005 0020"
+        }
+      ],
+      "tags": [
+        "django",
+        "migraciones",
+        "mantenimiento"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software"
+      ],
+      "notes": "Mantén las migraciones originales hasta que todos los entornos hayan aplicado la compactada; luego bórralas y quita 'replaces'."
+    },
+    {
+      "title": "Migración de datos con RunPython",
+      "command": "migrations.RunPython",
+      "section": "Django",
+      "topic": "Migraciones",
+      "description": "Permite transformar datos dentro de una migración usando los modelos históricos, con función de reversa.",
+      "examples": [
+        {
+          "description": "Poblar un campo nuevo",
+          "code": "from django.db import migrations\n\ndef poblar(apps, schema_editor):\n    Pedido = apps.get_model(\"pedidos\", \"Pedido\")\n    Pedido.objects.filter(estado=\"\").update(estado=\"pendiente\")\n\nclass Migration(migrations.Migration):\n    dependencies = [(\"pedidos\", \"0004_agrega_estado\")]\n    operations = [\n        migrations.RunPython(poblar, migrations.RunPython.noop),\n    ]"
+        }
+      ],
+      "tags": [
+        "django",
+        "migraciones",
+        "datos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Usa apps.get_model, nunca importes el modelo directamente: el modelo actual puede no coincidir con el esquema de ese momento."
+    },
+    {
+      "title": "Crear un superusuario",
+      "command": "python manage.py createsuperuser",
+      "section": "Django",
+      "topic": "Administración y datos",
+      "description": "Crea un usuario administrador para el panel /admin. Admite modo no interactivo con variables de entorno, útil en contenedores.",
+      "examples": [
+        {
+          "description": "Interactivo",
+          "code": "python manage.py createsuperuser"
+        },
+        {
+          "description": "No interactivo (CI / Docker)",
+          "code": "export DJANGO_SUPERUSER_USERNAME=admin DJANGO_SUPERUSER_EMAIL=admin@ejemplo.cl DJANGO_SUPERUSER_PASSWORD='cambiar-esto'\npython manage.py createsuperuser --noinput"
+        },
+        {
+          "description": "Cambiar la contraseña de un usuario",
+          "code": "python manage.py changepassword admin"
+        }
+      ],
+      "tags": [
+        "django",
+        "admin",
+        "usuarios"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Shell interactiva de Django",
+      "command": "python manage.py shell",
+      "section": "Django",
+      "topic": "Administración y datos",
+      "description": "Abre una consola Python con el proyecto cargado para probar consultas del ORM. Desde Django 5.2 importa automáticamente los modelos.",
+      "examples": [
+        {
+          "description": "Consulta rápida",
+          "code": "python manage.py shell\n>>> Pedido.objects.filter(estado=\"pendiente\").count()"
+        },
+        {
+          "description": "Ejecutar un comando sin entrar",
+          "code": "python manage.py shell -c \"from django.contrib.auth import get_user_model; print(get_user_model().objects.count())\""
+        },
+        {
+          "description": "Ver qué se importa automáticamente",
+          "code": "python manage.py shell -v 2"
+        }
+      ],
+      "tags": [
+        "django",
+        "shell",
+        "orm"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Shell mejorada con django-extensions",
+      "command": "python manage.py shell_plus",
+      "section": "Django",
+      "topic": "Administración y datos",
+      "description": "django-extensions agrega shell_plus (con autoimportación y opción de imprimir SQL), show_urls y graph_models, entre otros.",
+      "examples": [
+        {
+          "description": "Instalar y registrar",
+          "code": "python -m pip install django-extensions\n# settings.py\nINSTALLED_APPS += [\"django_extensions\"]"
+        },
+        {
+          "description": "Mostrar el SQL de cada consulta",
+          "code": "python manage.py shell_plus --print-sql"
+        },
+        {
+          "description": "Listar todas las URLs",
+          "code": "python manage.py show_urls"
+        }
+      ],
+      "tags": [
+        "django",
+        "shell",
+        "django-extensions"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Consola de la base de datos",
+      "command": "python manage.py dbshell",
+      "section": "Django",
+      "topic": "Administración y datos",
+      "description": "Abre el cliente nativo de la base de datos (psql, mysql, sqlite3) con las credenciales del settings.",
+      "examples": [
+        {
+          "description": "Abrir psql",
+          "code": "python manage.py dbshell"
+        },
+        {
+          "description": "Ejecutar una consulta directa (pasando argumentos al cliente)",
+          "code": "python manage.py dbshell -- -c 'SELECT count(*) FROM pedidos_pedido;'"
+        }
+      ],
+      "tags": [
+        "django",
+        "base-de-datos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ],
+      "notes": "Requiere que el cliente (psql, mysql) esté instalado en la máquina."
+    },
+    {
+      "title": "Exportar datos con dumpdata",
+      "command": "python manage.py dumpdata",
+      "section": "Django",
+      "topic": "Administración y datos",
+      "description": "Exporta datos de la base a JSON/YAML para respaldos pequeños, fixtures o migraciones entre motores.",
+      "examples": [
+        {
+          "description": "Exportar una app con indentación",
+          "code": "python manage.py dumpdata pedidos --indent 2 -o fixtures/pedidos.json"
+        },
+        {
+          "description": "Respaldo completo portable",
+          "code": "python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e auth.permission -e admin.logentry -e sessions --indent 2 -o respaldo.json"
+        }
+      ],
+      "tags": [
+        "django",
+        "datos",
+        "fixtures"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Cargar datos con loaddata",
+      "command": "python manage.py loaddata",
+      "section": "Django",
+      "topic": "Administración y datos",
+      "description": "Carga fixtures JSON/YAML en la base de datos.",
+      "examples": [
+        {
+          "description": "Cargar un fixture",
+          "code": "python manage.py loaddata fixtures/pedidos.json"
+        },
+        {
+          "description": "Cargar varios por nombre (busca en <app>/fixtures/)",
+          "code": "python manage.py loaddata categorias regiones"
+        }
+      ],
+      "tags": [
+        "django",
+        "datos",
+        "fixtures"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Comando de gestión propio",
+      "command": "BaseCommand",
+      "section": "Django",
+      "topic": "Administración y datos",
+      "description": "Crea comandos propios de manage.py para tareas programadas, importaciones o mantenimiento.",
+      "examples": [
+        {
+          "description": "app/management/commands/archivar_pedidos.py",
+          "code": "from datetime import timedelta\n\nfrom django.core.management.base import BaseCommand\nfrom django.utils import timezone\n\nfrom pedidos.models import Pedido\n\n\nclass Command(BaseCommand):\n    help = \"Archiva pedidos cancelados con más de N días\"\n\n    def add_arguments(self, parser):\n        parser.add_argument(\"--dias\", type=int, default=30)\n        parser.add_argument(\"--dry-run\", action=\"store_true\")\n\n    def handle(self, *args, **opts):\n        limite = timezone.now() - timedelta(days=opts[\"dias\"])\n        qs = Pedido.objects.filter(estado=\"cancelado\", creado__lt=limite)\n        total = qs.count()\n        if not opts[\"dry_run\"]:\n            qs.update(archivado=True)\n        self.stdout.write(self.style.SUCCESS(f\"{total} pedidos procesados\"))"
+        },
+        {
+          "description": "Ejecutarlo",
+          "code": "python manage.py archivar_pedidos --dias 60 --dry-run"
+        }
+      ],
+      "tags": [
+        "django",
+        "comandos",
+        "automatización"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ],
+      "notes": "Las carpetas management/ y management/commands/ necesitan __init__.py."
+    },
+    {
+      "title": "Definir modelos",
+      "command": "models.Model",
+      "section": "Django",
+      "topic": "ORM y modelos",
+      "description": "Los modelos describen las tablas y sus relaciones; Django genera las migraciones a partir de ellos.",
+      "examples": [
+        {
+          "description": "Modelo con relaciones, índices y restricciones",
+          "code": "from django.db import models\n\n\nclass Pedido(models.Model):\n    class Estado(models.TextChoices):\n        PENDIENTE = \"pendiente\", \"Pendiente\"\n        PAGADO = \"pagado\", \"Pagado\"\n\n    cliente = models.ForeignKey(\"clientes.Cliente\", on_delete=models.PROTECT, related_name=\"pedidos\")\n    estado = models.CharField(max_length=20, choices=Estado, default=Estado.PENDIENTE)\n    total = models.DecimalField(max_digits=12, decimal_places=2)\n    creado = models.DateTimeField(auto_now_add=True)\n\n    class Meta:\n        ordering = [\"-creado\"]\n        indexes = [models.Index(fields=[\"estado\", \"creado\"])]\n        constraints = [models.CheckConstraint(condition=models.Q(total__gte=0), name=\"total_no_negativo\")]\n\n    def __str__(self):\n        return f\"Pedido {self.pk}\""
+        }
+      ],
+      "tags": [
+        "django",
+        "orm",
+        "modelos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Desde Django 5.1 CheckConstraint usa 'condition=' (antes 'check='). Desde 5.0 choices acepta directamente la clase TextChoices."
+    },
+    {
+      "title": "Evitar consultas N+1",
+      "command": "select_related / prefetch_related",
+      "section": "Django",
+      "topic": "ORM y modelos",
+      "description": "select_related une con JOIN relaciones ForeignKey/OneToOne; prefetch_related hace una consulta extra para relaciones inversas o ManyToMany.",
+      "examples": [
+        {
+          "description": "JOIN para claves foráneas",
+          "code": "pedidos = Pedido.objects.select_related(\"cliente\").filter(estado=\"pagado\")"
+        },
+        {
+          "description": "Prefetch de relaciones inversas con filtro",
+          "code": "from django.db.models import Prefetch\n\nclientes = Cliente.objects.prefetch_related(\n    Prefetch(\"pedidos\", queryset=Pedido.objects.filter(estado=\"pagado\"))\n)"
+        },
+        {
+          "description": "Contar consultas en un test",
+          "code": "from django.test.utils import CaptureQueriesContext\nfrom django.db import connection\n\nwith CaptureQueriesContext(connection) as ctx:\n    list(Pedido.objects.select_related(\"cliente\"))\nprint(len(ctx.captured_queries))"
+        }
+      ],
+      "tags": [
+        "django",
+        "orm",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Consultas con Q, F y agregaciones",
+      "command": "annotate / aggregate",
+      "section": "Django",
+      "topic": "ORM y modelos",
+      "description": "Q combina condiciones con OR/NOT, F referencia columnas en la base y annotate/aggregate calculan valores agregados en SQL.",
+      "examples": [
+        {
+          "description": "OR y exclusiones",
+          "code": "from django.db.models import Q\n\nPedido.objects.filter(Q(estado=\"pagado\") | Q(total__gte=100_000), ~Q(cliente__bloqueado=True))"
+        },
+        {
+          "description": "Actualizar sin condición de carrera",
+          "code": "from django.db.models import F\n\nProducto.objects.filter(pk=10).update(stock=F(\"stock\") - 1)"
+        },
+        {
+          "description": "Totales por cliente",
+          "code": "from django.db.models import Count, Sum\n\nCliente.objects.annotate(n=Count(\"pedidos\"), gastado=Sum(\"pedidos__total\")).order_by(\"-gastado\")[:10]"
+        },
+        {
+          "description": "Agregado global",
+          "code": "Pedido.objects.aggregate(total=Sum(\"total\"))"
+        }
+      ],
+      "tags": [
+        "django",
+        "orm",
+        "consultas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Transacciones atómicas",
+      "command": "transaction.atomic",
+      "section": "Django",
+      "topic": "ORM y modelos",
+      "description": "Agrupa operaciones en una transacción: si algo falla, se revierte todo. on_commit ejecuta código solo si la transacción se confirma.",
+      "examples": [
+        {
+          "description": "Bloque atómico con bloqueo de fila",
+          "code": "from django.db import transaction\n\nwith transaction.atomic():\n    producto = Producto.objects.select_for_update().get(pk=10)\n    producto.stock -= 1\n    producto.save(update_fields=[\"stock\"])\n    Pedido.objects.create(producto=producto, total=producto.precio)"
+        },
+        {
+          "description": "Enviar un correo solo si se confirmó",
+          "code": "transaction.on_commit(lambda: enviar_confirmacion.delay(pedido.pk))"
+        }
+      ],
+      "tags": [
+        "django",
+        "orm",
+        "transacciones"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Ver el SQL de un QuerySet",
+      "command": "str(qs.query) / explain()",
+      "section": "Django",
+      "topic": "ORM y modelos",
+      "description": "Inspecciona el SQL que genera el ORM y el plan de ejecución de la base de datos.",
+      "examples": [
+        {
+          "description": "SQL generado",
+          "code": "qs = Pedido.objects.filter(estado=\"pagado\").select_related(\"cliente\")\nprint(qs.query)"
+        },
+        {
+          "description": "Plan de ejecución en PostgreSQL",
+          "code": "print(qs.explain(analyze=True))"
+        }
+      ],
+      "tags": [
+        "django",
+        "orm",
+        "sql",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Rutas con path e include",
+      "command": "urls.py",
+      "section": "Django",
+      "topic": "Vistas y URLs",
+      "description": "Define las URLs del proyecto, delegando en los urls.py de cada app con include.",
+      "examples": [
+        {
+          "description": "URLs del proyecto",
+          "code": "from django.contrib import admin\nfrom django.urls import include, path\n\nurlpatterns = [\n    path(\"admin/\", admin.site.urls),\n    path(\"pedidos/\", include(\"pedidos.urls\")),\n    path(\"api/\", include(\"api.urls\")),\n]"
+        },
+        {
+          "description": "URLs de la app con convertidores",
+          "code": "from django.urls import path\nfrom . import views\n\napp_name = \"pedidos\"\nurlpatterns = [\n    path(\"\", views.PedidoListView.as_view(), name=\"lista\"),\n    path(\"<int:pk>/\", views.PedidoDetailView.as_view(), name=\"detalle\"),\n]"
+        }
+      ],
+      "tags": [
+        "django",
+        "urls",
+        "rutas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Vistas basadas en clases",
+      "command": "ListView / DetailView",
+      "section": "Django",
+      "topic": "Vistas y URLs",
+      "description": "Las vistas genéricas resuelven listados, detalle y formularios con muy poco código.",
+      "examples": [
+        {
+          "description": "Listado paginado y filtrado por usuario",
+          "code": "from django.contrib.auth.mixins import LoginRequiredMixin\nfrom django.views.generic import ListView\n\nfrom .models import Pedido\n\n\nclass PedidoListView(LoginRequiredMixin, ListView):\n    model = Pedido\n    paginate_by = 20\n\n    def get_queryset(self):\n        return Pedido.objects.filter(cliente__usuario=self.request.user).select_related(\"cliente\")"
+        }
+      ],
+      "tags": [
+        "django",
+        "vistas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Registrar modelos en el admin",
+      "command": "@admin.register",
+      "section": "Django",
+      "topic": "Vistas y URLs",
+      "description": "Expone modelos en el panel de administración con listados, filtros y búsqueda.",
+      "examples": [
+        {
+          "description": "Admin con filtros, búsqueda y optimización",
+          "code": "from django.contrib import admin\n\nfrom .models import Pedido\n\n\n@admin.register(Pedido)\nclass PedidoAdmin(admin.ModelAdmin):\n    list_display = (\"id\", \"cliente\", \"estado\", \"total\", \"creado\")\n    list_filter = (\"estado\", \"creado\")\n    search_fields = (\"cliente__nombre\", \"id\")\n    list_select_related = (\"cliente\",)\n    date_hierarchy = \"creado\""
+        }
+      ],
+      "tags": [
+        "django",
+        "admin"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Settings por entorno",
+      "command": "DJANGO_SETTINGS_MODULE",
+      "section": "Django",
+      "topic": "Configuración y despliegue",
+      "description": "Separa la configuración en base, desarrollo y producción, eligiendo el módulo con la variable DJANGO_SETTINGS_MODULE.",
+      "examples": [
+        {
+          "description": "Estructura de settings",
+          "code": "config/settings/\n    __init__.py\n    base.py\n    dev.py    # from .base import *  ; DEBUG = True\n    prod.py   # from .base import *  ; DEBUG = False"
+        },
+        {
+          "description": "Elegir el entorno",
+          "code": "export DJANGO_SETTINGS_MODULE=config.settings.prod\npython manage.py check --deploy"
+        },
+        {
+          "description": "Por comando",
+          "code": "python manage.py migrate --settings=config.settings.dev"
+        }
+      ],
+      "tags": [
+        "django",
+        "settings",
+        "entornos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ],
+      "notes": "Ajusta también manage.py, wsgi.py y asgi.py para que su valor por defecto apunte al settings correcto."
+    },
+    {
+      "title": "Leer secretos desde variables de entorno",
+      "command": "os.environ / django-environ",
+      "section": "Django",
+      "topic": "Configuración y despliegue",
+      "description": "Los secretos (SECRET_KEY, credenciales de BD) nunca van en el código: se leen del entorno o de un .env no versionado.",
+      "examples": [
+        {
+          "description": "Con django-environ",
+          "code": "import environ\n\nenv = environ.Env(DEBUG=(bool, False))\nenviron.Env.read_env(BASE_DIR / \".env\")\n\nSECRET_KEY = env(\"SECRET_KEY\")\nDEBUG = env(\"DEBUG\")\nALLOWED_HOSTS = env.list(\"ALLOWED_HOSTS\", default=[])\nDATABASES = {\"default\": env.db(\"DATABASE_URL\")}"
+        },
+        {
+          "description": "Archivo .env de ejemplo",
+          "code": "SECRET_KEY=cambia-esto\nDEBUG=True\nALLOWED_HOSTS=localhost,127.0.0.1\nDATABASE_URL=postgres://app:app@localhost:5432/app"
+        }
+      ],
+      "tags": [
+        "django",
+        "settings",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Verificar configuración de producción",
+      "command": "python manage.py check --deploy",
+      "section": "Django",
+      "topic": "Configuración y despliegue",
+      "description": "Ejecuta el framework de chequeos de Django, incluyendo advertencias de seguridad para producción (HSTS, cookies seguras, DEBUG).",
+      "examples": [
+        {
+          "description": "Revisión de seguridad con el settings de producción",
+          "code": "python manage.py check --deploy --settings=config.settings.prod"
+        },
+        {
+          "description": "Fallar en CI ante advertencias",
+          "code": "python manage.py check --deploy --fail-level WARNING"
+        },
+        {
+          "description": "Ver diferencias con los valores por defecto",
+          "code": "python manage.py diffsettings"
+        }
+      ],
+      "tags": [
+        "django",
+        "seguridad",
+        "despliegue",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Recolectar archivos estáticos",
+      "command": "python manage.py collectstatic",
+      "section": "Django",
+      "topic": "Configuración y despliegue",
+      "description": "Copia los estáticos de todas las apps a STATIC_ROOT para servirlos con Nginx, WhiteNoise o un bucket.",
+      "examples": [
+        {
+          "description": "Sin preguntar (CI / Docker)",
+          "code": "python manage.py collectstatic --noinput"
+        },
+        {
+          "description": "Borrando lo anterior",
+          "code": "python manage.py collectstatic --noinput --clear"
+        },
+        {
+          "description": "Configuración mínima",
+          "code": "STATIC_URL = \"static/\"\nSTATIC_ROOT = BASE_DIR / \"staticfiles\""
+        }
+      ],
+      "tags": [
+        "django",
+        "estáticos",
+        "despliegue"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Servir Django en producción con Gunicorn",
+      "command": "gunicorn config.wsgi",
+      "section": "Django",
+      "topic": "Configuración y despliegue",
+      "description": "Ejecuta la app con Gunicorn (WSGI) o con Uvicorn (ASGI) detrás de un proxy inverso.",
+      "examples": [
+        {
+          "description": "WSGI con 4 workers",
+          "code": "gunicorn config.wsgi:application --workers 4 --bind 0.0.0.0:8000 --access-logfile -"
+        },
+        {
+          "description": "ASGI con Uvicorn",
+          "code": "uvicorn config.asgi:application --host 0.0.0.0 --port 8000 --workers 4"
+        },
+        {
+          "description": "Regla práctica de workers",
+          "code": "gunicorn config.wsgi -w $(( 2 * $(nproc) + 1 )) -b 127.0.0.1:8000"
+        }
+      ],
+      "tags": [
+        "django",
+        "despliegue",
+        "gunicorn"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Gunicorn no corre en Windows; para desarrollo allí usa runserver o Uvicorn."
+    },
+    {
+      "title": "Ejecutar tests de Django",
+      "command": "python manage.py test",
+      "section": "Django",
+      "topic": "Testing",
+      "description": "Ejecuta los tests con el runner de Django, que crea una base de datos de prueba temporal.",
+      "examples": [
+        {
+          "description": "Tests de una app en paralelo",
+          "code": "python manage.py test pedidos --parallel"
+        },
+        {
+          "description": "Conservar la BD de pruebas entre ejecuciones",
+          "code": "python manage.py test --keepdb"
+        },
+        {
+          "description": "Un test concreto",
+          "code": "python manage.py test pedidos.tests.test_views.PedidoViewTests.test_lista"
+        }
+      ],
+      "tags": [
+        "django",
+        "testing"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Tests de Django con pytest-django",
+      "command": "pytest --ds",
+      "section": "Django",
+      "topic": "Testing",
+      "description": "pytest-django integra pytest con Django: fixtures como client, admin_client y la marca django_db.",
+      "examples": [
+        {
+          "description": "Configuración en pyproject.toml",
+          "code": "[tool.pytest.ini_options]\nDJANGO_SETTINGS_MODULE = \"config.settings.test\"\npython_files = [\"test_*.py\"]"
+        },
+        {
+          "description": "Test con acceso a BD y cliente",
+          "code": "import pytest\nfrom django.urls import reverse\n\n@pytest.mark.django_db\ndef test_lista_requiere_login(client):\n    resp = client.get(reverse(\"pedidos:lista\"))\n    assert resp.status_code == 302"
+        },
+        {
+          "description": "Reutilizar la BD de pruebas",
+          "code": "pytest --reuse-db -x"
+        }
+      ],
+      "tags": [
+        "django",
+        "pytest",
+        "testing"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    }
+  ]
+}

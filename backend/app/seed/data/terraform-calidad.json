@@ -1,0 +1,287 @@
+{
+  "category": {
+    "slug": "terraform",
+    "name": "Terraform",
+    "icon": "cloud",
+    "order": 7,
+    "description": "Infraestructura como código con Terraform: flujo plan/apply, estado remoto, módulos, HCL y calidad en CI."
+  },
+  "commands": [
+    {
+      "title": "Pruebas nativas con terraform test",
+      "command": "terraform test",
+      "section": "Calidad y CI",
+      "topic": "Testing",
+      "description": "Ejecuta archivos .tftest.hcl con bloques run que hacen plan o apply y verifican assert. Puede usar providers simulados para no crear nada real.",
+      "examples": [
+        {
+          "description": "tests/bucket.tftest.hcl con plan y mock",
+          "code": "mock_provider \"aws\" {}\n\nvariables {\n  entorno     = \"dev\"\n  bucket_name = \"nicocano-test-assets\"\n}\n\nrun \"nombre_correcto\" {\n  command = plan\n  assert {\n    condition     = aws_s3_bucket.assets.bucket == \"nicocano-test-assets\"\n    error_message = \"El nombre del bucket no coincide.\"\n  }\n}\n\nrun \"rechaza_entorno_invalido\" {\n  command = plan\n  variables { entorno = \"qa\" }\n  expect_failures = [var.entorno]\n}"
+        },
+        {
+          "description": "Ejecutar un archivo y filtrar",
+          "code": "terraform test -filter=tests/bucket.tftest.hcl -verbose"
+        },
+        {
+          "description": "Salida JUnit para CI",
+          "code": "terraform test -junit-xml=resultados.xml"
+        }
+      ],
+      "tags": [
+        "test",
+        "tftest",
+        "calidad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Con command = apply y providers reales se crean recursos de verdad y Terraform intenta destruirlos al final; úsalo en una cuenta de pruebas."
+    },
+    {
+      "title": "Lint con TFLint",
+      "command": "tflint --init && tflint --recursive",
+      "section": "Calidad y CI",
+      "topic": "Análisis estático",
+      "description": "TFLint detecta errores que validate no ve: tipos de instancia inexistentes, variables sin usar, convenciones de nombres.",
+      "examples": [
+        {
+          "description": ".tflint.hcl con el plugin de AWS",
+          "code": "plugin \"terraform\" {\n  enabled = true\n  preset  = \"recommended\"\n}\nplugin \"aws\" {\n  enabled = true\n  version = \"0.40.0\"\n  source  = \"github.com/terraform-linters/tflint-ruleset-aws\"\n}"
+        },
+        {
+          "description": "Formato compacto para CI",
+          "code": "tflint --recursive --format compact"
+        }
+      ],
+      "tags": [
+        "tflint",
+        "lint"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Revisa la versión vigente del ruleset de AWS en su repositorio antes de fijarla."
+    },
+    {
+      "title": "Escaneo de seguridad con Checkov",
+      "command": "checkov -d .",
+      "section": "Calidad y CI",
+      "topic": "Análisis estático",
+      "description": "Checkov revisa configuraciones contra cientos de políticas (cifrado, acceso público, logging) en HCL o en el plan JSON.",
+      "examples": [
+        {
+          "description": "Escanear el plan, que resuelve variables y módulos",
+          "code": "terraform show -json tfplan > plan.json && checkov -f plan.json"
+        },
+        {
+          "description": "Solo algunos checks y salida SARIF",
+          "code": "checkov -d . --check CKV_AWS_18,CKV_AWS_21 -o sarif"
+        },
+        {
+          "description": "Suprimir un check con justificación en el código",
+          "code": "resource \"aws_s3_bucket\" \"publico\" {\n  # checkov:skip=CKV_AWS_20: bucket de sitio estático público por diseño\n  bucket = \"nicocano-sitio\"\n}"
+        }
+      ],
+      "tags": [
+        "checkov",
+        "seguridad",
+        "sast"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Escaneo de configuración con Trivy",
+      "command": "trivy config .",
+      "section": "Calidad y CI",
+      "topic": "Análisis estático",
+      "description": "Trivy analiza IaC (Terraform, Kubernetes, Dockerfile) en busca de configuraciones inseguras. Absorbió las reglas de tfsec.",
+      "examples": [
+        {
+          "description": "Solo severidades altas y fallar en CI",
+          "code": "trivy config --severity HIGH,CRITICAL --exit-code 1 ."
+        },
+        {
+          "description": "Con archivo de variables",
+          "code": "trivy config --tf-vars env/prod.tfvars ."
+        }
+      ],
+      "tags": [
+        "trivy",
+        "seguridad",
+        "tfsec"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Documentación automática con terraform-docs",
+      "command": "terraform-docs markdown table --output-file README.md --output-mode inject .",
+      "section": "Calidad y CI",
+      "topic": "Documentación",
+      "description": "Genera la tabla de inputs, outputs, providers y módulos de un módulo y la inserta en el README entre marcadores.",
+      "examples": [
+        {
+          "description": "Marcadores en el README",
+          "code": "<!-- BEGIN_TF_DOCS -->\n<!-- END_TF_DOCS -->"
+        },
+        {
+          "description": "Todos los módulos de un directorio",
+          "code": "for d in modules/*/; do terraform-docs markdown table --output-file README.md --output-mode inject \"$d\"; done"
+        }
+      ],
+      "tags": [
+        "terraform-docs",
+        "documentacion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Estimar costos con Infracost",
+      "command": "infracost breakdown --path .",
+      "section": "Calidad y CI",
+      "topic": "Costos",
+      "description": "Calcula el costo mensual estimado de la infraestructura y la diferencia que introduce un cambio, ideal como comentario en PRs.",
+      "examples": [
+        {
+          "description": "Diferencia respecto a una línea base",
+          "code": "infracost breakdown --path . --format json --out-file base.json && infracost diff --path . --compare-to base.json"
+        },
+        {
+          "description": "Desde un plan JSON",
+          "code": "infracost breakdown --path plan.json"
+        }
+      ],
+      "tags": [
+        "infracost",
+        "costos",
+        "finops"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Hooks de pre-commit para Terraform",
+      "command": "pre-commit run -a",
+      "section": "Calidad y CI",
+      "topic": "Automatización local",
+      "description": "pre-commit-terraform ejecuta fmt, validate, tflint, terraform-docs y escáneres antes de cada commit.",
+      "examples": [
+        {
+          "description": ".pre-commit-config.yaml",
+          "code": "repos:\n  - repo: https://github.com/antonbabenko/pre-commit-terraform\n    rev: v1.99.0\n    hooks:\n      - id: terraform_fmt\n      - id: terraform_validate\n      - id: terraform_tflint\n      - id: terraform_docs\n      - id: terraform_trivy"
+        },
+        {
+          "description": "Instalar los hooks en el repo",
+          "code": "pre-commit install"
+        }
+      ],
+      "tags": [
+        "pre-commit",
+        "hooks"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Fija rev a un tag existente; 'pre-commit autoupdate' lo actualiza a la última versión."
+    },
+    {
+      "title": "Pipeline de Terraform en GitHub Actions",
+      "command": "gh workflow run terraform.yml",
+      "section": "Calidad y CI",
+      "topic": "CI/CD",
+      "description": "Workflow con OIDC hacia AWS (sin llaves estáticas): fmt y validate primero, plan en PR y apply solo en main con plan guardado.",
+      "examples": [
+        {
+          "description": ".github/workflows/terraform.yml",
+          "code": "name: terraform\non:\n  pull_request:\n  push:\n    branches: [main]\npermissions:\n  contents: read\njobs:\n  plan:\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read\n      id-token: write\n    defaults:\n      run:\n        working-directory: envs/prod\n    steps:\n      - uses: actions/checkout@v5\n      - uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: 1.14.0\n      - uses: aws-actions/configure-aws-credentials@v5\n        with:\n          role-to-assume: arn:aws:iam::123456789012:role/gha-terraform\n          aws-region: us-east-1\n      - run: terraform fmt -check -recursive\n      - run: terraform init -input=false -lockfile=readonly\n      - run: terraform validate\n      - run: terraform plan -input=false -out=tfplan"
+        }
+      ],
+      "tags": [
+        "github-actions",
+        "ci",
+        "oidc"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Separa el apply en otro job con environment protegido y aprobación manual."
+    },
+    {
+      "title": "Políticas como código sobre el plan",
+      "command": "conftest test plan.json -p policy/",
+      "section": "Calidad y CI",
+      "topic": "Análisis estático",
+      "description": "Conftest evalúa políticas Rego (OPA) contra el plan JSON para imponer reglas propias, como prohibir buckets públicos o exigir etiquetas.",
+      "examples": [
+        {
+          "description": "Política Rego que exige la etiqueta Entorno",
+          "code": "package main\nimport rego.v1\n\ndeny contains msg if {\n  some r in input.resource_changes\n  r.type == \"aws_instance\"\n  not r.change.after.tags.Entorno\n  msg := sprintf(\"%s no tiene la etiqueta Entorno\", [r.address])\n}"
+        }
+      ],
+      "tags": [
+        "opa",
+        "conftest",
+        "politicas"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "OpenTofu como alternativa",
+      "command": "tofu init && tofu plan",
+      "section": "Calidad y CI",
+      "topic": "Herramientas",
+      "description": "OpenTofu es el fork open source de Terraform bajo la Linux Foundation, con CLI compatible y funciones propias como cifrado del estado.",
+      "examples": [
+        {
+          "description": "Cifrado del estado nativo de OpenTofu",
+          "code": "terraform {\n  encryption {\n    key_provider \"pbkdf2\" \"clave\" {\n      passphrase = var.state_passphrase\n    }\n    method \"aes_gcm\" \"metodo\" {\n      keys = key_provider.pbkdf2.clave\n    }\n    state {\n      method = method.aes_gcm.metodo\n    }\n  }\n}"
+        },
+        {
+          "description": "Migración típica desde Terraform",
+          "code": "cp -r infra infra-tofu && cd infra-tofu && tofu init && tofu plan"
+        }
+      ],
+      "tags": [
+        "opentofu",
+        "tofu",
+        "alternativas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Las versiones divergen: algunas funciones recientes de Terraform no existen en OpenTofu y viceversa. Verifica la compatibilidad de tu versión antes de migrar."
+    }
+  ]
+}

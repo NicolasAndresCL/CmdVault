@@ -1,0 +1,353 @@
+{
+  "category": {
+    "slug": "kubernetes",
+    "name": "Kubernetes",
+    "icon": "hub",
+    "order": 6,
+    "description": "Orquestación con Kubernetes: kubectl, workloads, redes, configuración, troubleshooting y Helm."
+  },
+  "commands": [
+    {
+      "title": "Init container que espera una dependencia",
+      "command": "kubectl logs api-xyz -c espera-db",
+      "section": "Workloads",
+      "topic": "Pods",
+      "description": "Los initContainers corren en orden y deben terminar con éxito antes de arrancar la app. Sirven para esperar dependencias o preparar archivos.",
+      "examples": [
+        {
+          "description": "Esperar a que Postgres acepte conexiones",
+          "code": "initContainers:\n  - name: espera-db\n    image: postgres:18\n    command: [\"sh\", \"-c\", \"until pg_isready -h postgres -p 5432; do echo esperando; sleep 2; done\"]"
+        },
+        {
+          "description": "Ver el estado de los init containers",
+          "code": "kubectl get pod api-xyz -o jsonpath='{range .status.initContainerStatuses[*]}{.name}={.state}{\"\\n\"}{end}'"
+        }
+      ],
+      "tags": [
+        "initcontainers",
+        "dependencias"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Un pod con estado Init:0/1 durante mucho rato casi siempre es un init container esperando algo que nunca llega."
+    },
+    {
+      "title": "Apagado ordenado con preStop",
+      "command": "kubectl get pod api-xyz -o jsonpath='{.spec.terminationGracePeriodSeconds}'",
+      "section": "Workloads",
+      "topic": "Pods",
+      "description": "Al terminar un pod, Kubernetes ejecuta preStop, envía SIGTERM y espera terminationGracePeriodSeconds antes de SIGKILL. Un breve sleep evita cortar peticiones mientras los endpoints se actualizan.",
+      "examples": [
+        {
+          "description": "preStop con pausa y gracia ampliada",
+          "code": "spec:\n  terminationGracePeriodSeconds: 45\n  containers:\n    - name: api\n      lifecycle:\n        preStop:\n          sleep:\n            seconds: 10"
+        }
+      ],
+      "tags": [
+        "prestop",
+        "graceful-shutdown",
+        "snippet"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "Software"
+      ],
+      "notes": "La acción sleep nativa evita depender de que exista /bin/sleep en la imagen (útil en distroless). En clústeres antiguos usa exec con sleep."
+    },
+    {
+      "title": "Estrategias de despliegue",
+      "command": "kubectl get deploy api -o jsonpath='{.spec.strategy}'",
+      "section": "Workloads",
+      "topic": "Rollouts",
+      "description": "RollingUpdate reemplaza pods de forma gradual según maxSurge y maxUnavailable; Recreate baja todo antes de subir la nueva versión.",
+      "examples": [
+        {
+          "description": "Rolling update sin perder capacidad",
+          "code": "strategy:\n  type: RollingUpdate\n  rollingUpdate:\n    maxSurge: 25%\n    maxUnavailable: 0"
+        },
+        {
+          "description": "Recreate para apps que no toleran dos versiones a la vez",
+          "code": "strategy:\n  type: Recreate"
+        },
+        {
+          "description": "Considerar disponible solo tras 10 s listo",
+          "code": "spec:\n  minReadySeconds: 10\n  progressDeadlineSeconds: 600"
+        }
+      ],
+      "tags": [
+        "rollingupdate",
+        "estrategia",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para canary o blue/green avanzados se usan Argo Rollouts o Flagger, o divisiones de tráfico con Gateway API."
+    },
+    {
+      "title": "Política de descarga de imágenes",
+      "command": "kubectl get pods -o jsonpath='{range .items[*]}{.metadata.name} {.spec.containers[0].imagePullPolicy}{\"\\n\"}{end}'",
+      "section": "Workloads",
+      "topic": "Pods",
+      "description": "imagePullPolicy controla si el kubelet descarga la imagen siempre, solo si falta o nunca. Referenciar por digest garantiza la versión exacta.",
+      "examples": [
+        {
+          "description": "Imagen inmutable por digest",
+          "code": "containers:\n  - name: api\n    image: ghcr.io/nicocano/api@sha256:<digest>\n    imagePullPolicy: IfNotPresent"
+        },
+        {
+          "description": "Obtener el digest para fijarlo",
+          "code": "docker buildx imagetools inspect ghcr.io/nicocano/api:1.4.2 --format '{{json .Manifest.Digest}}'"
+        }
+      ],
+      "tags": [
+        "imagepullpolicy",
+        "digest",
+        "imagenes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con el tag latest el valor por defecto es Always; con cualquier otro tag es IfNotPresent."
+    },
+    {
+      "title": "Etiquetar nodos y usar nodeSelector",
+      "command": "kubectl label node worker-1 disktype=ssd",
+      "section": "Clúster y contexto",
+      "topic": "Nodos",
+      "description": "Las etiquetas de nodo permiten dirigir pods a hardware concreto con nodeSelector o afinidad.",
+      "examples": [
+        {
+          "description": "nodeSelector en el pod",
+          "code": "spec:\n  nodeSelector:\n    disktype: ssd"
+        },
+        {
+          "description": "Ver nodos con esa etiqueta",
+          "code": "kubectl get nodes -l disktype=ssd"
+        }
+      ],
+      "tags": [
+        "nodos",
+        "nodeselector",
+        "scheduling"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Probar un Service desde dentro del clúster",
+      "command": "kubectl run curl --rm -it --image=curlimages/curl --restart=Never -- curl -sv http://api.tienda.svc.cluster.local/health",
+      "section": "Redes y servicios",
+      "topic": "Services",
+      "description": "Una petición desde un pod temporal confirma si el Service, sus endpoints y la app responden, aislando problemas de Ingress o DNS externo.",
+      "examples": [
+        {
+          "description": "Medir latencia de respuesta",
+          "code": "kubectl run curl --rm -it --image=curlimages/curl --restart=Never -- curl -s -o /dev/null -w '%{http_code} %{time_total}s\\n' http://api.tienda/health"
+        }
+      ],
+      "tags": [
+        "service",
+        "curl",
+        "troubleshooting"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Revisar cuotas y límites del namespace",
+      "command": "kubectl describe quota -n tienda",
+      "section": "Configuración y secretos",
+      "topic": "Cuotas",
+      "description": "Muestra el consumo frente a la ResourceQuota y los LimitRange vigentes. Si un pod no se crea por 'exceeded quota', aquí está la explicación.",
+      "examples": [
+        {
+          "description": "LimitRanges del namespace",
+          "code": "kubectl describe limitrange -n tienda"
+        },
+        {
+          "description": "ResourceQuota declarativa",
+          "code": "apiVersion: v1\nkind: ResourceQuota\nmetadata: { name: cuota, namespace: tienda }\nspec:\n  hard:\n    requests.cpu: \"4\"\n    requests.memory: 8Gi\n    limits.memory: 16Gi\n    persistentvolumeclaims: \"10\""
+        }
+      ],
+      "tags": [
+        "resourcequota",
+        "limitrange",
+        "cuotas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Con una cuota de CPU o memoria activa, todo pod debe declarar requests/limits o será rechazado."
+    },
+    {
+      "title": "Exponer metadatos del pod con Downward API",
+      "command": "kubectl exec api-xyz -- env | grep POD_",
+      "section": "Configuración y secretos",
+      "topic": "ConfigMaps",
+      "description": "Inyecta en el contenedor datos del propio pod (nombre, namespace, IP, nodo, límites) sin consultar el API.",
+      "examples": [
+        {
+          "description": "Variables del pod",
+          "code": "env:\n  - name: POD_NAME\n    valueFrom: { fieldRef: { fieldPath: metadata.name } }\n  - name: POD_NAMESPACE\n    valueFrom: { fieldRef: { fieldPath: metadata.namespace } }\n  - name: NODE_NAME\n    valueFrom: { fieldRef: { fieldPath: spec.nodeName } }\n  - name: MEM_LIMIT\n    valueFrom: { resourceFieldRef: { containerName: api, resource: limits.memory } }"
+        }
+      ],
+      "tags": [
+        "downward-api",
+        "env",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Limpiar pods fallidos o desalojados",
+      "command": "kubectl delete pods -A --field-selector=status.phase=Failed",
+      "section": "Troubleshooting",
+      "topic": "Estados comunes",
+      "description": "Los pods Evicted o Failed quedan como registro tras presión de recursos del nodo; se pueden eliminar en bloque.",
+      "examples": [
+        {
+          "description": "Ver primero cuántos son",
+          "code": "kubectl get pods -A --field-selector=status.phase=Failed --no-headers | wc -l"
+        },
+        {
+          "description": "Pods que no están Running ni Completed",
+          "code": "kubectl get pods -A | grep -Ev 'Running|Completed'"
+        }
+      ],
+      "tags": [
+        "evicted",
+        "limpieza"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "Muchos Evicted en un nodo indican presión de disco o memoria: revisa kubectl describe node y sus condiciones."
+    },
+    {
+      "title": "Logs de componentes del sistema",
+      "command": "kubectl logs -n kube-system -l k8s-app=kube-proxy --tail=100",
+      "section": "Troubleshooting",
+      "topic": "Logs",
+      "description": "Los componentes del clúster (CoreDNS, kube-proxy, CNI, controladores de ingress) corren como pods en kube-system u otros namespaces del sistema.",
+      "examples": [
+        {
+          "description": "Pods del sistema con problemas",
+          "code": "kubectl get pods -n kube-system -o wide | grep -v Running"
+        },
+        {
+          "description": "Logs del CNI Cilium",
+          "code": "kubectl logs -n kube-system ds/cilium --tail=100"
+        }
+      ],
+      "tags": [
+        "kube-system",
+        "logs",
+        "componentes"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE"
+      ]
+    },
+    {
+      "title": "Esquema de valores de un chart",
+      "command": "helm lint ./charts/api -f values-prod.yaml",
+      "section": "Helm",
+      "topic": "Desarrollo de charts",
+      "description": "values.schema.json valida con JSON Schema los valores en install, upgrade, lint y template, y rechaza tipos incorrectos antes de desplegar.",
+      "examples": [
+        {
+          "description": "values.schema.json mínimo",
+          "code": "{\n  \"$schema\": \"https://json-schema.org/draft-07/schema#\",\n  \"type\": \"object\",\n  \"required\": [\"image\"],\n  \"properties\": {\n    \"replicaCount\": { \"type\": \"integer\", \"minimum\": 1 },\n    \"image\": {\n      \"type\": \"object\",\n      \"required\": [\"repository\", \"tag\"],\n      \"properties\": {\n        \"repository\": { \"type\": \"string\" },\n        \"tag\": { \"type\": \"string\" }\n      }\n    }\n  }\n}"
+        }
+      ],
+      "tags": [
+        "helm",
+        "schema",
+        "validacion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Plantillas Helm con condicionales y range",
+      "command": "helm template api ./charts/api --set ingress.enabled=true",
+      "section": "Helm",
+      "topic": "Desarrollo de charts",
+      "description": "Las plantillas usan Go templates con funciones Sprig: if para recursos opcionales, range para listas y toYaml con nindent para bloques.",
+      "examples": [
+        {
+          "description": "Ingress opcional con hosts dinámicos",
+          "code": "{{- if .Values.ingress.enabled }}\napiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: {{ include \"api.fullname\" . }}\n  labels:\n    {{- include \"api.labels\" . | nindent 4 }}\nspec:\n  rules:\n    {{- range .Values.ingress.hosts }}\n    - host: {{ .host | quote }}\n      http:\n        paths:\n          - path: /\n            pathType: Prefix\n            backend:\n              service:\n                name: {{ include \"api.fullname\" $ }}\n                port: { number: {{ $.Values.service.port }} }\n    {{- end }}\n{{- end }}"
+        },
+        {
+          "description": "Bloque de recursos desde values",
+          "code": "resources:\n  {{- toYaml .Values.resources | nindent 2 }}"
+        },
+        {
+          "description": "Valor obligatorio",
+          "code": "image: \"{{ .Values.image.repository }}:{{ required \"image.tag es obligatorio\" .Values.image.tag }}\""
+        }
+      ],
+      "tags": [
+        "helm",
+        "templates",
+        "go-template"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Dentro de range el punto cambia de contexto: usa $ para llegar a la raíz (.Values, .Release)."
+    },
+    {
+      "title": "Forzar rollout al cambiar un ConfigMap en Helm",
+      "command": "helm upgrade api ./charts/api -n tienda",
+      "section": "Helm",
+      "topic": "Desarrollo de charts",
+      "description": "Una anotación con el checksum del ConfigMap en la plantilla del pod hace que cada cambio de configuración reinicie los pods automáticamente.",
+      "examples": [
+        {
+          "description": "Anotación en el Deployment",
+          "code": "spec:\n  template:\n    metadata:\n      annotations:\n        checksum/config: {{ include (print $.Template.BasePath \"/configmap.yaml\") . | sha256sum }}"
+        }
+      ],
+      "tags": [
+        "helm",
+        "configmap",
+        "rollout"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    }
+  ]
+}

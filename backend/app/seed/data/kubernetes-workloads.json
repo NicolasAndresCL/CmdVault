@@ -1,0 +1,523 @@
+{
+  "category": {
+    "slug": "kubernetes",
+    "name": "Kubernetes",
+    "icon": "hub",
+    "order": 6,
+    "description": "Orquestación con Kubernetes: kubectl, workloads, redes, configuración, troubleshooting y Helm."
+  },
+  "commands": [
+    {
+      "title": "Crear un Deployment",
+      "command": "kubectl create deployment api --image=ghcr.io/nicocano/api:1.0 --replicas=3 --port=8000",
+      "section": "Workloads",
+      "topic": "Deployments",
+      "description": "Crea un Deployment que gestiona un ReplicaSet con el número de réplicas indicado. Para producción conviene versionarlo como YAML.",
+      "examples": [
+        {
+          "description": "Deployment de producción con probes, recursos y seguridad",
+          "code": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\n  labels: { app: api }\nspec:\n  replicas: 3\n  revisionHistoryLimit: 5\n  selector:\n    matchLabels: { app: api }\n  strategy:\n    type: RollingUpdate\n    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }\n  template:\n    metadata:\n      labels: { app: api }\n    spec:\n      securityContext:\n        runAsNonRoot: true\n        seccompProfile: { type: RuntimeDefault }\n      containers:\n        - name: api\n          image: ghcr.io/nicocano/api:1.4.2\n          ports: [{ containerPort: 8000, name: http }]\n          resources:\n            requests: { cpu: 100m, memory: 256Mi }\n            limits: { memory: 512Mi }\n          readinessProbe:\n            httpGet: { path: /ready, port: http }\n            periodSeconds: 5\n          livenessProbe:\n            httpGet: { path: /health, port: http }\n            periodSeconds: 10\n            failureThreshold: 3\n          securityContext:\n            allowPrivilegeEscalation: false\n            readOnlyRootFilesystem: true\n            capabilities: { drop: [\"ALL\"] }"
+        }
+      ],
+      "tags": [
+        "deployment",
+        "yaml"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "El selector de un Deployment es inmutable: si lo cambias, hay que borrar y recrear el recurso."
+    },
+    {
+      "title": "Estado de un rollout",
+      "command": "kubectl rollout status deploy/api --timeout=5m",
+      "section": "Workloads",
+      "topic": "Rollouts",
+      "description": "Espera y reporta el avance de un despliegue; sale con error si no termina dentro del plazo. Paso obligado en pipelines.",
+      "examples": [
+        {
+          "description": "Para un StatefulSet o DaemonSet",
+          "code": "kubectl rollout status sts/postgres && kubectl rollout status ds/node-exporter -n monitoring"
+        },
+        {
+          "description": "Sin bloquear, solo consultar",
+          "code": "kubectl rollout status deploy/api --watch=false"
+        }
+      ],
+      "tags": [
+        "rollout",
+        "ci"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Historial y rollback de un Deployment",
+      "command": "kubectl rollout undo deploy/api",
+      "section": "Workloads",
+      "topic": "Rollouts",
+      "description": "Vuelve a la revisión anterior del Deployment o a una concreta del historial.",
+      "examples": [
+        {
+          "description": "Ver historial de revisiones",
+          "code": "kubectl rollout history deploy/api"
+        },
+        {
+          "description": "Detalle de una revisión",
+          "code": "kubectl rollout history deploy/api --revision=4"
+        },
+        {
+          "description": "Volver a una revisión específica",
+          "code": "kubectl rollout undo deploy/api --to-revision=4"
+        }
+      ],
+      "tags": [
+        "rollout",
+        "rollback"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El historial muestra CHANGE-CAUSE solo si anotas kubernetes.io/change-cause. Con GitOps, el rollback real es revertir el commit."
+    },
+    {
+      "title": "Reiniciar pods de un Deployment",
+      "command": "kubectl rollout restart deploy/api",
+      "section": "Workloads",
+      "topic": "Rollouts",
+      "description": "Fuerza un rolling restart cambiando una anotación de la plantilla. Útil tras actualizar un Secret o ConfigMap montado como variables.",
+      "examples": [
+        {
+          "description": "Reiniciar todos los Deployments de un namespace",
+          "code": "kubectl rollout restart deploy -n tienda"
+        },
+        {
+          "description": "Pausar y reanudar para agrupar cambios",
+          "code": "kubectl rollout pause deploy/api && kubectl set image deploy/api api=ghcr.io/nicocano/api:1.5 && kubectl set resources deploy/api -c api --limits=memory=1Gi && kubectl rollout resume deploy/api"
+        }
+      ],
+      "tags": [
+        "rollout",
+        "restart"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Cambiar la imagen de un workload",
+      "command": "kubectl set image deploy/api api=ghcr.io/nicocano/api:1.4.3",
+      "section": "Workloads",
+      "topic": "Rollouts",
+      "description": "Actualiza la imagen de uno o varios contenedores y dispara un rollout.",
+      "examples": [
+        {
+          "description": "Todos los contenedores a la vez",
+          "code": "kubectl set image deploy/api '*=ghcr.io/nicocano/api:1.4.3'"
+        },
+        {
+          "description": "Variables de entorno",
+          "code": "kubectl set env deploy/api LOG_LEVEL=debug"
+        },
+        {
+          "description": "Cargar variables desde un ConfigMap",
+          "code": "kubectl set env deploy/api --from=configmap/api-config"
+        },
+        {
+          "description": "Ajustar recursos",
+          "code": "kubectl set resources deploy/api -c api --requests=cpu=200m,memory=256Mi --limits=memory=512Mi"
+        }
+      ],
+      "tags": [
+        "set",
+        "imagen",
+        "rollout"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Escalar réplicas",
+      "command": "kubectl scale deploy/api --replicas=5",
+      "section": "Workloads",
+      "topic": "Escalado",
+      "description": "Ajusta manualmente el número de réplicas de un Deployment, ReplicaSet o StatefulSet.",
+      "examples": [
+        {
+          "description": "Apagar un workload sin borrarlo",
+          "code": "kubectl scale deploy/api --replicas=0"
+        },
+        {
+          "description": "Escalar solo si el valor actual es el esperado",
+          "code": "kubectl scale deploy/api --current-replicas=3 --replicas=6"
+        },
+        {
+          "description": "Escalar todos los deployments por etiqueta",
+          "code": "kubectl scale deploy -l tier=batch --replicas=0"
+        }
+      ],
+      "tags": [
+        "scale",
+        "replicas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si existe un HPA para el workload, este volverá a ajustar las réplicas según sus métricas."
+    },
+    {
+      "title": "Autoescalado horizontal (HPA)",
+      "command": "kubectl autoscale deploy/api --min=2 --max=10 --cpu-percent=70",
+      "section": "Workloads",
+      "topic": "Escalado",
+      "description": "Crea un HorizontalPodAutoscaler que ajusta las réplicas según CPU, memoria o métricas personalizadas. Requiere metrics-server.",
+      "examples": [
+        {
+          "description": "HPA autoscaling/v2 con CPU, memoria y comportamiento",
+          "code": "apiVersion: autoscaling/v2\nkind: HorizontalPodAutoscaler\nmetadata: { name: api }\nspec:\n  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: api }\n  minReplicas: 2\n  maxReplicas: 10\n  metrics:\n    - type: Resource\n      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }\n    - type: Resource\n      resource: { name: memory, target: { type: Utilization, averageUtilization: 80 } }\n  behavior:\n    scaleDown:\n      stabilizationWindowSeconds: 300"
+        },
+        {
+          "description": "Ver estado y métricas actuales",
+          "code": "kubectl get hpa api -w"
+        },
+        {
+          "description": "Por qué escaló o no",
+          "code": "kubectl describe hpa api"
+        }
+      ],
+      "tags": [
+        "hpa",
+        "autoscaling",
+        "metricas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "La utilización se calcula sobre los requests: sin requests de CPU el HPA no puede funcionar (muestra <unknown>)."
+    },
+    {
+      "title": "Probes de liveness, readiness y startup",
+      "command": "kubectl describe pod api-xyz | grep -A3 -i probe",
+      "section": "Workloads",
+      "topic": "Salud",
+      "description": "readiness decide si el pod recibe tráfico, liveness si hay que reiniciarlo y startup protege arranques lentos antes de activar las otras dos.",
+      "examples": [
+        {
+          "description": "Las tres probes juntas",
+          "code": "startupProbe:\n  httpGet: { path: /health, port: 8000 }\n  failureThreshold: 30\n  periodSeconds: 2\nreadinessProbe:\n  httpGet: { path: /ready, port: 8000 }\n  periodSeconds: 5\nlivenessProbe:\n  httpGet: { path: /health, port: 8000 }\n  periodSeconds: 10\n  timeoutSeconds: 2\n  failureThreshold: 3"
+        },
+        {
+          "description": "Probe por TCP o comando",
+          "code": "readinessProbe:\n  tcpSocket: { port: 5432 }\nlivenessProbe:\n  exec:\n    command: [\"pg_isready\", \"-U\", \"postgres\"]"
+        }
+      ],
+      "tags": [
+        "probes",
+        "salud",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "No hagas que liveness dependa de la base de datos: si la BD cae, Kubernetes reiniciaría todos los pods en cascada sin arreglar nada."
+    },
+    {
+      "title": "Requests y limits de recursos",
+      "command": "kubectl top pod -l app=api --containers",
+      "section": "Workloads",
+      "topic": "Recursos",
+      "description": "requests reservan recursos para el scheduler; limits ponen techo. Memoria por encima del límite provoca OOMKilled; CPU por encima se estrangula.",
+      "examples": [
+        {
+          "description": "Bloque recomendado",
+          "code": "resources:\n  requests:\n    cpu: 250m\n    memory: 256Mi\n  limits:\n    memory: 512Mi"
+        },
+        {
+          "description": "Valores por defecto por namespace con LimitRange",
+          "code": "apiVersion: v1\nkind: LimitRange\nmetadata: { name: defaults, namespace: tienda }\nspec:\n  limits:\n    - type: Container\n      defaultRequest: { cpu: 100m, memory: 128Mi }\n      default: { memory: 256Mi }"
+        }
+      ],
+      "tags": [
+        "recursos",
+        "requests",
+        "limits",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Muchos equipos omiten el límite de CPU para evitar throttling y mantienen siempre el de memoria. Pods con requests = limits obtienen QoS Guaranteed."
+    },
+    {
+      "title": "Redimensionar recursos de un pod en caliente",
+      "command": "kubectl patch pod api-xyz --subresource resize --patch '{\"spec\":{\"containers\":[{\"name\":\"api\",\"resources\":{\"requests\":{\"cpu\":\"500m\"},\"limits\":{\"cpu\":\"1\"}}}]}}'",
+      "section": "Workloads",
+      "topic": "Recursos",
+      "description": "In-place pod resize cambia CPU y memoria de un contenedor sin recrear el pod, a través del subrecurso resize.",
+      "examples": [
+        {
+          "description": "Ver el estado del redimensionamiento",
+          "code": "kubectl get pod api-xyz -o jsonpath='{.status.conditions}'"
+        }
+      ],
+      "tags": [
+        "resize",
+        "recursos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Requiere un clúster y kubectl recientes con la funcionalidad habilitada; en un Deployment el cambio no persiste si se recrea el pod."
+    },
+    {
+      "title": "Crear un Job",
+      "command": "kubectl create job migracion --image=ghcr.io/nicocano/api:1.4.2 -- python manage.py migrate",
+      "section": "Workloads",
+      "topic": "Jobs y CronJobs",
+      "description": "Un Job ejecuta pods hasta que terminan con éxito, con reintentos configurables. Ideal para migraciones y tareas batch.",
+      "examples": [
+        {
+          "description": "Job con reintentos, timeout y limpieza automática",
+          "code": "apiVersion: batch/v1\nkind: Job\nmetadata: { name: migracion }\nspec:\n  backoffLimit: 3\n  activeDeadlineSeconds: 600\n  ttlSecondsAfterFinished: 3600\n  template:\n    spec:\n      restartPolicy: Never\n      containers:\n        - name: migrate\n          image: ghcr.io/nicocano/api:1.4.2\n          command: [\"python\", \"manage.py\", \"migrate\"]"
+        },
+        {
+          "description": "Logs del job",
+          "code": "kubectl logs job/migracion -f"
+        },
+        {
+          "description": "Job paralelo indexado",
+          "code": "spec:\n  completions: 10\n  parallelism: 3\n  completionMode: Indexed"
+        }
+      ],
+      "tags": [
+        "job",
+        "batch"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Programar tareas con CronJob",
+      "command": "kubectl create cronjob respaldo --image=postgres:18 --schedule='0 4 * * *' -- /scripts/backup.sh",
+      "section": "Workloads",
+      "topic": "Jobs y CronJobs",
+      "description": "Un CronJob crea Jobs según una expresión cron. Admite zona horaria, política de concurrencia e historial.",
+      "examples": [
+        {
+          "description": "CronJob con zona horaria y sin solapamientos",
+          "code": "apiVersion: batch/v1\nkind: CronJob\nmetadata: { name: respaldo }\nspec:\n  schedule: \"0 4 * * *\"\n  timeZone: America/Santiago\n  concurrencyPolicy: Forbid\n  successfulJobsHistoryLimit: 3\n  failedJobsHistoryLimit: 3\n  jobTemplate:\n    spec:\n      template:\n        spec:\n          restartPolicy: OnFailure\n          containers:\n            - name: backup\n              image: postgres:18\n              command: [\"/scripts/backup.sh\"]"
+        },
+        {
+          "description": "Ejecutar un CronJob ahora a mano",
+          "code": "kubectl create job respaldo-manual --from=cronjob/respaldo"
+        },
+        {
+          "description": "Suspender temporalmente",
+          "code": "kubectl patch cronjob respaldo -p '{\"spec\":{\"suspend\":true}}'"
+        }
+      ],
+      "tags": [
+        "cronjob",
+        "programacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "StatefulSet para servicios con estado",
+      "command": "kubectl get sts",
+      "section": "Workloads",
+      "topic": "StatefulSets y DaemonSets",
+      "description": "StatefulSet da a cada pod identidad estable (nombre-0, nombre-1), DNS propio vía un Service headless y un PVC dedicado por réplica.",
+      "examples": [
+        {
+          "description": "StatefulSet con volumeClaimTemplates",
+          "code": "apiVersion: apps/v1\nkind: StatefulSet\nmetadata: { name: postgres }\nspec:\n  serviceName: postgres\n  replicas: 1\n  selector: { matchLabels: { app: postgres } }\n  template:\n    metadata: { labels: { app: postgres } }\n    spec:\n      containers:\n        - name: postgres\n          image: postgres:18\n          ports: [{ containerPort: 5432 }]\n          volumeMounts:\n            - { name: data, mountPath: /var/lib/postgresql }\n  volumeClaimTemplates:\n    - metadata: { name: data }\n      spec:\n        accessModes: [\"ReadWriteOnce\"]\n        resources: { requests: { storage: 20Gi } }"
+        },
+        {
+          "description": "Escalar y ver los PVC creados",
+          "code": "kubectl scale sts/postgres --replicas=2 && kubectl get pvc -l app=postgres"
+        }
+      ],
+      "tags": [
+        "statefulset",
+        "pvc",
+        "estado"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Al borrar o escalar hacia abajo un StatefulSet los PVC se conservan por defecto (persistentVolumeClaimRetentionPolicy permite cambiarlo)."
+    },
+    {
+      "title": "DaemonSet: un pod por nodo",
+      "command": "kubectl get ds -A",
+      "section": "Workloads",
+      "topic": "StatefulSets y DaemonSets",
+      "description": "DaemonSet asegura una copia del pod en cada nodo (o en los que coincidan con un selector). Típico para agentes de logs y métricas.",
+      "examples": [
+        {
+          "description": "DaemonSet que tolera los nodos del control plane",
+          "code": "apiVersion: apps/v1\nkind: DaemonSet\nmetadata: { name: node-exporter, namespace: monitoring }\nspec:\n  selector: { matchLabels: { app: node-exporter } }\n  template:\n    metadata: { labels: { app: node-exporter } }\n    spec:\n      hostNetwork: true\n      tolerations:\n        - key: node-role.kubernetes.io/control-plane\n          operator: Exists\n          effect: NoSchedule\n      containers:\n        - name: node-exporter\n          image: prom/node-exporter:v1.9.1\n          ports: [{ containerPort: 9100 }]"
+        },
+        {
+          "description": "Reiniciar el DaemonSet",
+          "code": "kubectl rollout restart ds/node-exporter -n monitoring"
+        }
+      ],
+      "tags": [
+        "daemonset",
+        "agentes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Contenedores sidecar nativos",
+      "command": "kubectl get pod api-xyz -o jsonpath='{.spec.initContainers[*].name}'",
+      "section": "Workloads",
+      "topic": "Pods",
+      "description": "Un initContainer con restartPolicy: Always actúa como sidecar: arranca antes que la app, sigue corriendo y se detiene después de ella.",
+      "examples": [
+        {
+          "description": "Sidecar de logs",
+          "code": "spec:\n  initContainers:\n    - name: log-shipper\n      image: fluent/fluent-bit:4.0\n      restartPolicy: Always\n      volumeMounts: [{ name: logs, mountPath: /logs }]\n  containers:\n    - name: api\n      image: ghcr.io/nicocano/api:1.4.2\n      volumeMounts: [{ name: logs, mountPath: /app/logs }]\n  volumes:\n    - name: logs\n      emptyDir: {}"
+        }
+      ],
+      "tags": [
+        "sidecar",
+        "initcontainers",
+        "pods"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con sidecars nativos los Jobs terminan correctamente: el sidecar ya no impide que el pod complete."
+    },
+    {
+      "title": "Ejecutar un pod rápido con kubectl run",
+      "command": "kubectl run tmp --rm -it --image=busybox:1.37 --restart=Never -- sh",
+      "section": "Workloads",
+      "topic": "Pods",
+      "description": "Lanza un pod suelto para pruebas. Con --rm -it se borra al salir de la shell.",
+      "examples": [
+        {
+          "description": "Pod de diagnóstico de red",
+          "code": "kubectl run netshoot --rm -it --image=nicolaka/netshoot --restart=Never -- bash"
+        },
+        {
+          "description": "Cliente de Postgres temporal",
+          "code": "kubectl run psql --rm -it --image=postgres:18 --restart=Never --env=PGPASSWORD=secreto -- psql -h postgres -U postgres"
+        },
+        {
+          "description": "Generar YAML de un pod",
+          "code": "kubectl run web --image=nginx:1.29 --port=80 --dry-run=client -o yaml"
+        }
+      ],
+      "tags": [
+        "run",
+        "pods",
+        "debug"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Afinidad y distribución de pods",
+      "command": "kubectl get pods -o wide -l app=api",
+      "section": "Workloads",
+      "topic": "Scheduling",
+      "description": "nodeAffinity elige nodos, podAntiAffinity evita juntar réplicas y topologySpreadConstraints reparte pods entre zonas o nodos.",
+      "examples": [
+        {
+          "description": "Repartir réplicas entre zonas",
+          "code": "topologySpreadConstraints:\n  - maxSkew: 1\n    topologyKey: topology.kubernetes.io/zone\n    whenUnsatisfiable: ScheduleAnyway\n    labelSelector:\n      matchLabels: { app: api }"
+        },
+        {
+          "description": "Solo nodos con GPU",
+          "code": "affinity:\n  nodeAffinity:\n    requiredDuringSchedulingIgnoredDuringExecution:\n      nodeSelectorTerms:\n        - matchExpressions:\n            - { key: nvidia.com/gpu.present, operator: In, values: [\"true\"] }"
+        }
+      ],
+      "tags": [
+        "affinity",
+        "scheduling",
+        "alta-disponibilidad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "PodDisruptionBudget",
+      "command": "kubectl create pdb api-pdb --selector=app=api --min-available=2",
+      "section": "Workloads",
+      "topic": "Scheduling",
+      "description": "Limita cuántos pods de una aplicación pueden caer a la vez por interrupciones voluntarias (drain, actualizaciones de nodos).",
+      "examples": [
+        {
+          "description": "Manifiesto con maxUnavailable",
+          "code": "apiVersion: policy/v1\nkind: PodDisruptionBudget\nmetadata: { name: api }\nspec:\n  maxUnavailable: 1\n  selector:\n    matchLabels: { app: api }"
+        },
+        {
+          "description": "Ver interrupciones permitidas",
+          "code": "kubectl get pdb"
+        }
+      ],
+      "tags": [
+        "pdb",
+        "disponibilidad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ]
+    }
+  ]
+}

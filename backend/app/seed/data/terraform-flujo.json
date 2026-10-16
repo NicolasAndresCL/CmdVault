@@ -1,0 +1,556 @@
+{
+  "category": {
+    "slug": "terraform",
+    "name": "Terraform",
+    "icon": "cloud",
+    "order": 7,
+    "description": "Infraestructura como código con Terraform: flujo plan/apply, estado remoto, módulos, HCL y calidad en CI."
+  },
+  "commands": [
+    {
+      "title": "Inicializar un directorio de Terraform",
+      "command": "terraform init",
+      "section": "Flujo básico",
+      "topic": "Init",
+      "description": "Descarga providers y módulos, configura el backend de estado y crea o respeta el archivo .terraform.lock.hcl. Es el primer comando en cualquier directorio nuevo o tras cambiar providers/backends.",
+      "syntax": "terraform init [-upgrade] [-backend-config=ARCHIVO|K=V] [-reconfigure | -migrate-state]",
+      "examples": [
+        {
+          "description": "Actualizar providers y módulos dentro de las restricciones",
+          "code": "terraform init -upgrade"
+        },
+        {
+          "description": "Backend parcial con archivo por entorno",
+          "code": "terraform init -backend-config=backends/prod.s3.tfbackend"
+        },
+        {
+          "description": "Reconfigurar el backend ignorando el estado previo",
+          "code": "terraform init -reconfigure"
+        },
+        {
+          "description": "Migrar el estado al nuevo backend",
+          "code": "terraform init -migrate-state"
+        }
+      ],
+      "tags": [
+        "init",
+        "providers",
+        "backend"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "En CI usa 'terraform init -input=false -lockfile=readonly' para fallar si el lock de providers no coincide. OpenTofu ofrece el mismo comando como 'tofu', compatible en la mayoría de los flujos."
+    },
+    {
+      "title": "Validar configuración",
+      "command": "terraform validate",
+      "section": "Flujo básico",
+      "topic": "Validación",
+      "description": "Comprueba sintaxis y coherencia interna (referencias, tipos, argumentos obligatorios) sin acceder a APIs remotas.",
+      "examples": [
+        {
+          "description": "Salida JSON para CI",
+          "code": "terraform validate -json | jq '.diagnostics[] | .summary'"
+        },
+        {
+          "description": "Validar sin configurar el backend",
+          "code": "terraform init -backend=false && terraform validate"
+        }
+      ],
+      "tags": [
+        "validate",
+        "ci"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Formatear código HCL",
+      "command": "terraform fmt -recursive",
+      "section": "Flujo básico",
+      "topic": "Validación",
+      "description": "Reescribe los .tf al estilo canónico. Con -check no modifica y devuelve error si algo no está formateado.",
+      "examples": [
+        {
+          "description": "Verificación en CI",
+          "code": "terraform fmt -check -recursive -diff"
+        },
+        {
+          "description": "Formatear un archivo puntual",
+          "code": "terraform fmt main.tf"
+        }
+      ],
+      "tags": [
+        "fmt",
+        "estilo",
+        "ci"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Generar un plan",
+      "command": "terraform plan -out=tfplan",
+      "section": "Flujo básico",
+      "topic": "Plan",
+      "description": "Calcula qué cambiaría comparando configuración, estado y la infraestructura real. Guardarlo con -out garantiza que apply ejecute exactamente lo revisado.",
+      "syntax": "terraform plan [-out=ARCHIVO] [-var K=V] [-var-file=ARCHIVO] [-target=DIR] [-destroy | -refresh-only]",
+      "examples": [
+        {
+          "description": "Con archivo de variables",
+          "code": "terraform plan -var-file=env/prod.tfvars -out=prod.tfplan"
+        },
+        {
+          "description": "Variable puntual",
+          "code": "terraform plan -var='instance_type=t3.small'"
+        },
+        {
+          "description": "Plan de destrucción",
+          "code": "terraform plan -destroy -out=destroy.tfplan"
+        },
+        {
+          "description": "Sin refrescar (más rápido, menos exacto)",
+          "code": "terraform plan -refresh=false"
+        }
+      ],
+      "tags": [
+        "plan"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Un plan guardado contiene valores sensibles en claro: trátalo como secreto y no lo subas como artefacto público."
+    },
+    {
+      "title": "Detectar drift con detailed-exitcode",
+      "command": "terraform plan -detailed-exitcode -input=false",
+      "section": "Flujo básico",
+      "topic": "Plan",
+      "description": "Devuelve 0 sin cambios, 1 en error y 2 si hay cambios. Base de los jobs programados de detección de deriva.",
+      "examples": [
+        {
+          "description": "Script de detección de drift",
+          "code": "terraform plan -detailed-exitcode -input=false -lock=false -out=drift.tfplan\ncase $? in\n  0) echo \"Sin drift\" ;;\n  2) echo \"Hay drift\"; terraform show -no-color drift.tfplan > drift.txt; exit 2 ;;\n  *) echo \"Error\"; exit 1 ;;\nesac"
+        }
+      ],
+      "tags": [
+        "plan",
+        "drift",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Plan de solo refresco",
+      "command": "terraform plan -refresh-only",
+      "section": "Flujo básico",
+      "topic": "Plan",
+      "description": "Muestra cómo cambió la infraestructura real respecto del estado, sin proponer cambios a los recursos. Sustituye al antiguo terraform refresh.",
+      "examples": [
+        {
+          "description": "Aceptar los cambios detectados en el estado",
+          "code": "terraform apply -refresh-only -auto-approve"
+        }
+      ],
+      "tags": [
+        "refresh",
+        "drift",
+        "estado"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "terraform refresh sigue existiendo pero está obsoleto: actualiza el estado sin mostrarte qué cambia."
+    },
+    {
+      "title": "Aplicar cambios",
+      "command": "terraform apply tfplan",
+      "section": "Flujo básico",
+      "topic": "Apply",
+      "description": "Ejecuta un plan guardado sin volver a preguntar, o calcula uno nuevo y pide confirmación si no se pasa archivo.",
+      "examples": [
+        {
+          "description": "Plan y apply interactivo",
+          "code": "terraform apply -var-file=env/dev.tfvars"
+        },
+        {
+          "description": "Ajustar paralelismo ante límites de API",
+          "code": "terraform apply -parallelism=5 tfplan"
+        },
+        {
+          "description": "Esperar el lock si otro proceso lo tiene",
+          "code": "terraform apply -lock-timeout=5m tfplan"
+        }
+      ],
+      "tags": [
+        "apply"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Evita -auto-approve sin plan guardado en producción: aplicas algo que nadie revisó."
+    },
+    {
+      "title": "Destruir infraestructura",
+      "command": "terraform destroy",
+      "section": "Flujo básico",
+      "topic": "Apply",
+      "description": "Elimina todos los recursos gestionados por la configuración y el estado actual, previa confirmación.",
+      "examples": [
+        {
+          "description": "Con variables del entorno",
+          "code": "terraform destroy -var-file=env/dev.tfvars"
+        },
+        {
+          "description": "Revisar antes y destruir con el plan",
+          "code": "terraform plan -destroy -out=d.tfplan && terraform apply d.tfplan"
+        }
+      ],
+      "tags": [
+        "destroy"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Protege recursos críticos con lifecycle { prevent_destroy = true } y con protecciones del proveedor (deletion_protection en RDS)."
+    },
+    {
+      "title": "Apuntar a recursos con -target",
+      "command": "terraform apply -target=aws_instance.web",
+      "section": "Flujo básico",
+      "topic": "Plan",
+      "description": "Limita el plan a recursos o módulos concretos y sus dependencias. Pensado para recuperarse de errores, no para el uso diario.",
+      "examples": [
+        {
+          "description": "Un módulo completo",
+          "code": "terraform plan -target=module.vpc"
+        },
+        {
+          "description": "Una instancia de un for_each",
+          "code": "terraform apply -target='aws_s3_bucket.this[\"logs\"]'"
+        }
+      ],
+      "tags": [
+        "target"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Abusar de -target deja el estado parcialmente desalineado; tras usarlo ejecuta un plan completo."
+    },
+    {
+      "title": "Reemplazar un recurso con -replace",
+      "command": "terraform apply -replace=aws_instance.web",
+      "section": "Flujo básico",
+      "topic": "Apply",
+      "description": "Fuerza destruir y recrear un recurso en el siguiente apply, mostrándolo en el plan. Sustituye a terraform taint.",
+      "examples": [
+        {
+          "description": "Reemplazar una instancia de count",
+          "code": "terraform plan -replace='aws_instance.web[1]' -out=tfplan"
+        },
+        {
+          "description": "El comando antiguo equivalente (obsoleto)",
+          "code": "terraform taint aws_instance.web && terraform untaint aws_instance.web"
+        }
+      ],
+      "tags": [
+        "replace",
+        "taint"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "taint modifica el estado inmediatamente sin plan; -replace es revisable y no toca el estado hasta el apply."
+    },
+    {
+      "title": "Ver salidas",
+      "command": "terraform output",
+      "section": "Flujo básico",
+      "topic": "Salidas",
+      "description": "Muestra los outputs del módulo raíz desde el estado. Es la forma de pasar datos a scripts u otros sistemas.",
+      "examples": [
+        {
+          "description": "Valor sin comillas para scripts",
+          "code": "ssh ubuntu@$(terraform output -raw public_ip)"
+        },
+        {
+          "description": "Todos en JSON",
+          "code": "terraform output -json | jq -r '.subnet_ids.value[]'"
+        },
+        {
+          "description": "Mostrar un output sensible",
+          "code": "terraform output -raw db_password"
+        }
+      ],
+      "tags": [
+        "output"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Inspeccionar estado o plan con show",
+      "command": "terraform show",
+      "section": "Flujo básico",
+      "topic": "Salidas",
+      "description": "Muestra de forma legible el estado actual o un plan guardado; -json da la estructura completa para herramientas.",
+      "examples": [
+        {
+          "description": "Plan en JSON para políticas o escáneres",
+          "code": "terraform show -json tfplan > plan.json"
+        },
+        {
+          "description": "Recursos que se destruirán según el plan",
+          "code": "terraform show -json tfplan | jq -r '.resource_changes[] | select(.change.actions | index(\"delete\")) | .address'"
+        }
+      ],
+      "tags": [
+        "show",
+        "json",
+        "plan"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Consola interactiva de expresiones",
+      "command": "terraform console",
+      "section": "Flujo básico",
+      "topic": "Herramientas",
+      "description": "Evalúa expresiones HCL con el estado y las variables actuales. Ideal para probar funciones, for y cidrsubnet.",
+      "examples": [
+        {
+          "description": "Evaluar desde un pipe",
+          "code": "echo 'cidrsubnets(\"10.0.0.0/16\", 8, 8, 8)' | terraform console"
+        },
+        {
+          "description": "Con variables de un entorno",
+          "code": "terraform console -var-file=env/prod.tfvars"
+        }
+      ],
+      "tags": [
+        "console",
+        "expresiones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Grafo de dependencias",
+      "command": "terraform graph | dot -Tsvg > grafo.svg",
+      "section": "Flujo básico",
+      "topic": "Herramientas",
+      "description": "Genera el grafo de dependencias en formato DOT para visualizarlo con Graphviz.",
+      "examples": [
+        {
+          "description": "Grafo de un plan de destrucción",
+          "code": "terraform graph -type=plan-destroy | dot -Tpng > destroy.png"
+        }
+      ],
+      "tags": [
+        "graph",
+        "dependencias"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Bloquear providers para varias plataformas",
+      "command": "terraform providers lock -platform=linux_amd64 -platform=darwin_arm64 -platform=windows_amd64",
+      "section": "Flujo básico",
+      "topic": "Providers",
+      "description": "Registra en .terraform.lock.hcl los hashes de cada plataforma, para que CI en Linux y desarrollo en Mac/Windows usen el mismo lock.",
+      "examples": [
+        {
+          "description": "Ver qué providers requiere cada módulo",
+          "code": "terraform providers"
+        },
+        {
+          "description": "Espejo local de providers para entornos sin internet",
+          "code": "terraform providers mirror ./mirror"
+        }
+      ],
+      "tags": [
+        "providers",
+        "lockfile"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Versiona siempre .terraform.lock.hcl. Si alguien hace init en otra plataforma y faltan hashes, aparecerá el error de checksums."
+    },
+    {
+      "title": "Versión de Terraform y providers",
+      "command": "terraform version",
+      "section": "Flujo básico",
+      "topic": "Providers",
+      "description": "Muestra la versión del binario y de los providers instalados en el directorio.",
+      "examples": [
+        {
+          "description": "Formato JSON",
+          "code": "terraform version -json"
+        },
+        {
+          "description": "Gestionar versiones con tfenv",
+          "code": "tfenv install 1.14.0 && tfenv use 1.14.0"
+        }
+      ],
+      "tags": [
+        "version"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Fija la versión en el bloque terraform { required_version = \"~> 1.14\" } para que todo el equipo use la misma."
+    },
+    {
+      "title": "Autenticarse en HCP Terraform",
+      "command": "terraform login",
+      "section": "Flujo básico",
+      "topic": "Herramientas",
+      "description": "Obtiene y guarda un token de API para HCP Terraform o Terraform Enterprise, usado por el backend cloud y registros privados.",
+      "examples": [
+        {
+          "description": "Contra una instancia Enterprise propia",
+          "code": "terraform login tfe.ejemplo.cl"
+        },
+        {
+          "description": "Cerrar sesión",
+          "code": "terraform logout"
+        }
+      ],
+      "tags": [
+        "login",
+        "hcp"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Variables de entorno de Terraform",
+      "command": "export TF_VAR_region=us-east-1",
+      "section": "Flujo básico",
+      "topic": "Herramientas",
+      "description": "TF_VAR_<nombre> define variables de entrada; otras TF_* controlan logs, caché de plugins y modo automatización.",
+      "examples": [
+        {
+          "description": "Variables típicas en CI",
+          "code": "export TF_IN_AUTOMATION=1\nexport TF_INPUT=0\nexport TF_PLUGIN_CACHE_DIR=\"$HOME/.terraform.d/plugin-cache\"\nexport TF_CLI_ARGS_plan=\"-lock-timeout=5m\""
+        },
+        {
+          "description": "Variable compleja como JSON",
+          "code": "export TF_VAR_tags='{\"equipo\":\"sre\",\"entorno\":\"prod\"}'"
+        }
+      ],
+      "tags": [
+        "variables",
+        "entorno",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Logs de depuración",
+      "command": "TF_LOG=DEBUG terraform plan",
+      "section": "Flujo básico",
+      "topic": "Herramientas",
+      "description": "Activa logs detallados de Terraform y de los providers para diagnosticar errores de API o autenticación.",
+      "examples": [
+        {
+          "description": "Guardar en archivo",
+          "code": "TF_LOG=TRACE TF_LOG_PATH=./tf.log terraform apply"
+        },
+        {
+          "description": "Solo logs del provider",
+          "code": "TF_LOG_PROVIDER=DEBUG terraform plan"
+        },
+        {
+          "description": "PowerShell",
+          "code": "$env:TF_LOG='DEBUG'; terraform plan"
+        }
+      ],
+      "tags": [
+        "debug",
+        "logs"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Los logs TRACE pueden contener credenciales y tokens: no los pegues en tickets sin revisarlos."
+    },
+    {
+      "title": "Desbloquear estado atascado",
+      "command": "terraform force-unlock 6d1c9a5e-0f3a-4b4e-a2b1-9c8d7e6f5a4b",
+      "section": "Flujo básico",
+      "topic": "Herramientas",
+      "description": "Libera manualmente el lock del estado cuando un proceso terminó abruptamente y lo dejó bloqueado.",
+      "examples": [
+        {
+          "description": "Sin confirmación interactiva",
+          "code": "terraform force-unlock -force 6d1c9a5e-0f3a-4b4e-a2b1-9c8d7e6f5a4b"
+        }
+      ],
+      "tags": [
+        "lock",
+        "estado"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Asegúrate de que nadie más está ejecutando: liberar un lock activo puede corromper el estado."
+    }
+  ]
+}

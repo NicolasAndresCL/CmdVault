@@ -1,0 +1,984 @@
+{
+  "category": {
+    "slug": "windows",
+    "name": "Windows",
+    "icon": "desktop_windows",
+    "order": 3,
+    "description": "Línea de comandos de Windows: CMD clásico y PowerShell para automatización y diagnóstico."
+  },
+  "commands": [
+    {
+      "title": "Obtener ayuda con Get-Help",
+      "command": "Get-Help",
+      "section": "PowerShell",
+      "topic": "Fundamentos",
+      "description": "Muestra la ayuda de cualquier cmdlet: sintaxis, parámetros y ejemplos.",
+      "syntax": "Get-Help <cmdlet> [-Examples|-Full|-Online]",
+      "examples": [
+        {
+          "description": "Solo ejemplos",
+          "code": "Get-Help Get-ChildItem -Examples"
+        },
+        {
+          "description": "Ayuda completa en el navegador",
+          "code": "Get-Help Invoke-RestMethod -Online"
+        },
+        {
+          "description": "Descargar o actualizar la ayuda local (admin)",
+          "code": "Update-Help -UICulture en-US -ErrorAction SilentlyContinue"
+        },
+        {
+          "description": "Ayuda de un parámetro concreto",
+          "code": "Get-Help Copy-Item -Parameter Recurse"
+        }
+      ],
+      "tags": [
+        "ayuda",
+        "fundamentos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Descubrir comandos con Get-Command",
+      "command": "Get-Command",
+      "section": "PowerShell",
+      "topic": "Fundamentos",
+      "description": "Busca cmdlets, funciones, alias y ejecutables por nombre, verbo, sustantivo o módulo.",
+      "examples": [
+        {
+          "description": "Comandos relacionados con servicios",
+          "code": "Get-Command -Noun Service"
+        },
+        {
+          "description": "Comandos de un módulo",
+          "code": "Get-Command -Module NetTCPIP"
+        },
+        {
+          "description": "¿Qué es realmente 'ls' o 'curl'?",
+          "code": "Get-Command ls, curl"
+        },
+        {
+          "description": "Ruta de un ejecutable (equivalente a which)",
+          "code": "(Get-Command python).Source"
+        }
+      ],
+      "tags": [
+        "descubrimiento",
+        "fundamentos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Inspeccionar objetos con Get-Member",
+      "command": "Get-Member",
+      "section": "PowerShell",
+      "topic": "Fundamentos",
+      "description": "Muestra el tipo, las propiedades y los métodos de los objetos que salen por el pipeline; clave para saber qué se puede filtrar o seleccionar.",
+      "examples": [
+        {
+          "description": "Propiedades de un proceso",
+          "code": "Get-Process | Get-Member -MemberType Property"
+        },
+        {
+          "description": "Tipo de un valor",
+          "code": "(Get-Date).GetType().FullName"
+        },
+        {
+          "description": "Ver todas las propiedades con valores",
+          "code": "Get-Service WinRM | Select-Object *"
+        }
+      ],
+      "tags": [
+        "objetos",
+        "fundamentos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Alias en PowerShell",
+      "command": "Get-Alias",
+      "section": "PowerShell",
+      "topic": "Fundamentos",
+      "description": "Lista y define alias. Útiles en consola, pero en scripts conviene usar el nombre completo del cmdlet.",
+      "examples": [
+        {
+          "description": "¿A qué cmdlet apunta un alias?",
+          "code": "Get-Alias gci, ?, %"
+        },
+        {
+          "description": "Alias de un cmdlet",
+          "code": "Get-Alias -Definition Get-ChildItem"
+        },
+        {
+          "description": "Crear un alias",
+          "code": "Set-Alias -Name k -Value kubectl"
+        }
+      ],
+      "tags": [
+        "alias",
+        "fundamentos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "En PowerShell 7 se eliminaron los alias 'curl' y 'wget' que en 5.1 apuntaban a Invoke-WebRequest."
+    },
+    {
+      "title": "Seleccionar propiedades con Select-Object",
+      "command": "Select-Object",
+      "section": "PowerShell",
+      "topic": "Pipeline y objetos",
+      "description": "Elige propiedades, crea columnas calculadas o toma los primeros/últimos elementos del pipeline.",
+      "examples": [
+        {
+          "description": "Top 5 procesos por memoria",
+          "code": "Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 5 Name, Id, @{n='MB';e={[math]::Round($_.WorkingSet64/1MB,1)}}"
+        },
+        {
+          "description": "Valores únicos",
+          "code": "Get-Content ips.txt | Select-Object -Unique"
+        },
+        {
+          "description": "Extraer solo el valor de una propiedad",
+          "code": "Get-Service | Select-Object -ExpandProperty Name"
+        }
+      ],
+      "tags": [
+        "pipeline",
+        "objetos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Filtrar con Where-Object",
+      "command": "Where-Object",
+      "section": "PowerShell",
+      "topic": "Pipeline y objetos",
+      "description": "Filtra objetos del pipeline según una condición sobre sus propiedades.",
+      "examples": [
+        {
+          "description": "Servicios automáticos detenidos",
+          "code": "Get-Service | Where-Object { $_.StartType -eq 'Automatic' -and $_.Status -ne 'Running' }"
+        },
+        {
+          "description": "Sintaxis simplificada",
+          "code": "Get-Process | Where-Object CPU -gt 100"
+        },
+        {
+          "description": "Archivos de más de 100 MB",
+          "code": "Get-ChildItem C:\\ -Recurse -File -ErrorAction SilentlyContinue | Where-Object Length -gt 100MB"
+        }
+      ],
+      "tags": [
+        "pipeline",
+        "filtros"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Filtra lo antes posible: '-Filter' de Get-ChildItem o '-FilterHashtable' de Get-WinEvent son mucho más rápidos que Where-Object."
+    },
+    {
+      "title": "Iterar con ForEach-Object",
+      "command": "ForEach-Object",
+      "section": "PowerShell",
+      "topic": "Pipeline y objetos",
+      "description": "Ejecuta un bloque por cada objeto del pipeline. En PowerShell 7, -Parallel ejecuta en paralelo con hilos.",
+      "examples": [
+        {
+          "description": "Transformar cada elemento",
+          "code": "1..5 | ForEach-Object { $_ * 2 }"
+        },
+        {
+          "description": "Ping en paralelo (solo PS 7+)",
+          "code": "'web01','web02','db01' | ForEach-Object -Parallel { [pscustomobject]@{ Host = $_; Up = Test-Connection $_ -Count 1 -Quiet } } -ThrottleLimit 10"
+        },
+        {
+          "description": "Bucle foreach clásico (más rápido sobre colecciones en memoria)",
+          "code": "foreach ($f in Get-ChildItem *.log) { \"$($f.Name): $($f.Length)\" }"
+        }
+      ],
+      "tags": [
+        "pipeline",
+        "bucles",
+        "paralelismo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Dentro de -Parallel las variables externas se referencian con $using:variable."
+    },
+    {
+      "title": "Ordenar, agrupar y medir",
+      "command": "Sort-Object / Group-Object / Measure-Object",
+      "section": "PowerShell",
+      "topic": "Pipeline y objetos",
+      "description": "Ordena por propiedades, agrupa y cuenta por un campo, y calcula sumas, promedios y máximos.",
+      "examples": [
+        {
+          "description": "Eventos agrupados por origen",
+          "code": "Get-WinEvent -LogName System -MaxEvents 500 | Group-Object ProviderName | Sort-Object Count -Descending | Select-Object -First 10 Count, Name"
+        },
+        {
+          "description": "Tamaño total de una carpeta",
+          "code": "(Get-ChildItem C:\\logs -Recurse -File | Measure-Object Length -Sum).Sum / 1MB"
+        },
+        {
+          "description": "Estadísticas de una columna",
+          "code": "Import-Csv ventas.csv | Measure-Object Monto -Sum -Average -Maximum"
+        }
+      ],
+      "tags": [
+        "pipeline",
+        "agregación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Formatear la salida",
+      "command": "Format-Table / Format-List",
+      "section": "PowerShell",
+      "topic": "Pipeline y objetos",
+      "description": "Controla cómo se muestra la salida en consola. Debe ir al final del pipeline: después de Format-* ya no hay objetos útiles.",
+      "examples": [
+        {
+          "description": "Tabla con columnas ajustadas",
+          "code": "Get-Service | Format-Table Name, Status, StartType -AutoSize"
+        },
+        {
+          "description": "Todas las propiedades en lista",
+          "code": "Get-Process -Id $PID | Format-List *"
+        },
+        {
+          "description": "Ventana interactiva filtrable (Windows)",
+          "code": "Get-Process | Out-GridView -PassThru | Stop-Process -WhatIf"
+        }
+      ],
+      "tags": [
+        "salida",
+        "formato"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "No pongas Format-Table antes de Export-Csv u Out-File: exportarías objetos de formato, no tus datos. Out-GridView en PS 7 requiere Windows."
+    },
+    {
+      "title": "Listar archivos con Get-ChildItem",
+      "command": "Get-ChildItem",
+      "section": "PowerShell",
+      "topic": "Archivos",
+      "description": "Lista archivos y carpetas (también claves de registro, certificados y variables). Equivale a dir/ls.",
+      "syntax": "Get-ChildItem [-Path] [-Filter] [-Recurse] [-File|-Directory]",
+      "examples": [
+        {
+          "description": "Recursivo filtrando por extensión",
+          "code": "Get-ChildItem -Path C:\\proyectos -Recurse -Filter *.py"
+        },
+        {
+          "description": "Solo archivos ocultos",
+          "code": "Get-ChildItem -Force -Hidden -File"
+        },
+        {
+          "description": "Modificados en las últimas 24 horas",
+          "code": "Get-ChildItem C:\\logs -File | Where-Object LastWriteTime -gt (Get-Date).AddDays(-1)"
+        },
+        {
+          "description": "Limitar la profundidad (PS 5+)",
+          "code": "Get-ChildItem -Directory -Recurse -Depth 1"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "listado"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Crear archivos y carpetas",
+      "command": "New-Item",
+      "section": "PowerShell",
+      "topic": "Archivos",
+      "description": "Crea archivos, carpetas, enlaces simbólicos o claves de registro.",
+      "examples": [
+        {
+          "description": "Crear carpeta con padres",
+          "code": "New-Item -ItemType Directory -Path C:\\apps\\api\\logs -Force"
+        },
+        {
+          "description": "Crear archivo solo si no existe",
+          "code": "if (-not (Test-Path .\\.env)) { New-Item -ItemType File .\\.env }"
+        },
+        {
+          "description": "Enlace simbólico",
+          "code": "New-Item -ItemType SymbolicLink -Path C:\\apps\\actual -Target C:\\apps\\releases\\v2.3.0"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "directorios"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Nunca uses 'New-Item -Force' sobre un archivo existente: lo vacía."
+    },
+    {
+      "title": "Copiar, mover y borrar elementos",
+      "command": "Copy-Item / Move-Item / Remove-Item",
+      "section": "PowerShell",
+      "topic": "Archivos",
+      "description": "Operaciones básicas sobre archivos y carpetas; -WhatIf muestra lo que haría sin ejecutar.",
+      "examples": [
+        {
+          "description": "Copiar carpeta recursivamente",
+          "code": "Copy-Item -Path C:\\origen -Destination D:\\respaldo -Recurse -Force"
+        },
+        {
+          "description": "Borrar logs de más de 30 días (simulación)",
+          "code": "Get-ChildItem C:\\logs -Filter *.log | Where-Object LastWriteTime -lt (Get-Date).AddDays(-30) | Remove-Item -WhatIf"
+        },
+        {
+          "description": "Borrar una carpeta completa",
+          "code": "Remove-Item -Recurse -Force .\\node_modules"
+        },
+        {
+          "description": "Renombrar",
+          "code": "Rename-Item .\\config.json config.old.json"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "copiar",
+        "borrar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Comprobar rutas con Test-Path",
+      "command": "Test-Path",
+      "section": "PowerShell",
+      "topic": "Archivos",
+      "description": "Comprueba si existe una ruta (archivo, carpeta o clave de registro); devuelve True o False.",
+      "examples": [
+        {
+          "description": "Validar antes de continuar",
+          "code": "if (-not (Test-Path C:\\apps\\api\\.env)) { throw 'Falta el archivo .env' }"
+        },
+        {
+          "description": "Solo carpetas",
+          "code": "Test-Path C:\\logs -PathType Container"
+        },
+        {
+          "description": "Clave de registro",
+          "code": "Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\PowerShell\\3'"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "validación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Leer archivos y seguir logs",
+      "command": "Get-Content -Tail -Wait",
+      "section": "PowerShell",
+      "topic": "Archivos",
+      "description": "Lee archivos de texto línea a línea. Con -Tail y -Wait funciona como 'tail -f'.",
+      "examples": [
+        {
+          "description": "Seguir un log en vivo",
+          "code": "Get-Content C:\\logs\\app.log -Tail 50 -Wait"
+        },
+        {
+          "description": "Seguir filtrando errores",
+          "code": "Get-Content C:\\logs\\app.log -Tail 0 -Wait | Select-String 'ERROR'"
+        },
+        {
+          "description": "Leer todo como un solo string",
+          "code": "$json = Get-Content .\\config.json -Raw"
+        },
+        {
+          "description": "Primeras 10 líneas",
+          "code": "Get-Content datos.csv -TotalCount 10"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "logs"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Escribir archivos con encoding correcto",
+      "command": "Set-Content / Out-File",
+      "section": "PowerShell",
+      "topic": "Archivos",
+      "description": "Escribe texto en archivos. El encoding por defecto difiere entre PowerShell 5.1 y 7, causa típica de archivos que otras herramientas leen mal.",
+      "examples": [
+        {
+          "description": "Escribir UTF-8 explícito",
+          "code": "Set-Content -Path .\\salida.txt -Value $texto -Encoding utf8"
+        },
+        {
+          "description": "Agregar líneas",
+          "code": "Add-Content -Path C:\\logs\\eventos.log -Value \"$(Get-Date -Format s) Despliegue OK\""
+        },
+        {
+          "description": "UTF-8 sin BOM en PS 7",
+          "code": "'hola' | Out-File .\\a.txt -Encoding utf8NoBOM"
+        },
+        {
+          "description": "UTF-8 sin BOM en PS 5.1",
+          "code": "[System.IO.File]::WriteAllText(\"$PWD\\a.txt\", $texto, [System.Text.UTF8Encoding]::new($false))"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "encoding"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "PS 7: UTF-8 sin BOM por defecto en todo. PS 5.1: '>' y Out-File escriben UTF-16 LE, Set-Content usa ANSI, y '-Encoding utf8' agrega BOM (rompe algunos parsers de bash/YAML)."
+    },
+    {
+      "title": "Comprimir y descomprimir ZIP",
+      "command": "Compress-Archive / Expand-Archive",
+      "section": "PowerShell",
+      "topic": "Archivos",
+      "description": "Crea y extrae archivos .zip sin herramientas externas.",
+      "examples": [
+        {
+          "description": "Comprimir el contenido de una carpeta",
+          "code": "Compress-Archive -Path .\\dist\\* -DestinationPath .\\release.zip -Force"
+        },
+        {
+          "description": "Extraer",
+          "code": "Expand-Archive -Path .\\release.zip -DestinationPath C:\\apps\\api -Force"
+        },
+        {
+          "description": "tar.exe incluido en Windows",
+          "code": "tar -czf respaldo.tar.gz .\\datos"
+        }
+      ],
+      "tags": [
+        "compresión",
+        "archivos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Compress-Archive tiene un límite de 2 GB por archivo; para volúmenes grandes usa tar.exe o 7-Zip."
+    },
+    {
+      "title": "Hash de archivos con Get-FileHash",
+      "command": "Get-FileHash",
+      "section": "PowerShell",
+      "topic": "Archivos",
+      "description": "Calcula el hash (SHA256 por defecto) de archivos para verificar integridad o detectar duplicados.",
+      "examples": [
+        {
+          "description": "Verificar contra un hash publicado",
+          "code": "(Get-FileHash .\\terraform.zip -Algorithm SHA256).Hash -eq 'A1B2C3...'"
+        },
+        {
+          "description": "Detectar archivos duplicados",
+          "code": "Get-ChildItem C:\\fotos -Recurse -File | Get-FileHash | Group-Object Hash | Where-Object Count -gt 1"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "integridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Buscar texto con Select-String",
+      "command": "Select-String",
+      "section": "PowerShell",
+      "topic": "Datos y texto",
+      "description": "El 'grep' de PowerShell: busca patrones regex en archivos o en el pipeline y devuelve objetos con línea y número.",
+      "examples": [
+        {
+          "description": "Buscar en archivos recursivamente",
+          "code": "Get-ChildItem -Recurse -Include *.py, *.toml | Select-String -Pattern 'DATABASE_URL'"
+        },
+        {
+          "description": "Con contexto de 2 líneas",
+          "code": "Select-String -Path C:\\logs\\*.log -Pattern 'Exception' -Context 2,2"
+        },
+        {
+          "description": "Capturar grupos regex",
+          "code": "Select-String -Path access.log -Pattern '^(\\d+\\.\\d+\\.\\d+\\.\\d+)' | ForEach-Object { $_.Matches[0].Groups[1].Value } | Group-Object | Sort-Object Count -Desc | Select-Object -First 10"
+        }
+      ],
+      "tags": [
+        "texto",
+        "búsqueda",
+        "regex"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Convertir desde y hacia JSON",
+      "command": "ConvertTo-Json / ConvertFrom-Json",
+      "section": "PowerShell",
+      "topic": "Datos y texto",
+      "description": "Transforma objetos PowerShell a JSON y viceversa, para configuraciones y APIs.",
+      "examples": [
+        {
+          "description": "Leer y modificar un JSON",
+          "code": "$cfg = Get-Content .\\appsettings.json -Raw | ConvertFrom-Json\n$cfg.Logging.LogLevel.Default = 'Warning'\n$cfg | ConvertTo-Json -Depth 10 | Set-Content .\\appsettings.json -Encoding utf8"
+        },
+        {
+          "description": "Objeto a JSON compacto",
+          "code": "@{ nombre = 'api'; replicas = 3 } | ConvertTo-Json -Compress"
+        },
+        {
+          "description": "JSON a hashtable (solo PS 7)",
+          "code": "$h = Get-Content .\\datos.json -Raw | ConvertFrom-Json -AsHashtable"
+        }
+      ],
+      "tags": [
+        "json",
+        "datos",
+        "api"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "ConvertTo-Json corta a profundidad 2 por defecto: usa -Depth para objetos anidados o perderás datos sin aviso (PS 7.1+ al menos advierte)."
+    },
+    {
+      "title": "Importar y exportar CSV",
+      "command": "Import-Csv / Export-Csv",
+      "section": "PowerShell",
+      "topic": "Datos y texto",
+      "description": "Lee CSV como objetos con propiedades por columna y exporta objetos a CSV.",
+      "examples": [
+        {
+          "description": "Filtrar un CSV y guardar resultado",
+          "code": "Import-Csv .\\usuarios.csv | Where-Object Area -eq 'TI' | Export-Csv .\\ti.csv -NoTypeInformation -Encoding utf8"
+        },
+        {
+          "description": "CSV separado por punto y coma (Excel en español)",
+          "code": "Import-Csv .\\ventas.csv -Delimiter ';'"
+        },
+        {
+          "description": "Exportar procesos",
+          "code": "Get-Process | Select-Object Name, Id, CPU | Export-Csv procesos.csv -NoTypeInformation"
+        }
+      ],
+      "tags": [
+        "csv",
+        "datos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "-NoTypeInformation solo es necesario en PS 5.1 (en PS 7 ya es el comportamiento por defecto)."
+    },
+    {
+      "title": "Objetos personalizados y hashtables",
+      "command": "[pscustomobject]@{}",
+      "section": "PowerShell",
+      "topic": "Datos y texto",
+      "description": "Las hashtables guardan pares clave-valor; [pscustomobject] crea objetos con propiedades que se exportan bien a CSV/JSON.",
+      "examples": [
+        {
+          "description": "Construir un reporte",
+          "code": "$reporte = foreach ($s in 'web01','web02') {\n    [pscustomobject]@{\n        Servidor = $s\n        Online   = Test-Connection $s -Count 1 -Quiet\n        Fecha    = Get-Date -Format 'yyyy-MM-dd HH:mm'\n    }\n}\n$reporte | Export-Csv .\\estado.csv -NoTypeInformation"
+        },
+        {
+          "description": "Hashtable ordenada",
+          "code": "$cfg = [ordered]@{ env = 'prod'; replicas = 3 }\n$cfg.env\n$cfg['replicas'] = 5"
+        }
+      ],
+      "tags": [
+        "objetos",
+        "datos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Formatear cadenas",
+      "command": "-f / here-strings",
+      "section": "PowerShell",
+      "topic": "Datos y texto",
+      "description": "Interpola variables y formatea números y fechas en cadenas; los here-strings permiten texto multilínea.",
+      "examples": [
+        {
+          "description": "Operador de formato",
+          "code": "'{0} tiene {1:N0} bytes ({2:P1} usado)' -f 'C:', 512000000000, 0.734"
+        },
+        {
+          "description": "Subexpresiones en comillas dobles",
+          "code": "\"Hoy es $(Get-Date -Format 'dddd dd-MM-yyyy') y el host es $env:COMPUTERNAME\""
+        },
+        {
+          "description": "Here-string literal (sin interpolar)",
+          "code": "$sql = @'\nSELECT * FROM pedidos WHERE estado = 'pagado';\n'@"
+        }
+      ],
+      "tags": [
+        "texto",
+        "cadenas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "El cierre '@ de un here-string debe ir en la columna 0 de su propia línea."
+    },
+    {
+      "title": "Parámetros con splatting",
+      "command": "@parametros",
+      "section": "PowerShell",
+      "topic": "Scripting",
+      "description": "Pasa parámetros a un cmdlet desde una hashtable, haciendo los scripts más legibles y permitiendo construirlos dinámicamente.",
+      "examples": [
+        {
+          "description": "Splatting básico",
+          "code": "$params = @{\n    Uri         = 'https://api.ejemplo.cl/pedidos'\n    Method      = 'Post'\n    ContentType = 'application/json'\n    Body        = (@{ total = 1990 } | ConvertTo-Json)\n}\nInvoke-RestMethod @params"
+        },
+        {
+          "description": "Agregar parámetros condicionalmente",
+          "code": "$copia = @{ Path = '.\\dist'; Destination = '\\\\web01\\c$\\apps'; Recurse = $true }\nif ($Forzar) { $copia.Force = $true }\nCopy-Item @copia"
+        }
+      ],
+      "tags": [
+        "scripting",
+        "parámetros"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Manejo de errores con try/catch",
+      "command": "try { } catch { } finally { }",
+      "section": "PowerShell",
+      "topic": "Scripting",
+      "description": "Captura errores terminantes. Para que un error de cmdlet sea capturable se usa -ErrorAction Stop.",
+      "examples": [
+        {
+          "description": "Capturar y registrar",
+          "code": "try {\n    Get-Item C:\\no-existe.txt -ErrorAction Stop\n}\ncatch [System.Management.Automation.ItemNotFoundException] {\n    Write-Warning \"No existe: $($_.Exception.Message)\"\n}\ncatch {\n    Write-Error \"Error inesperado: $_\"\n    exit 1\n}\nfinally {\n    Write-Host 'Fin del intento'\n}"
+        },
+        {
+          "description": "Hacer terminantes todos los errores del script",
+          "code": "$ErrorActionPreference = 'Stop'"
+        },
+        {
+          "description": "Revisar el código de salida de un ejecutable",
+          "code": "git pull\nif ($LASTEXITCODE -ne 0) { throw \"git falló con código $LASTEXITCODE\" }"
+        }
+      ],
+      "tags": [
+        "scripting",
+        "errores"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Los ejecutables nativos no lanzan excepciones: revisa $LASTEXITCODE. En PS 7.3+ puedes activar $PSNativeCommandUseErrorActionPreference = $true."
+    },
+    {
+      "title": "Funciones avanzadas",
+      "command": "function / [CmdletBinding()]",
+      "section": "PowerShell",
+      "topic": "Scripting",
+      "description": "Define funciones con parámetros tipados, validaciones, ayuda y soporte de -Verbose y -WhatIf como un cmdlet.",
+      "examples": [
+        {
+          "description": "Función con validación y WhatIf",
+          "code": "function Remove-LogsAntiguos {\n    [CmdletBinding(SupportsShouldProcess)]\n    param(\n        [Parameter(Mandatory)]\n        [ValidateScript({ Test-Path $_ -PathType Container })]\n        [string]$Ruta,\n\n        [ValidateRange(1, 365)]\n        [int]$Dias = 30\n    )\n    $limite = (Get-Date).AddDays(-$Dias)\n    Get-ChildItem $Ruta -File | Where-Object LastWriteTime -lt $limite | ForEach-Object {\n        if ($PSCmdlet.ShouldProcess($_.FullName, 'Eliminar')) {\n            Remove-Item $_.FullName\n        }\n    }\n}\n\nRemove-LogsAntiguos -Ruta C:\\logs -Dias 14 -WhatIf -Verbose"
+        }
+      ],
+      "tags": [
+        "scripting",
+        "funciones"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Trabajos en segundo plano",
+      "command": "Start-Job / Start-ThreadJob",
+      "section": "PowerShell",
+      "topic": "Scripting",
+      "description": "Ejecuta tareas en segundo plano y recupera sus resultados después. ThreadJob es más liviano porque usa hilos.",
+      "examples": [
+        {
+          "description": "Lanzar y esperar varios jobs",
+          "code": "$jobs = 'web01','web02' | ForEach-Object { Start-ThreadJob -ScriptBlock { param($h) Test-Connection $h -Count 2 } -ArgumentList $_ }\n$jobs | Wait-Job | Receive-Job\n$jobs | Remove-Job"
+        },
+        {
+          "description": "Lanzar con & (PS 7)",
+          "code": "$job = Get-ChildItem C:\\ -Recurse -File -ErrorAction SilentlyContinue &\nReceive-Job $job -Wait"
+        }
+      ],
+      "tags": [
+        "scripting",
+        "paralelismo",
+        "jobs"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Start-ThreadJob viene incluido en PS 7; en 5.1 hay que instalar el módulo ThreadJob."
+    },
+    {
+      "title": "Operadores modernos de PowerShell 7",
+      "command": "?: / ?? / &&",
+      "section": "PowerShell",
+      "topic": "Scripting",
+      "description": "PowerShell 7 agrega operador ternario, null-coalescing y encadenamiento de comandos por éxito/fallo.",
+      "examples": [
+        {
+          "description": "Ternario y null-coalescing",
+          "code": "$entorno = $env:APP_ENV ?? 'development'\n$nivel = ($entorno -eq 'production') ? 'Warning' : 'Debug'"
+        },
+        {
+          "description": "Asignar solo si es nulo",
+          "code": "$config ??= @{}"
+        },
+        {
+          "description": "Ejecutar si el anterior tuvo éxito",
+          "code": "npm ci && npm run build || Write-Error 'Build fallido'"
+        }
+      ],
+      "tags": [
+        "scripting",
+        "operadores",
+        "ps7"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Nada de esto existe en Windows PowerShell 5.1: usa if/else y '; if ($?) { }'."
+    },
+    {
+      "title": "Política de ejecución de scripts",
+      "command": "Set-ExecutionPolicy",
+      "section": "PowerShell",
+      "topic": "Módulos y configuración",
+      "description": "Controla si PowerShell permite ejecutar scripts .ps1 en Windows. No es una barrera de seguridad, sino una protección contra ejecuciones accidentales.",
+      "examples": [
+        {
+          "description": "Ver la política efectiva por ámbito",
+          "code": "Get-ExecutionPolicy -List"
+        },
+        {
+          "description": "Permitir scripts locales para el usuario actual",
+          "code": "Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned"
+        },
+        {
+          "description": "Ejecutar un script puntual sin cambiar la política",
+          "code": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\instalar.ps1"
+        },
+        {
+          "description": "Desbloquear un script descargado",
+          "code": "Unblock-File .\\script.ps1"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "scripts",
+        "configuración"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "En PS 7 el ejecutable es 'pwsh'; en 5.1, 'powershell.exe'. Fuera de Windows la política no aplica."
+    },
+    {
+      "title": "Instalar módulos desde la PowerShell Gallery",
+      "command": "Install-Module / Install-PSResource",
+      "section": "PowerShell",
+      "topic": "Módulos y configuración",
+      "description": "Instala módulos de la PowerShell Gallery. En PS 7.4+ viene PSResourceGet (Install-PSResource), sucesor de PowerShellGet.",
+      "examples": [
+        {
+          "description": "Instalar para el usuario actual",
+          "code": "Install-Module -Name Az -Scope CurrentUser -Repository PSGallery"
+        },
+        {
+          "description": "Con PSResourceGet (PS 7.4+)",
+          "code": "Install-PSResource -Name Pester -Scope CurrentUser -TrustRepository"
+        },
+        {
+          "description": "Listar y actualizar módulos instalados",
+          "code": "Get-InstalledModule\nUpdate-Module -Name Az"
+        },
+        {
+          "description": "Importar y ver comandos del módulo",
+          "code": "Import-Module Pester\nGet-Command -Module Pester"
+        }
+      ],
+      "tags": [
+        "módulos",
+        "paquetes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Variables de entorno en PowerShell",
+      "command": "$env:",
+      "section": "PowerShell",
+      "topic": "Módulos y configuración",
+      "description": "Lee y define variables de entorno en la sesión actual o de forma persistente para el usuario o la máquina.",
+      "examples": [
+        {
+          "description": "Leer y definir en la sesión",
+          "code": "$env:APP_ENV = 'production'\n$env:PATH -split ';'"
+        },
+        {
+          "description": "Persistente para el usuario",
+          "code": "[Environment]::SetEnvironmentVariable('JAVA_HOME', 'C:\\Program Files\\Eclipse Adoptium\\jdk-21', 'User')"
+        },
+        {
+          "description": "Agregar una carpeta al PATH del usuario sin romperlo",
+          "code": "$actual = [Environment]::GetEnvironmentVariable('Path', 'User')\n[Environment]::SetEnvironmentVariable('Path', \"$actual;C:\\tools\\bin\", 'User')"
+        },
+        {
+          "description": "Borrar una variable de la sesión",
+          "code": "Remove-Item Env:\\APP_ENV"
+        }
+      ],
+      "tags": [
+        "variables",
+        "entorno"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Los cambios persistentes solo los ven las terminales nuevas; la actual no se entera."
+    },
+    {
+      "title": "Perfil de PowerShell",
+      "command": "$PROFILE",
+      "section": "PowerShell",
+      "topic": "Módulos y configuración",
+      "description": "Script que se ejecuta al abrir PowerShell; ahí se definen alias, funciones, prompt y módulos que se cargan siempre.",
+      "examples": [
+        {
+          "description": "Crear y editar el perfil",
+          "code": "if (-not (Test-Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force }\ncode $PROFILE"
+        },
+        {
+          "description": "Contenido típico",
+          "code": "Set-Alias k kubectl\nfunction gs { git status -sb }\nImport-Module PSReadLine\nSet-PSReadLineOption -PredictionSource History"
+        },
+        {
+          "description": "Ver todas las rutas de perfil",
+          "code": "$PROFILE | Select-Object *"
+        }
+      ],
+      "tags": [
+        "perfil",
+        "configuración",
+        "productividad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "PS 5.1 y PS 7 tienen perfiles distintos (Documents\\WindowsPowerShell vs Documents\\PowerShell)."
+    }
+  ]
+}

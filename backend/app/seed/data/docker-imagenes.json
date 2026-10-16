@@ -1,0 +1,553 @@
+{
+  "category": {
+    "slug": "docker",
+    "name": "Docker",
+    "icon": "directions_boat",
+    "order": 5,
+    "description": "Contenedores con Docker Engine y Compose actualizados: imágenes, buildx, redes, volúmenes, seguridad y diagnóstico."
+  },
+  "commands": [
+    {
+      "title": "Descargar imagen",
+      "command": "docker pull python:3.14-slim",
+      "section": "Imágenes",
+      "topic": "Gestión de imágenes",
+      "description": "Descarga una imagen desde un registro. Fija siempre un tag explícito o, mejor aún, el digest.",
+      "syntax": "docker pull [--platform P] NOMBRE[:TAG|@DIGEST]",
+      "examples": [
+        {
+          "description": "Por digest inmutable",
+          "code": "docker pull nginx@sha256:<digest>"
+        },
+        {
+          "description": "Una arquitectura concreta",
+          "code": "docker pull --platform linux/arm64 postgres:18"
+        },
+        {
+          "description": "Todas las etiquetas de un repositorio (cuidado)",
+          "code": "docker pull -a miorg/herramienta"
+        }
+      ],
+      "tags": [
+        "pull",
+        "registro"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Evita :latest en producción: no es una versión, solo el tag por defecto, y cambia sin aviso."
+    },
+    {
+      "title": "Listar imágenes",
+      "command": "docker image ls",
+      "section": "Imágenes",
+      "topic": "Gestión de imágenes",
+      "description": "Lista imágenes locales con repositorio, tag, ID y tamaño. Admite filtros y formato.",
+      "examples": [
+        {
+          "description": "Imágenes colgantes (<none>)",
+          "code": "docker image ls -f dangling=true"
+        },
+        {
+          "description": "Con digest",
+          "code": "docker image ls --digests python"
+        },
+        {
+          "description": "Formato propio ordenado por tamaño",
+          "code": "docker image ls --format '{{.Size}}\\t{{.Repository}}:{{.Tag}}' | sort -h"
+        },
+        {
+          "description": "Imágenes creadas antes que otra",
+          "code": "docker image ls -f before=app:2.0"
+        }
+      ],
+      "tags": [
+        "image",
+        "listar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Etiquetar imagen",
+      "command": "docker tag app:1.0 ghcr.io/nicocano/app:1.0",
+      "section": "Imágenes",
+      "topic": "Gestión de imágenes",
+      "description": "Crea un alias (nombre:tag) para una imagen existente. Es el paso previo a subirla a un registro.",
+      "examples": [
+        {
+          "description": "Etiquetar para Amazon ECR",
+          "code": "docker tag app:1.0 123456789012.dkr.ecr.us-east-1.amazonaws.com/app:1.0"
+        },
+        {
+          "description": "Versión semántica y sha de git",
+          "code": "docker tag app:build ghcr.io/nicocano/app:1.4.2 && docker tag app:build ghcr.io/nicocano/app:sha-$(git rev-parse --short HEAD)"
+        }
+      ],
+      "tags": [
+        "tag",
+        "registro"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Subir imagen a un registro",
+      "command": "docker push ghcr.io/nicocano/app:1.0",
+      "section": "Imágenes",
+      "topic": "Gestión de imágenes",
+      "description": "Publica la imagen en el registro correspondiente al prefijo del nombre. Requiere docker login previo.",
+      "examples": [
+        {
+          "description": "Subir todas las etiquetas del repositorio local",
+          "code": "docker push -a ghcr.io/nicocano/app"
+        },
+        {
+          "description": "Subir una sola plataforma de un índice multi-arch",
+          "code": "docker push --platform linux/amd64 ghcr.io/nicocano/app:1.0"
+        }
+      ],
+      "tags": [
+        "push",
+        "registro"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Para imágenes multi-arquitectura es más simple construir y subir en un paso con docker buildx build --push."
+    },
+    {
+      "title": "Eliminar imágenes",
+      "command": "docker rmi app:1.0",
+      "section": "Imágenes",
+      "topic": "Limpieza",
+      "description": "Borra una o varias imágenes locales. Si tiene varios tags, solo quita el indicado hasta que no quede ninguno.",
+      "examples": [
+        {
+          "description": "Forzar aunque haya contenedores detenidos que la usen",
+          "code": "docker rmi -f app:1.0"
+        },
+        {
+          "description": "Borrar todas las imágenes de un repositorio",
+          "code": "docker image ls -q app | xargs -r docker rmi"
+        }
+      ],
+      "tags": [
+        "rmi",
+        "limpieza"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Limpiar imágenes sin uso",
+      "command": "docker image prune -a --filter 'until=168h'",
+      "section": "Imágenes",
+      "topic": "Limpieza",
+      "description": "Sin -a borra solo las colgantes; con -a todas las que no usa ningún contenedor. El filtro until limita por antigüedad.",
+      "examples": [
+        {
+          "description": "Solo colgantes, sin confirmar",
+          "code": "docker image prune -f"
+        },
+        {
+          "description": "Conservar las que tengan una etiqueta",
+          "code": "docker image prune -a -f --filter 'label!=keep=true'"
+        }
+      ],
+      "tags": [
+        "prune",
+        "limpieza",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Historial de capas",
+      "command": "docker image history app:1.0",
+      "section": "Imágenes",
+      "topic": "Análisis",
+      "description": "Muestra cada capa con la instrucción que la generó y su tamaño. Sirve para detectar capas infladas.",
+      "examples": [
+        {
+          "description": "Instrucciones completas sin truncar",
+          "code": "docker image history --no-trunc --format '{{.Size}}\\t{{.CreatedBy}}' app:1.0"
+        },
+        {
+          "description": "Analizar capas de forma interactiva con dive",
+          "code": "docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock wagoodman/dive app:1.0"
+        }
+      ],
+      "tags": [
+        "history",
+        "capas",
+        "optimizacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Inspeccionar imagen",
+      "command": "docker image inspect app:1.0",
+      "section": "Imágenes",
+      "topic": "Análisis",
+      "description": "Devuelve metadatos de la imagen: entrypoint, cmd, usuario, puertos, labels, arquitectura y capas.",
+      "examples": [
+        {
+          "description": "Entrypoint, cmd y usuario",
+          "code": "docker image inspect -f 'EP={{json .Config.Entrypoint}} CMD={{json .Config.Cmd}} USER={{.Config.User}}' app:1.0"
+        },
+        {
+          "description": "Arquitectura y SO",
+          "code": "docker image inspect -f '{{.Os}}/{{.Architecture}}' app:1.0"
+        },
+        {
+          "description": "Labels OCI",
+          "code": "docker image inspect -f '{{json .Config.Labels}}' app:1.0 | jq"
+        }
+      ],
+      "tags": [
+        "inspect",
+        "metadatos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Exportar e importar imágenes con save/load",
+      "command": "docker save -o app.tar app:1.0",
+      "section": "Imágenes",
+      "topic": "Transporte",
+      "description": "save empaqueta una o varias imágenes con todas sus capas y tags en un tar; load las restaura. Sirve para entornos sin acceso al registro.",
+      "examples": [
+        {
+          "description": "Comprimir al vuelo",
+          "code": "docker save app:1.0 postgres:18 | gzip > imagenes.tar.gz"
+        },
+        {
+          "description": "Cargar desde un archivo comprimido",
+          "code": "docker load -i imagenes.tar.gz"
+        },
+        {
+          "description": "Copiar directo a un servidor por SSH",
+          "code": "docker save app:1.0 | ssh deploy@srv 'docker load'"
+        }
+      ],
+      "tags": [
+        "save",
+        "load",
+        "air-gapped"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con el almacén de imágenes de containerd (por defecto en instalaciones nuevas de Engine 29) save puede incluir varias plataformas; usa --platform para acotar."
+    },
+    {
+      "title": "Export e import de sistema de archivos",
+      "command": "docker export api -o api-fs.tar",
+      "section": "Imágenes",
+      "topic": "Transporte",
+      "description": "export vuelca el sistema de archivos plano de un contenedor (sin capas ni metadatos); import lo convierte en una imagen de una sola capa.",
+      "examples": [
+        {
+          "description": "Crear imagen a partir del tar con un CMD",
+          "code": "docker import -c 'CMD [\"/bin/sh\"]' api-fs.tar debug/api-flat:1"
+        },
+        {
+          "description": "Listar el contenido sin extraer",
+          "code": "docker export api | tar -tv | head"
+        }
+      ],
+      "tags": [
+        "export",
+        "import"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "No confundir con save/load: export pierde historial, ENV, ENTRYPOINT y demás configuración."
+    },
+    {
+      "title": "Buscar imágenes en Docker Hub",
+      "command": "docker search --filter is-official=true postgres",
+      "section": "Imágenes",
+      "topic": "Gestión de imágenes",
+      "description": "Busca repositorios en Docker Hub desde la CLI con filtros por estrellas o imágenes oficiales.",
+      "examples": [
+        {
+          "description": "Limitar resultados",
+          "code": "docker search --limit 5 redis"
+        }
+      ],
+      "tags": [
+        "search",
+        "hub"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Prefiere imágenes oficiales o de editores verificados, y revisa su Dockerfile antes de usarlas."
+    },
+    {
+      "title": "Inspeccionar manifiesto multi-arquitectura",
+      "command": "docker buildx imagetools inspect python:3.14-slim",
+      "section": "Imágenes",
+      "topic": "Análisis",
+      "description": "Muestra el índice OCI de una imagen remota (plataformas, digests, attestations) sin descargarla.",
+      "examples": [
+        {
+          "description": "Con la CLI clásica de manifiestos",
+          "code": "docker manifest inspect python:3.14-slim"
+        },
+        {
+          "description": "Obtener el digest del índice",
+          "code": "docker buildx imagetools inspect --format '{{json .Manifest.Digest}}' python:3.14-slim"
+        },
+        {
+          "description": "Ver la SBOM adjunta",
+          "code": "docker buildx imagetools inspect --format '{{json .SBOM}}' ghcr.io/nicocano/app:1.0"
+        }
+      ],
+      "tags": [
+        "manifest",
+        "multi-arch",
+        "oci"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Copiar imagen entre registros sin descargarla",
+      "command": "docker buildx imagetools create -t ghcr.io/nicocano/app:1.0 docker.io/nicocano/app:1.0",
+      "section": "Imágenes",
+      "topic": "Transporte",
+      "description": "Crea un nuevo tag (o índice multi-arch) en un registro a partir de imágenes existentes, copiando de registro a registro.",
+      "examples": [
+        {
+          "description": "Promover de staging a producción",
+          "code": "docker buildx imagetools create -t registry.ejemplo.cl/app:prod registry.ejemplo.cl/app:staging"
+        },
+        {
+          "description": "Unir imágenes de dos arquitecturas en un índice",
+          "code": "docker buildx imagetools create -t ghcr.io/nicocano/app:1.0 ghcr.io/nicocano/app:1.0-amd64 ghcr.io/nicocano/app:1.0-arm64"
+        }
+      ],
+      "tags": [
+        "imagetools",
+        "registro",
+        "promocion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Resumen de vulnerabilidades con Docker Scout",
+      "command": "docker scout quickview app:1.0",
+      "section": "Imágenes",
+      "topic": "Seguridad de imágenes",
+      "description": "Muestra un resumen de CVEs por severidad de la imagen y de su imagen base, con sugerencias de actualización.",
+      "examples": [
+        {
+          "description": "Analizar una imagen remota",
+          "code": "docker scout quickview ghcr.io/nicocano/app:1.0"
+        },
+        {
+          "description": "Analizar el build local más reciente",
+          "code": "docker scout quickview local://app:1.0"
+        }
+      ],
+      "tags": [
+        "scout",
+        "cve",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Viene incluido en Docker Desktop; en Engine Linux se instala como plugin. Requiere sesión de Docker Hub."
+    },
+    {
+      "title": "Listar CVEs con Docker Scout",
+      "command": "docker scout cves app:1.0",
+      "section": "Imágenes",
+      "topic": "Seguridad de imágenes",
+      "description": "Detalla las vulnerabilidades de cada paquete de la imagen, filtrable por severidad y por si tienen arreglo.",
+      "examples": [
+        {
+          "description": "Solo críticas y altas con corrección disponible",
+          "code": "docker scout cves --only-severity critical,high --only-fixed app:1.0"
+        },
+        {
+          "description": "Fallar en CI si hay críticas",
+          "code": "docker scout cves --exit-code --only-severity critical app:1.0"
+        },
+        {
+          "description": "Exportar en SARIF para GitHub Code Scanning",
+          "code": "docker scout cves --format sarif --output scout.sarif app:1.0"
+        }
+      ],
+      "tags": [
+        "scout",
+        "cve",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Alternativa libre muy usada: trivy image app:1.0."
+    },
+    {
+      "title": "Recomendaciones de imagen base",
+      "command": "docker scout recommendations app:1.0",
+      "section": "Imágenes",
+      "topic": "Seguridad de imágenes",
+      "description": "Sugiere tags de imagen base más recientes o más pequeños que reducen vulnerabilidades.",
+      "examples": [
+        {
+          "description": "Solo recomendaciones de actualización",
+          "code": "docker scout recommendations --only-update app:1.0"
+        },
+        {
+          "description": "Comparar dos versiones de la imagen",
+          "code": "docker scout compare --to app:1.0 app:1.1"
+        }
+      ],
+      "tags": [
+        "scout",
+        "imagen-base"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Descargar un modelo de IA con Docker Model Runner",
+      "command": "docker model pull ai/llama3.2",
+      "section": "Imágenes",
+      "topic": "Modelos de IA",
+      "description": "Docker Model Runner descarga modelos empaquetados como artefactos OCI (Docker Hub namespace ai/ o Hugging Face) para ejecutarlos localmente.",
+      "examples": [
+        {
+          "description": "Desde Hugging Face en formato GGUF",
+          "code": "docker model pull hf.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF"
+        },
+        {
+          "description": "Listar modelos locales",
+          "code": "docker model list"
+        }
+      ],
+      "tags": [
+        "model-runner",
+        "ia",
+        "llm"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Disponible en Docker Desktop (habilitar en Settings > AI) y en Docker Engine Linux con el plugin docker-model-plugin."
+    },
+    {
+      "title": "Ejecutar un modelo local",
+      "command": "docker model run ai/llama3.2 \"Explica qué es un healthcheck en una frase\"",
+      "section": "Imágenes",
+      "topic": "Modelos de IA",
+      "description": "Lanza una inferencia de un solo prompt o un chat interactivo contra el modelo descargado.",
+      "examples": [
+        {
+          "description": "Modo chat interactivo",
+          "code": "docker model run ai/llama3.2"
+        },
+        {
+          "description": "Consumir la API compatible con OpenAI desde el host (TCP habilitado)",
+          "code": "curl http://localhost:12434/engines/v1/chat/completions -H 'Content-Type: application/json' -d '{\"model\":\"ai/llama3.2\",\"messages\":[{\"role\":\"user\",\"content\":\"hola\"}]}'"
+        }
+      ],
+      "tags": [
+        "model-runner",
+        "ia",
+        "inferencia"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "IA",
+        "Fullstack"
+      ],
+      "notes": "Desde contenedores el endpoint es http://model-runner.docker.internal/engines/v1. En Compose se declara con el elemento de nivel superior models:."
+    },
+    {
+      "title": "Gestionar modelos locales",
+      "command": "docker model ls",
+      "section": "Imágenes",
+      "topic": "Modelos de IA",
+      "description": "Lista, inspecciona y elimina modelos de Docker Model Runner y muestra el estado del servicio.",
+      "examples": [
+        {
+          "description": "Estado del runner",
+          "code": "docker model status"
+        },
+        {
+          "description": "Eliminar un modelo",
+          "code": "docker model rm ai/llama3.2"
+        },
+        {
+          "description": "Inspeccionar metadatos",
+          "code": "docker model inspect ai/llama3.2"
+        }
+      ],
+      "tags": [
+        "model-runner",
+        "ia"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "IA"
+      ]
+    }
+  ]
+}

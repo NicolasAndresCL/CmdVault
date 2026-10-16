@@ -1,0 +1,172 @@
+{
+  "category": {
+    "slug": "jenkins",
+    "name": "Jenkins",
+    "icon": "engineering",
+    "order": 4,
+    "description": "CI/CD con Jenkins: pipelines declarativos, CLI, Jenkins en Docker y administración."
+  },
+  "commands": [
+    {
+      "title": "Limpiar el workspace",
+      "command": "cleanWs()",
+      "section": "Pipeline",
+      "topic": "Steps comunes",
+      "description": "Borra el workspace del agente al terminar para no arrastrar archivos de builds anteriores ni llenar el disco (plugin Workspace Cleanup).",
+      "examples": [
+        {
+          "description": "Limpiar siempre al final",
+          "code": "post {\n    cleanup { cleanWs(deleteDirs: true, notFailBuild: true) }\n}"
+        },
+        {
+          "description": "Conservar solo los reportes",
+          "code": "cleanWs(patterns: [[pattern: 'reports/**', type: 'EXCLUDE']])"
+        },
+        {
+          "description": "Borrar el directorio actual (sin plugin)",
+          "code": "deleteDir()"
+        }
+      ],
+      "tags": [
+        "workspace",
+        "limpieza"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Nombre y descripción del build",
+      "command": "currentBuild.displayName",
+      "section": "Pipeline",
+      "topic": "Steps comunes",
+      "description": "Personaliza cómo se ve cada build en la interfaz (versión, entorno, commit) para encontrarlo rápido en el historial.",
+      "examples": [
+        {
+          "description": "Mostrar versión y entorno",
+          "code": "script {\n    currentBuild.displayName = \"#${env.BUILD_NUMBER} ${params.VERSION}\"\n    currentBuild.description = \"Entorno: ${params.ENTORNO} | commit ${env.GIT_COMMIT?.take(7)}\"\n}"
+        },
+        {
+          "description": "Consultar el resultado actual en post",
+          "code": "post { always { echo \"Resultado: ${currentBuild.currentResult}, duración: ${currentBuild.durationString}\" } }"
+        }
+      ],
+      "tags": [
+        "build",
+        "interfaz"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Variables de pipelines Multibranch",
+      "command": "env.BRANCH_NAME / env.CHANGE_ID",
+      "section": "Pipeline",
+      "topic": "Credenciales y entorno",
+      "description": "En jobs Multibranch Jenkins expone la rama, y en pull requests el número, autor y rama destino, para decidir qué hacer en cada caso.",
+      "examples": [
+        {
+          "description": "Comportamiento distinto para PR y ramas",
+          "code": "script {\n    if (env.CHANGE_ID) {\n        echo \"PR #${env.CHANGE_ID} de ${env.CHANGE_AUTHOR} hacia ${env.CHANGE_TARGET}\"\n    } else {\n        echo \"Rama: ${env.BRANCH_NAME}\"\n    }\n}"
+        },
+        {
+          "description": "Tag de imagen según la rama",
+          "code": "environment {\n    TAG = \"${env.BRANCH_NAME == 'main' ? 'latest' : env.BRANCH_NAME.replaceAll('/', '-')}\"\n}"
+        }
+      ],
+      "tags": [
+        "multibranch",
+        "variables",
+        "pull-request"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Trabajar en un subdirectorio",
+      "command": "dir('ruta') { }",
+      "section": "Pipeline",
+      "topic": "Steps comunes",
+      "description": "Ejecuta steps dentro de un subdirectorio del workspace, útil en monorepos con varios proyectos.",
+      "examples": [
+        {
+          "description": "Monorepo con backend y frontend",
+          "code": "stage('Backend')  { steps { dir('backend')  { sh 'pytest -q' } } }\nstage('Frontend') { steps { dir('frontend') { sh 'npm ci && npm test' } } }"
+        }
+      ],
+      "tags": [
+        "monorepo",
+        "workspace"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Actualizar el controller en Docker",
+      "command": "docker pull jenkins/jenkins:lts-jdk21",
+      "section": "Docker",
+      "topic": "Instalación y contenedores",
+      "description": "Actualiza Jenkins a la última LTS recreando el contenedor con la nueva imagen; los datos sobreviven porque viven en el volumen.",
+      "examples": [
+        {
+          "description": "Actualizar con respaldo previo",
+          "code": "docker run --rm -v jenkins_home:/data:ro -v \"$(pwd)\":/backup alpine tar czf /backup/pre-upgrade.tgz -C /data .\ndocker pull jenkins/jenkins:lts-jdk21\ndocker stop jenkins && docker rm jenkins\ndocker run -d --name jenkins --restart unless-stopped -p 8080:8080 -p 50000:50000 -v jenkins_home:/var/jenkins_home jenkins/jenkins:lts-jdk21"
+        },
+        {
+          "description": "Con Docker Compose",
+          "code": "docker compose pull && docker compose up -d"
+        },
+        {
+          "description": "Ver la versión en ejecución",
+          "code": "curl -sI http://localhost:8080/login | grep -i x-jenkins"
+        }
+      ],
+      "tags": [
+        "docker",
+        "actualización",
+        "mantenimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud",
+        "SRE"
+      ],
+      "notes": "Lee el changelog de la LTS y actualiza los plugins después de subir de versión; fija una versión concreta (p. ej. 2.528.1-lts-jdk21) si necesitas reproducibilidad."
+    },
+    {
+      "title": "Revisar agentes desconectados (Script Console)",
+      "command": "Jenkins.instance.computers",
+      "section": "Administración",
+      "topic": "Script Console",
+      "description": "Lista los nodos con su estado y causa de desconexión, y permite reconectarlos en bloque.",
+      "examples": [
+        {
+          "description": "Estado de cada agente",
+          "code": "Jenkins.instance.computers.each { c ->\n    println \"${c.name}: online=${c.online} causa=${c.offlineCause ?: '-'}\"\n}"
+        },
+        {
+          "description": "Reconectar los agentes caídos",
+          "code": "Jenkins.instance.computers.findAll { it.offline && !it.temporarilyOffline }.each { it.connect(true) }"
+        }
+      ],
+      "tags": [
+        "script-console",
+        "agentes",
+        "troubleshooting"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    }
+  ]
+}

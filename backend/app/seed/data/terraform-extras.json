@@ -1,0 +1,217 @@
+{
+  "category": {
+    "slug": "terraform",
+    "name": "Terraform",
+    "icon": "cloud",
+    "order": 7,
+    "description": "Infraestructura como código con Terraform: flujo plan/apply, estado remoto, módulos, HCL y calidad en CI."
+  },
+  "commands": [
+    {
+      "title": "Ejemplo: RDS PostgreSQL privado",
+      "command": "terraform apply",
+      "section": "HCL",
+      "topic": "Ejemplos AWS",
+      "description": "Instancia RDS en subredes privadas, con contraseña maestra gestionada por Secrets Manager, cifrado y respaldos.",
+      "examples": [
+        {
+          "description": "main.tf",
+          "code": "resource \"aws_db_subnet_group\" \"main\" {\n  name       = \"tienda-prod\"\n  subnet_ids = module.vpc.private_subnets\n}\nresource \"aws_security_group\" \"db\" {\n  name   = \"db-sg\"\n  vpc_id = module.vpc.vpc_id\n  ingress {\n    from_port       = 5432\n    to_port         = 5432\n    protocol        = \"tcp\"\n    security_groups = [aws_security_group.api.id]\n  }\n}\nresource \"aws_db_instance\" \"main\" {\n  identifier                  = \"tienda-prod\"\n  engine                      = \"postgres\"\n  engine_version              = \"17\"\n  instance_class              = \"db.t4g.medium\"\n  allocated_storage           = 50\n  max_allocated_storage       = 200\n  db_name                     = \"tienda\"\n  username                    = \"app\"\n  manage_master_user_password = true\n  db_subnet_group_name        = aws_db_subnet_group.main.name\n  vpc_security_group_ids      = [aws_security_group.db.id]\n  multi_az                    = true\n  storage_encrypted           = true\n  backup_retention_period     = 7\n  deletion_protection         = true\n  final_snapshot_identifier   = \"tienda-prod-final\"\n}"
+        }
+      ],
+      "tags": [
+        "aws",
+        "rds",
+        "postgres"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Cambios como instance_class se aplican en la siguiente ventana de mantenimiento salvo apply_immediately = true."
+    },
+    {
+      "title": "Ejemplo: VPC con recursos nativos",
+      "command": "terraform apply",
+      "section": "HCL",
+      "topic": "Ejemplos AWS",
+      "description": "VPC con subredes públicas calculadas con cidrsubnet, internet gateway y tabla de rutas, sin módulos externos.",
+      "examples": [
+        {
+          "description": "network.tf",
+          "code": "resource \"aws_vpc\" \"main\" {\n  cidr_block           = \"10.30.0.0/16\"\n  enable_dns_hostnames = true\n  tags                 = { Name = \"tienda-vpc\" }\n}\nresource \"aws_subnet\" \"public\" {\n  for_each                = { for i, az in local.azs : az => i }\n  vpc_id                  = aws_vpc.main.id\n  availability_zone       = each.key\n  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, each.value)\n  map_public_ip_on_launch = true\n}\nresource \"aws_internet_gateway\" \"igw\" {\n  vpc_id = aws_vpc.main.id\n}\nresource \"aws_route_table\" \"public\" {\n  vpc_id = aws_vpc.main.id\n  route {\n    cidr_block = \"0.0.0.0/0\"\n    gateway_id = aws_internet_gateway.igw.id\n  }\n}\nresource \"aws_route_table_association\" \"public\" {\n  for_each       = aws_subnet.public\n  subnet_id      = each.value.id\n  route_table_id = aws_route_table.public.id\n}"
+        }
+      ],
+      "tags": [
+        "aws",
+        "vpc",
+        "redes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Valores sensibles en HCL",
+      "command": "terraform plan",
+      "section": "HCL",
+      "topic": "Secretos",
+      "description": "sensitive oculta valores en la salida del plan; nonsensitive quita la marca cuando sabes que el valor derivado no es secreto.",
+      "examples": [
+        {
+          "description": "Marcar y desmarcar",
+          "code": "locals {\n  conexion = sensitive(\"postgres://app:${var.db_password}@${aws_db_instance.main.address}/tienda\")\n  largo_password = nonsensitive(length(var.db_password))\n}"
+        }
+      ],
+      "tags": [
+        "sensitive",
+        "secretos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "sensitive no cifra nada: el valor sigue guardado en claro en el estado. Para eso están ephemeral y write-only."
+    },
+    {
+      "title": "Recurso terraform_data",
+      "command": "terraform apply",
+      "section": "HCL",
+      "topic": "Meta-argumentos",
+      "description": "terraform_data es un recurso integrado (sin provider) que guarda valores y dispara reemplazos o provisioners; reemplaza a null_resource.",
+      "examples": [
+        {
+          "description": "Ejecutar un script cuando cambia una versión",
+          "code": "resource \"terraform_data\" \"migraciones\" {\n  triggers_replace = [var.app_version]\n  provisioner \"local-exec\" {\n    command = \"./scripts/migrar.sh ${var.app_version}\"\n  }\n}"
+        },
+        {
+          "description": "Usarlo como disparador de reemplazo",
+          "code": "resource \"terraform_data\" \"revision\" {\n  input = var.revision\n}\nresource \"aws_instance\" \"app\" {\n  # ...\n  lifecycle {\n    replace_triggered_by = [terraform_data.revision]\n  }\n}"
+        }
+      ],
+      "tags": [
+        "terraform_data",
+        "provisioner"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Los provisioners son el último recurso: no se reflejan bien en el plan y fallan de forma opaca."
+    },
+    {
+      "title": "Backend remoto en HCP Terraform",
+      "command": "terraform init",
+      "section": "Estado",
+      "topic": "Backends",
+      "description": "El bloque cloud conecta la configuración a workspaces de HCP Terraform, que guardan estado, ejecutan planes remotos y aplican políticas.",
+      "examples": [
+        {
+          "description": "Bloque cloud por etiquetas",
+          "code": "terraform {\n  cloud {\n    organization = \"nicocano\"\n    workspaces {\n      tags = [\"tienda\", \"aws\"]\n    }\n  }\n}"
+        },
+        {
+          "description": "Workspace fijo y ejecución",
+          "code": "terraform {\n  cloud {\n    organization = \"nicocano\"\n    workspaces { name = \"tienda-prod\" }\n  }\n}\n# luego: terraform login && terraform init && terraform plan"
+        }
+      ],
+      "tags": [
+        "hcp",
+        "cloud",
+        "backend"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Estado por workspace en S3",
+      "command": "terraform workspace select -or-create staging",
+      "section": "Módulos y workspaces",
+      "topic": "Workspaces",
+      "description": "Con el backend S3 cada workspace distinto de default guarda su estado bajo el prefijo env:/<workspace>/, configurable con workspace_key_prefix.",
+      "examples": [
+        {
+          "description": "Prefijo personalizado",
+          "code": "terraform {\n  backend \"s3\" {\n    bucket               = \"nicocano-tfstate\"\n    key                  = \"tienda/terraform.tfstate\"\n    workspace_key_prefix = \"workspaces\"\n    region               = \"us-east-1\"\n    use_lockfile         = true\n  }\n}"
+        },
+        {
+          "description": "Ver dónde quedó cada estado",
+          "code": "aws s3 ls s3://nicocano-tfstate/workspaces/ --recursive"
+        }
+      ],
+      "tags": [
+        "workspace",
+        "s3",
+        "backend"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Terraform en contenedor",
+      "command": "docker run --rm -it -v \"$PWD\":/work -w /work hashicorp/terraform:1.14 plan",
+      "section": "Calidad y CI",
+      "topic": "CI/CD",
+      "description": "Ejecutar la imagen oficial fija la versión exacta sin instalar nada, útil en CI genérico o para probar versiones.",
+      "examples": [
+        {
+          "description": "Con credenciales AWS del perfil local",
+          "code": "docker run --rm -it -v \"$PWD\":/work -v $HOME/.aws:/root/.aws:ro -e AWS_PROFILE=dev -w /work hashicorp/terraform:1.14 init"
+        },
+        {
+          "description": "OpenTofu en contenedor",
+          "code": "docker run --rm -it -v \"$PWD\":/work -w /work ghcr.io/opentofu/opentofu:latest plan"
+        }
+      ],
+      "tags": [
+        "docker",
+        "ci",
+        "versiones"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "En CI fija el tag exacto de la imagen (por ejemplo 1.14.0) en lugar de una versión flotante."
+    },
+    {
+      "title": "Plan legible para revisión en PR",
+      "command": "terraform show -no-color tfplan > plan.txt",
+      "section": "Calidad y CI",
+      "topic": "CI/CD",
+      "description": "Convertir el plan a texto plano o resumen permite publicarlo como comentario en el pull request para revisión humana.",
+      "examples": [
+        {
+          "description": "Resumen de acciones por recurso",
+          "code": "terraform show -json tfplan | jq -r '.resource_changes[] | select(.change.actions != [\"no-op\"]) | \"\\(.change.actions | join(\",\")) \\(.address)\"'"
+        },
+        {
+          "description": "Comentar en el PR con gh",
+          "code": "gh pr comment --body-file plan.txt"
+        }
+      ],
+      "tags": [
+        "plan",
+        "pull-request",
+        "revision"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    }
+  ]
+}

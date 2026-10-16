@@ -1,0 +1,835 @@
+{
+  "category": {
+    "slug": "python",
+    "name": "Python",
+    "icon": "code",
+    "order": 2,
+    "description": "Python moderno y sus frameworks backend: Django, Django REST Framework y FastAPI."
+  },
+  "commands": [
+    {
+      "title": "Crear un entorno virtual",
+      "command": "python -m venv env",
+      "section": "Python",
+      "topic": "Entornos y dependencias",
+      "description": "Crea un entorno aislado con su propio intérprete y pip, para que las dependencias de cada proyecto no se mezclen.",
+      "syntax": "python -m venv <directorio>",
+      "examples": [
+        {
+          "description": "Crear y activar en Linux/macOS",
+          "code": "python3 -m venv env\nsource env/bin/activate"
+        },
+        {
+          "description": "Crear y activar en Windows (PowerShell)",
+          "code": "py -3.13 -m venv env\n.\\env\\Scripts\\Activate.ps1"
+        },
+        {
+          "description": "Recrear desde cero",
+          "code": "rm -rf env && python3 -m venv env && env/bin/pip install -r requirements.txt"
+        },
+        {
+          "description": "Salir del entorno",
+          "code": "deactivate"
+        }
+      ],
+      "tags": [
+        "venv",
+        "entornos",
+        "dependencias"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "En Ubuntu necesitas 'apt install python3-venv'. Nunca versionar el directorio env/: agrégalo a .gitignore."
+    },
+    {
+      "title": "Instalar dependencias con pip",
+      "command": "pip install",
+      "section": "Python",
+      "topic": "Entornos y dependencias",
+      "description": "Instala paquetes desde PyPI o desde un archivo de requisitos. Usar 'python -m pip' garantiza que se usa el pip del intérprete activo.",
+      "syntax": "pip install [opciones] paquete[==versión]",
+      "examples": [
+        {
+          "description": "Instalar desde requirements",
+          "code": "python -m pip install -r requirements.txt"
+        },
+        {
+          "description": "Instalar con extras y versión mínima",
+          "code": "python -m pip install \"fastapi[standard]>=0.115\""
+        },
+        {
+          "description": "Instalar el proyecto en modo editable",
+          "code": "python -m pip install -e \".[dev]\""
+        },
+        {
+          "description": "Actualizar pip",
+          "code": "python -m pip install --upgrade pip"
+        }
+      ],
+      "tags": [
+        "pip",
+        "dependencias"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "En Ubuntu 24.04 y Debian, pip fuera de un venv falla con 'externally-managed-environment' (PEP 668): crea un venv en vez de usar --break-system-packages."
+    },
+    {
+      "title": "Congelar e inspeccionar dependencias",
+      "command": "pip freeze",
+      "section": "Python",
+      "topic": "Entornos y dependencias",
+      "description": "Lista los paquetes instalados con versión exacta para reproducir el entorno; pip show y pip list ayudan a auditar.",
+      "examples": [
+        {
+          "description": "Generar requirements con versiones fijas",
+          "code": "python -m pip freeze > requirements.txt"
+        },
+        {
+          "description": "Paquetes desactualizados",
+          "code": "python -m pip list --outdated"
+        },
+        {
+          "description": "Dependencias y ubicación de un paquete",
+          "code": "python -m pip show django"
+        },
+        {
+          "description": "Verificar dependencias rotas",
+          "code": "python -m pip check"
+        }
+      ],
+      "tags": [
+        "pip",
+        "dependencias",
+        "auditoría"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Fijar dependencias con pip-tools",
+      "command": "pip-compile",
+      "section": "Python",
+      "topic": "Entornos y dependencias",
+      "description": "pip-tools separa las dependencias directas (requirements.in) del lock con versiones exactas y transitivas (requirements.txt).",
+      "examples": [
+        {
+          "description": "Compilar el lock",
+          "code": "pip install pip-tools\npip-compile requirements.in -o requirements.txt"
+        },
+        {
+          "description": "Desde pyproject.toml con hashes",
+          "code": "pip-compile --generate-hashes pyproject.toml -o requirements.txt"
+        },
+        {
+          "description": "Actualizar un solo paquete",
+          "code": "pip-compile --upgrade-package django requirements.in"
+        },
+        {
+          "description": "Sincronizar el venv exactamente con el lock",
+          "code": "pip-sync requirements.txt"
+        }
+      ],
+      "tags": [
+        "pip-tools",
+        "dependencias",
+        "lock"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "pip-sync desinstala lo que no esté en el lock: úsalo solo dentro de un venv."
+    },
+    {
+      "title": "Gestionar proyectos con uv",
+      "command": "uv",
+      "section": "Python",
+      "topic": "Entornos y dependencias",
+      "description": "uv es un gestor de paquetes y proyectos escrito en Rust, 10–100 veces más rápido que pip; maneja venv, lock y versiones de Python.",
+      "syntax": "uv [comando]",
+      "examples": [
+        {
+          "description": "Iniciar un proyecto y agregar dependencias",
+          "code": "uv init api\ncd api\nuv add fastapi[standard] sqlalchemy\nuv add --dev pytest ruff"
+        },
+        {
+          "description": "Ejecutar dentro del entorno del proyecto",
+          "code": "uv run pytest\nuv run fastapi dev"
+        },
+        {
+          "description": "Sincronizar exactamente con uv.lock (CI)",
+          "code": "uv sync --locked"
+        },
+        {
+          "description": "Instalar una versión de Python",
+          "code": "uv python install 3.13"
+        }
+      ],
+      "tags": [
+        "uv",
+        "dependencias",
+        "entornos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ],
+      "notes": "uv.lock debe versionarse. Con 'uv export --format requirements-txt' puedes generar un requirements.txt para herramientas que no conocen uv."
+    },
+    {
+      "title": "Interfaz compatible con pip en uv",
+      "command": "uv pip install",
+      "section": "Python",
+      "topic": "Entornos y dependencias",
+      "description": "uv ofrece una interfaz casi idéntica a pip y pip-tools para proyectos que ya usan requirements.txt.",
+      "examples": [
+        {
+          "description": "Crear venv e instalar",
+          "code": "uv venv\nuv pip install -r requirements.txt"
+        },
+        {
+          "description": "Compilar un lock tipo pip-tools",
+          "code": "uv pip compile requirements.in -o requirements.txt"
+        },
+        {
+          "description": "Sincronizar el venv",
+          "code": "uv pip sync requirements.txt"
+        }
+      ],
+      "tags": [
+        "uv",
+        "pip",
+        "dependencias"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Ejecutar herramientas aisladas",
+      "command": "uvx / pipx",
+      "section": "Python",
+      "topic": "Entornos y dependencias",
+      "description": "Ejecuta o instala herramientas de línea de comandos Python en entornos aislados, sin contaminar el venv del proyecto.",
+      "examples": [
+        {
+          "description": "Ejecutar ruff sin instalarlo",
+          "code": "uvx ruff check ."
+        },
+        {
+          "description": "Instalar una herramienta global aislada",
+          "code": "pipx install httpie"
+        },
+        {
+          "description": "Ejecutar una versión concreta",
+          "code": "uvx --from 'django==5.2.*' django-admin --version"
+        }
+      ],
+      "tags": [
+        "uv",
+        "pipx",
+        "herramientas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Configurar el proyecto con pyproject.toml",
+      "command": "pyproject.toml",
+      "section": "Python",
+      "topic": "Entornos y dependencias",
+      "description": "Archivo estándar de metadatos y configuración del proyecto: dependencias y ajustes de ruff, pytest y mypy en un solo lugar.",
+      "examples": [
+        {
+          "description": "pyproject mínimo con herramientas",
+          "code": "[project]\nname = \"api\"\nversion = \"0.1.0\"\nrequires-python = \">=3.12\"\ndependencies = [\"fastapi[standard]>=0.115\", \"sqlalchemy>=2.0\"]\n\n[project.optional-dependencies]\ndev = [\"pytest\", \"ruff\", \"mypy\"]\n\n[tool.ruff]\nline-length = 100\n\n[tool.ruff.lint]\nselect = [\"E\", \"F\", \"I\", \"UP\", \"B\"]\n\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\naddopts = \"-ra -q\""
+        },
+        {
+          "description": "Instalar el proyecto con extras de desarrollo",
+          "code": "python -m pip install -e \".[dev]\""
+        }
+      ],
+      "tags": [
+        "pyproject",
+        "configuración",
+        "empaquetado"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software"
+      ]
+    },
+    {
+      "title": "Ejecutar tests con pytest",
+      "command": "pytest",
+      "section": "Python",
+      "topic": "Testing",
+      "description": "Descubre y ejecuta tests (archivos test_*.py, funciones test_*) con asserts simples y reportes claros.",
+      "syntax": "pytest [opciones] [rutas]",
+      "examples": [
+        {
+          "description": "Detenerse en el primer fallo, modo detallado",
+          "code": "pytest -x -v"
+        },
+        {
+          "description": "Filtrar por nombre",
+          "code": "pytest -k 'login and not slow'"
+        },
+        {
+          "description": "Solo los que fallaron la última vez",
+          "code": "pytest --lf"
+        },
+        {
+          "description": "Un test concreto",
+          "code": "pytest tests/test_api.py::test_crear_usuario"
+        }
+      ],
+      "tags": [
+        "pytest",
+        "testing"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "Usa 'python -m pytest' si los imports del proyecto fallan: agrega el directorio actual a sys.path."
+    },
+    {
+      "title": "Fixtures de pytest",
+      "command": "@pytest.fixture",
+      "section": "Python",
+      "topic": "Testing",
+      "description": "Las fixtures preparan datos o recursos reutilizables para los tests y pueden limpiar al terminar con yield.",
+      "examples": [
+        {
+          "description": "Fixture con limpieza",
+          "code": "import pytest\n\n@pytest.fixture\ndef archivo_config(tmp_path):\n    ruta = tmp_path / \"config.ini\"\n    ruta.write_text(\"[app]\\ndebug = true\\n\")\n    yield ruta\n    # limpieza automática: tmp_path se borra solo\n\ndef test_lee_config(archivo_config):\n    assert \"debug\" in archivo_config.read_text()"
+        },
+        {
+          "description": "Fixture compartida en conftest.py con alcance de sesión",
+          "code": "# tests/conftest.py\nimport pytest\n\n@pytest.fixture(scope=\"session\")\ndef base_url():\n    return \"http://localhost:8000\""
+        }
+      ],
+      "tags": [
+        "pytest",
+        "fixtures",
+        "testing"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Parametrizar tests",
+      "command": "@pytest.mark.parametrize",
+      "section": "Python",
+      "topic": "Testing",
+      "description": "Ejecuta el mismo test con múltiples combinaciones de entrada y salida esperada.",
+      "examples": [
+        {
+          "description": "Casos de validación de RUT",
+          "code": "import pytest\nfrom app.utils import rut_valido\n\n@pytest.mark.parametrize(\"rut, esperado\", [\n    (\"11.111.111-1\", True),\n    (\"12.345.678-5\", True),\n    (\"12.345.678-0\", False),\n    (\"\", False),\n])\ndef test_rut_valido(rut, esperado):\n    assert rut_valido(rut) is esperado"
+        },
+        {
+          "description": "Verificar excepciones",
+          "code": "def test_division_por_cero():\n    with pytest.raises(ZeroDivisionError, match=\"division\"):\n        1 / 0"
+        }
+      ],
+      "tags": [
+        "pytest",
+        "parametrize",
+        "testing"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Mocks y monkeypatch",
+      "command": "monkeypatch / unittest.mock",
+      "section": "Python",
+      "topic": "Testing",
+      "description": "Reemplaza variables de entorno, funciones o llamadas externas durante un test para aislarlo de la red o del sistema.",
+      "examples": [
+        {
+          "description": "Variables de entorno",
+          "code": "def test_modo_debug(monkeypatch):\n    monkeypatch.setenv(\"APP_DEBUG\", \"1\")\n    from app.config import debug_activo\n    assert debug_activo()"
+        },
+        {
+          "description": "Simular una API externa",
+          "code": "from unittest.mock import patch\n\ndef test_clima():\n    with patch(\"app.clima.httpx.get\") as fake_get:\n        fake_get.return_value.json.return_value = {\"temp\": 18}\n        from app.clima import temperatura\n        assert temperatura(\"Santiago\") == 18"
+        }
+      ],
+      "tags": [
+        "pytest",
+        "mock",
+        "testing"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "Parchea donde se USA el objeto (app.clima.httpx.get), no donde se define."
+    },
+    {
+      "title": "Cobertura de tests",
+      "command": "pytest --cov",
+      "section": "Python",
+      "topic": "Testing",
+      "description": "Mide qué líneas del código ejecutan los tests usando pytest-cov.",
+      "examples": [
+        {
+          "description": "Reporte en terminal con líneas faltantes",
+          "code": "pytest --cov=app --cov-report=term-missing"
+        },
+        {
+          "description": "Fallar si baja del 80 %",
+          "code": "pytest --cov=app --cov-fail-under=80"
+        },
+        {
+          "description": "Reporte HTML",
+          "code": "pytest --cov=app --cov-report=html && xdg-open htmlcov/index.html"
+        }
+      ],
+      "tags": [
+        "pytest",
+        "cobertura",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Tests asíncronos con pytest",
+      "command": "pytest-asyncio / anyio",
+      "section": "Python",
+      "topic": "Testing",
+      "description": "Permite escribir tests async def para código asyncio, como clientes httpx o sesiones async de SQLAlchemy.",
+      "examples": [
+        {
+          "description": "Con el plugin de anyio (incluido con httpx/FastAPI)",
+          "code": "import pytest\n\n@pytest.mark.anyio\nasync def test_suma_async():\n    import asyncio\n    await asyncio.sleep(0)\n    assert 1 + 1 == 2"
+        },
+        {
+          "description": "Modo automático de pytest-asyncio en pyproject",
+          "code": "[tool.pytest.ini_options]\nasyncio_mode = \"auto\""
+        }
+      ],
+      "tags": [
+        "pytest",
+        "async",
+        "testing"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Linter con ruff",
+      "command": "ruff check",
+      "section": "Python",
+      "topic": "Calidad de código",
+      "description": "Linter extremadamente rápido que reemplaza a flake8, isort, pyupgrade y muchos plugins; puede corregir automáticamente.",
+      "syntax": "ruff check [opciones] [rutas]",
+      "examples": [
+        {
+          "description": "Revisar y corregir lo seguro",
+          "code": "ruff check . --fix"
+        },
+        {
+          "description": "Ordenar imports (regla I)",
+          "code": "ruff check --select I --fix ."
+        },
+        {
+          "description": "Formato de salida para GitHub Actions",
+          "code": "ruff check --output-format=github ."
+        },
+        {
+          "description": "Ver por qué existe una regla",
+          "code": "ruff rule B006"
+        }
+      ],
+      "tags": [
+        "ruff",
+        "lint",
+        "calidad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Formatear código con ruff",
+      "command": "ruff format",
+      "section": "Python",
+      "topic": "Calidad de código",
+      "description": "Formateador compatible con Black, mucho más rápido. En CI se usa --check para fallar si hay archivos sin formatear.",
+      "examples": [
+        {
+          "description": "Formatear el proyecto",
+          "code": "ruff format ."
+        },
+        {
+          "description": "Verificar en CI sin modificar",
+          "code": "ruff format --check --diff ."
+        }
+      ],
+      "tags": [
+        "ruff",
+        "formato",
+        "calidad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Verificar tipos con mypy",
+      "command": "mypy",
+      "section": "Python",
+      "topic": "Calidad de código",
+      "description": "Analiza estáticamente las anotaciones de tipo para detectar errores antes de ejecutar.",
+      "examples": [
+        {
+          "description": "Revisar un paquete",
+          "code": "mypy app/"
+        },
+        {
+          "description": "Modo estricto",
+          "code": "mypy --strict app/"
+        },
+        {
+          "description": "Configuración en pyproject",
+          "code": "[tool.mypy]\npython_version = \"3.13\"\nstrict = true\nplugins = [\"pydantic.mypy\"]\n\n[[tool.mypy.overrides]]\nmodule = [\"celery.*\"]\nignore_missing_imports = true"
+        }
+      ],
+      "tags": [
+        "mypy",
+        "tipos",
+        "calidad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software"
+      ]
+    },
+    {
+      "title": "Hooks de pre-commit",
+      "command": "pre-commit",
+      "section": "Python",
+      "topic": "Calidad de código",
+      "description": "Ejecuta linters y formateadores automáticamente antes de cada commit con la configuración de .pre-commit-config.yaml.",
+      "examples": [
+        {
+          "description": "Configuración con ruff",
+          "code": "repos:\n  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.7.0\n    hooks:\n      - id: ruff\n        args: [--fix]\n      - id: ruff-format"
+        },
+        {
+          "description": "Instalar y ejecutar en todo el repo",
+          "code": "pre-commit install\npre-commit run --all-files"
+        },
+        {
+          "description": "Actualizar versiones de los hooks",
+          "code": "pre-commit autoupdate"
+        }
+      ],
+      "tags": [
+        "pre-commit",
+        "git",
+        "calidad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "Fija 'rev' a una versión real; 'pre-commit autoupdate' la actualiza a la última publicada."
+    },
+    {
+      "title": "Depurar con pdb y breakpoint()",
+      "command": "breakpoint()",
+      "section": "Python",
+      "topic": "Depuración y perfilado",
+      "description": "Detiene la ejecución e inicia el depurador interactivo para inspeccionar variables y avanzar paso a paso.",
+      "examples": [
+        {
+          "description": "Punto de interrupción en el código",
+          "code": "def calcular(items):\n    total = sum(i.precio for i in items)\n    breakpoint()  # n=next, s=step, c=continue, p var, l=list, q=quit\n    return total"
+        },
+        {
+          "description": "Depurar un script desde el inicio",
+          "code": "python -m pdb script.py"
+        },
+        {
+          "description": "Entrar al depurador cuando falla un test",
+          "code": "pytest --pdb -x"
+        }
+      ],
+      "tags": [
+        "pdb",
+        "depuración"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software"
+      ],
+      "notes": "PYTHONBREAKPOINT=0 desactiva todas las llamadas a breakpoint(); nunca dejes uno en producción."
+    },
+    {
+      "title": "Medir micro-rendimiento con timeit",
+      "command": "python -m timeit",
+      "section": "Python",
+      "topic": "Depuración y perfilado",
+      "description": "Mide con precisión el tiempo de ejecución de fragmentos pequeños de código repitiéndolos muchas veces.",
+      "examples": [
+        {
+          "description": "Comparar dos formas de construir una lista",
+          "code": "python -m timeit \"[x*2 for x in range(1000)]\"\npython -m timeit \"list(map(lambda x: x*2, range(1000)))\""
+        },
+        {
+          "description": "Con código de preparación",
+          "code": "python -m timeit -s \"import json; d={'a': list(range(100))}\" \"json.dumps(d)\""
+        },
+        {
+          "description": "Desde Python",
+          "code": "import timeit\nprint(timeit.timeit(\"sorted(datos)\", setup=\"import random; datos=[random.random() for _ in range(10_000)]\", number=100))"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "timeit"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software"
+      ]
+    },
+    {
+      "title": "Perfilar con cProfile",
+      "command": "python -m cProfile",
+      "section": "Python",
+      "topic": "Depuración y perfilado",
+      "description": "Perfila un programa completo y muestra cuánto tiempo pasa en cada función para encontrar cuellos de botella.",
+      "examples": [
+        {
+          "description": "Ordenar por tiempo acumulado",
+          "code": "python -m cProfile -s cumtime script.py | head -30"
+        },
+        {
+          "description": "Guardar y analizar con pstats",
+          "code": "python -m cProfile -o perfil.out script.py\npython -c \"import pstats; pstats.Stats('perfil.out').sort_stats('cumtime').print_stats(15)\""
+        },
+        {
+          "description": "Perfilar un bloque concreto",
+          "code": "import cProfile, pstats\n\nwith cProfile.Profile() as pr:\n    procesar_lote()\npstats.Stats(pr).sort_stats(\"tottime\").print_stats(10)"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "perfilado",
+        "cprofile"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "SRE"
+      ],
+      "notes": "Para perfilar procesos en producción sin reiniciarlos, py-spy ('py-spy top --pid 1234') tiene sobrecarga mínima."
+    },
+    {
+      "title": "Servidor HTTP rápido",
+      "command": "python -m http.server",
+      "section": "Python",
+      "topic": "Utilidades",
+      "description": "Levanta un servidor web estático en el directorio actual; útil para compartir archivos o probar un frontend.",
+      "examples": [
+        {
+          "description": "Servir en el puerto 8080",
+          "code": "python -m http.server 8080"
+        },
+        {
+          "description": "Solo en localhost y otro directorio",
+          "code": "python -m http.server 9000 --bind 127.0.0.1 --directory dist/"
+        }
+      ],
+      "tags": [
+        "http",
+        "utilidades"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "No es apto para producción: no tiene seguridad ni rendimiento."
+    },
+    {
+      "title": "Formatear JSON desde la terminal",
+      "command": "python -m json.tool",
+      "section": "Python",
+      "topic": "Utilidades",
+      "description": "Valida y formatea JSON sin instalar herramientas extra.",
+      "examples": [
+        {
+          "description": "Formatear un archivo",
+          "code": "python -m json.tool datos.json"
+        },
+        {
+          "description": "Desde una API",
+          "code": "curl -s https://api.github.com/users/octocat | python -m json.tool --sort-keys"
+        }
+      ],
+      "tags": [
+        "json",
+        "utilidades"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Ejecutar código en línea",
+      "command": "python -c",
+      "section": "Python",
+      "topic": "Utilidades",
+      "description": "Ejecuta una instrucción Python directamente desde la shell; práctico en scripts y para verificar entornos.",
+      "examples": [
+        {
+          "description": "Ver la versión y ruta del intérprete",
+          "code": "python -c \"import sys; print(sys.version); print(sys.executable)\""
+        },
+        {
+          "description": "Generar una clave secreta",
+          "code": "python -c \"import secrets; print(secrets.token_urlsafe(50))\""
+        },
+        {
+          "description": "Verificar que un paquete importa",
+          "code": "python -c \"import django; print(django.get_version())\""
+        }
+      ],
+      "tags": [
+        "utilidades",
+        "shell"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Configurar logging",
+      "command": "logging.basicConfig",
+      "section": "Python",
+      "topic": "Utilidades",
+      "description": "El módulo logging reemplaza a print para registrar eventos con nivel, fecha y origen, y se integra con cualquier gestor de logs.",
+      "examples": [
+        {
+          "description": "Configuración básica",
+          "code": "import logging\n\nlogging.basicConfig(\n    level=logging.INFO,\n    format=\"%(asctime)s %(levelname)s %(name)s: %(message)s\",\n)\nlog = logging.getLogger(__name__)\nlog.info(\"Procesando %d registros\", 120)"
+        },
+        {
+          "description": "Registrar una excepción con traceback",
+          "code": "try:\n    1 / 0\nexcept ZeroDivisionError:\n    log.exception(\"Falló el cálculo\")"
+        }
+      ],
+      "tags": [
+        "logging",
+        "observabilidad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "SRE"
+      ],
+      "notes": "Pasa los argumentos al logger ('%s', valor) en vez de f-strings: el formateo solo ocurre si el nivel está activo."
+    },
+    {
+      "title": "Concurrencia con asyncio",
+      "command": "asyncio.run",
+      "section": "Python",
+      "topic": "Utilidades",
+      "description": "Ejecuta corrutinas y lanza tareas concurrentes, ideal para I/O como llamadas HTTP o a bases de datos.",
+      "examples": [
+        {
+          "description": "Peticiones HTTP concurrentes con httpx",
+          "code": "import asyncio\nimport httpx\n\nasync def main():\n    async with httpx.AsyncClient(timeout=10) as client:\n        urls = [f\"https://httpbin.org/delay/{i}\" for i in range(3)]\n        respuestas = await asyncio.gather(*(client.get(u) for u in urls))\n        print([r.status_code for r in respuestas])\n\nasyncio.run(main())"
+        },
+        {
+          "description": "TaskGroup (3.11+) con cancelación en cadena",
+          "code": "async def main():\n    async with asyncio.TaskGroup() as tg:\n        t1 = tg.create_task(tarea_a())\n        t2 = tg.create_task(tarea_b())\n    print(t1.result(), t2.result())"
+        }
+      ],
+      "tags": [
+        "asyncio",
+        "concurrencia"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Rutas y archivos con pathlib",
+      "command": "pathlib.Path",
+      "section": "Python",
+      "topic": "Utilidades",
+      "description": "API orientada a objetos para rutas de archivos, portable entre Linux y Windows.",
+      "examples": [
+        {
+          "description": "Leer, escribir y recorrer",
+          "code": "from pathlib import Path\n\nbase = Path(__file__).resolve().parent\nconfig = base / \"config\" / \"app.toml\"\nprint(config.exists(), config.suffix)\n\nfor log in Path(\"/var/log/app\").glob(\"*.log\"):\n    print(log.name, log.stat().st_size)"
+        },
+        {
+          "description": "Crear directorios y escribir texto",
+          "code": "salida = Path(\"reportes/2026\")\nsalida.mkdir(parents=True, exist_ok=True)\n(salida / \"resumen.txt\").write_text(\"ok\\n\", encoding=\"utf-8\")"
+        }
+      ],
+      "tags": [
+        "pathlib",
+        "archivos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software"
+      ],
+      "notes": "Especifica siempre encoding='utf-8': en Windows el valor por defecto puede ser cp1252."
+    }
+  ]
+}

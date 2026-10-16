@@ -1,0 +1,545 @@
+{
+  "category": {
+    "slug": "kubernetes",
+    "name": "Kubernetes",
+    "icon": "hub",
+    "order": 6,
+    "description": "Orquestación con Kubernetes: kubectl, workloads, redes, configuración, troubleshooting y Helm."
+  },
+  "commands": [
+    {
+      "title": "Agregar y actualizar repositorios de Helm",
+      "command": "helm repo add bitnami https://charts.bitnami.com/bitnami && helm repo update",
+      "section": "Helm",
+      "topic": "Repositorios",
+      "description": "Registra repositorios de charts y refresca sus índices.",
+      "examples": [
+        {
+          "description": "Listar y quitar repositorios",
+          "code": "helm repo list && helm repo remove bitnami"
+        },
+        {
+          "description": "Repositorio de ingress de Traefik",
+          "code": "helm repo add traefik https://traefik.github.io/charts"
+        },
+        {
+          "description": "Actualizar solo uno",
+          "code": "helm repo update prometheus-community"
+        }
+      ],
+      "tags": [
+        "helm",
+        "repo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Muchos proyectos publican ahora sus charts solo en registros OCI, sin repositorio HTTP clásico."
+    },
+    {
+      "title": "Buscar charts",
+      "command": "helm search repo postgres",
+      "section": "Helm",
+      "topic": "Repositorios",
+      "description": "Busca charts en los repositorios locales o en Artifact Hub.",
+      "examples": [
+        {
+          "description": "Todas las versiones disponibles",
+          "code": "helm search repo prometheus-community/kube-prometheus-stack --versions | head"
+        },
+        {
+          "description": "Buscar en Artifact Hub",
+          "code": "helm search hub cert-manager"
+        }
+      ],
+      "tags": [
+        "helm",
+        "search"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Instalar un chart",
+      "command": "helm install pg bitnami/postgresql -n datos --create-namespace",
+      "section": "Helm",
+      "topic": "Releases",
+      "description": "Instala un chart como un release con nombre. Los valores se personalizan con archivos -f o con --set.",
+      "syntax": "helm install NOMBRE CHART [-n NS] [-f values.yaml] [--set k=v] [--version V]",
+      "examples": [
+        {
+          "description": "Versión fija y archivo de valores",
+          "code": "helm install monitoring prometheus-community/kube-prometheus-stack --version 77.0.0 -n monitoring --create-namespace -f values-monitoring.yaml"
+        },
+        {
+          "description": "Esperar a que todo esté listo",
+          "code": "helm install api ./charts/api -n tienda --wait --timeout 5m"
+        },
+        {
+          "description": "Nombre generado automáticamente",
+          "code": "helm install --generate-name ./charts/api"
+        }
+      ],
+      "tags": [
+        "helm",
+        "install"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Fija siempre --version: sin ella instalas la última y el despliegue deja de ser reproducible."
+    },
+    {
+      "title": "Instalar o actualizar idempotente",
+      "command": "helm upgrade --install api ./charts/api -n tienda --create-namespace -f values-prod.yaml",
+      "section": "Helm",
+      "topic": "Releases",
+      "description": "Instala si el release no existe o lo actualiza si existe. Es el comando estándar en pipelines de CD.",
+      "examples": [
+        {
+          "description": "Con imagen desde CI y espera",
+          "code": "helm upgrade --install api ./charts/api -n tienda -f values-prod.yaml --set image.tag=$GIT_SHA --wait --timeout 10m"
+        },
+        {
+          "description": "Revertir automáticamente si falla (Helm 4)",
+          "code": "helm upgrade --install api ./charts/api -n tienda --rollback-on-failure --timeout 10m"
+        },
+        {
+          "description": "Reutilizar valores previos y cambiar uno",
+          "code": "helm upgrade api ./charts/api -n tienda --reuse-values --set replicaCount=4"
+        }
+      ],
+      "tags": [
+        "helm",
+        "upgrade",
+        "cd"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "En Helm 4 la opción --atomic de Helm 3 pasó a llamarse --rollback-on-failure. --reuse-values puede arrastrar valores obsoletos; en CI pasa siempre los archivos de valores completos."
+    },
+    {
+      "title": "Valores con -f y --set",
+      "command": "helm install api ./charts/api -f values.yaml -f values-prod.yaml --set image.tag=1.4.2",
+      "section": "Helm",
+      "topic": "Valores",
+      "description": "Los archivos de valores se fusionan en orden (el último gana) y --set tiene prioridad sobre todos.",
+      "examples": [
+        {
+          "description": "Listas y claves anidadas",
+          "code": "helm install api ./charts/api --set 'ingress.hosts[0].host=api.ejemplo.cl' --set resources.limits.memory=512Mi"
+        },
+        {
+          "description": "Forzar string (evita que 1.10 se convierta en 1.1)",
+          "code": "helm install api ./charts/api --set-string image.tag=1.10"
+        },
+        {
+          "description": "Contenido desde archivo",
+          "code": "helm install api ./charts/api --set-file config=./app.toml"
+        },
+        {
+          "description": "Clave con punto escapado",
+          "code": "helm install api ./charts/api --set 'podAnnotations.prometheus\\.io/scrape=true'"
+        }
+      ],
+      "tags": [
+        "helm",
+        "values",
+        "set"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ver valores por defecto de un chart",
+      "command": "helm show values bitnami/postgresql > values-pg.yaml",
+      "section": "Helm",
+      "topic": "Valores",
+      "description": "Descarga el values.yaml del chart para partir de él. show chart, readme y all dan el resto de la información.",
+      "examples": [
+        {
+          "description": "Valores de una versión concreta",
+          "code": "helm show values prometheus-community/kube-prometheus-stack --version 77.0.0"
+        },
+        {
+          "description": "Metadatos del chart",
+          "code": "helm show chart bitnami/postgresql"
+        }
+      ],
+      "tags": [
+        "helm",
+        "values",
+        "show"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Valores y manifiestos de un release",
+      "command": "helm get values api -n tienda",
+      "section": "Helm",
+      "topic": "Releases",
+      "description": "Muestra lo que realmente está desplegado: valores suministrados, manifiestos renderizados, notas y hooks.",
+      "examples": [
+        {
+          "description": "Todos los valores incluidos los por defecto",
+          "code": "helm get values api -n tienda --all"
+        },
+        {
+          "description": "Manifiestos aplicados",
+          "code": "helm get manifest api -n tienda"
+        },
+        {
+          "description": "Valores de una revisión anterior",
+          "code": "helm get values api -n tienda --revision 3"
+        }
+      ],
+      "tags": [
+        "helm",
+        "get",
+        "release"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Listar releases y su estado",
+      "command": "helm list -A",
+      "section": "Helm",
+      "topic": "Releases",
+      "description": "Lista releases de todos los namespaces con su revisión, estado y versión del chart.",
+      "examples": [
+        {
+          "description": "Incluir fallidos y pendientes",
+          "code": "helm list -A --all"
+        },
+        {
+          "description": "Solo los fallidos",
+          "code": "helm list -A --failed"
+        },
+        {
+          "description": "Estado detallado de un release",
+          "code": "helm status api -n tienda"
+        }
+      ],
+      "tags": [
+        "helm",
+        "list",
+        "status"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Historial y rollback de Helm",
+      "command": "helm rollback api 3 -n tienda",
+      "section": "Helm",
+      "topic": "Releases",
+      "description": "Vuelve a una revisión anterior del release. Sin número, vuelve a la inmediatamente anterior.",
+      "examples": [
+        {
+          "description": "Ver historial",
+          "code": "helm history api -n tienda"
+        },
+        {
+          "description": "Rollback esperando a que esté sano",
+          "code": "helm rollback api -n tienda --wait --timeout 5m"
+        }
+      ],
+      "tags": [
+        "helm",
+        "rollback",
+        "history"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Un release en estado pending-upgrade (por un pipeline cortado) bloquea nuevas actualizaciones: un rollback a la última revisión deployed lo destraba."
+    },
+    {
+      "title": "Desinstalar un release",
+      "command": "helm uninstall api -n tienda",
+      "section": "Helm",
+      "topic": "Releases",
+      "description": "Elimina los recursos del release. Con --keep-history conserva el historial para poder hacer rollback.",
+      "examples": [
+        {
+          "description": "Conservar historial",
+          "code": "helm uninstall api -n tienda --keep-history"
+        },
+        {
+          "description": "Simular",
+          "code": "helm uninstall api -n tienda --dry-run"
+        }
+      ],
+      "tags": [
+        "helm",
+        "uninstall"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los CRDs instalados desde la carpeta crds/ y los PVC de StatefulSets no se borran: hay que eliminarlos a mano si corresponde."
+    },
+    {
+      "title": "Renderizar plantillas localmente",
+      "command": "helm template api ./charts/api -f values-prod.yaml",
+      "section": "Helm",
+      "topic": "Desarrollo de charts",
+      "description": "Genera los manifiestos sin contactar el clúster. Sirve para revisar, versionar el resultado o pasarlo a kubectl diff y a escáneres.",
+      "examples": [
+        {
+          "description": "Renderizar a un directorio",
+          "code": "helm template api ./charts/api -f values-prod.yaml --output-dir rendered/"
+        },
+        {
+          "description": "Solo una plantilla",
+          "code": "helm template api ./charts/api -s templates/deployment.yaml"
+        },
+        {
+          "description": "Comparar con el clúster",
+          "code": "helm template api ./charts/api -n tienda -f values-prod.yaml | kubectl diff -n tienda -f -"
+        },
+        {
+          "description": "Instalación simulada contra el servidor",
+          "code": "helm install api ./charts/api --dry-run=server --debug"
+        }
+      ],
+      "tags": [
+        "helm",
+        "template",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Validar un chart con lint",
+      "command": "helm lint ./charts/api",
+      "section": "Helm",
+      "topic": "Desarrollo de charts",
+      "description": "Revisa la estructura del chart y que las plantillas rendericen con los valores dados.",
+      "examples": [
+        {
+          "description": "Con valores de cada entorno y en modo estricto",
+          "code": "helm lint ./charts/api -f values-prod.yaml --strict"
+        },
+        {
+          "description": "Validar además el esquema de Kubernetes",
+          "code": "helm template api ./charts/api | kubeconform -strict -summary"
+        }
+      ],
+      "tags": [
+        "helm",
+        "lint",
+        "calidad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Crear y empaquetar un chart",
+      "command": "helm create api",
+      "section": "Helm",
+      "topic": "Desarrollo de charts",
+      "description": "Genera el esqueleto de un chart (Chart.yaml, values.yaml, templates) y luego lo empaqueta en un .tgz versionado.",
+      "examples": [
+        {
+          "description": "Empaquetar con versión y appVersion",
+          "code": "helm package ./charts/api --version 1.4.2 --app-version 1.4.2"
+        },
+        {
+          "description": "Helper típico en templates/_helpers.tpl",
+          "code": "{{- define \"api.labels\" -}}\napp.kubernetes.io/name: {{ .Chart.Name }}\napp.kubernetes.io/instance: {{ .Release.Name }}\napp.kubernetes.io/version: {{ .Chart.AppVersion | quote }}\n{{- end }}"
+        }
+      ],
+      "tags": [
+        "helm",
+        "create",
+        "package"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Dependencias de un chart",
+      "command": "helm dependency update ./charts/api",
+      "section": "Helm",
+      "topic": "Desarrollo de charts",
+      "description": "Descarga los subcharts declarados en Chart.yaml a charts/ y actualiza Chart.lock.",
+      "examples": [
+        {
+          "description": "Declarar una dependencia condicional",
+          "code": "# Chart.yaml\ndependencies:\n  - name: postgresql\n    version: \"16.x.x\"\n    repository: oci://registry-1.docker.io/bitnamicharts\n    condition: postgresql.enabled"
+        },
+        {
+          "description": "Reconstruir desde Chart.lock (reproducible en CI)",
+          "code": "helm dependency build ./charts/api"
+        },
+        {
+          "description": "Listar estado de dependencias",
+          "code": "helm dependency list ./charts/api"
+        }
+      ],
+      "tags": [
+        "helm",
+        "dependencias"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Charts en registros OCI",
+      "command": "helm push api-1.4.2.tgz oci://ghcr.io/nicocano/charts",
+      "section": "Helm",
+      "topic": "OCI",
+      "description": "Helm almacena charts como artefactos OCI en registros como GHCR, ECR, Artifact Registry o Docker Hub.",
+      "examples": [
+        {
+          "description": "Iniciar sesión en el registro",
+          "code": "echo $GHCR_TOKEN | helm registry login ghcr.io -u nicocano --password-stdin"
+        },
+        {
+          "description": "Instalar directamente desde OCI",
+          "code": "helm upgrade --install api oci://ghcr.io/nicocano/charts/api --version 1.4.2 -n tienda"
+        },
+        {
+          "description": "Descargar y descomprimir para revisar",
+          "code": "helm pull oci://ghcr.io/nicocano/charts/api --version 1.4.2 --untar"
+        },
+        {
+          "description": "Ver valores de un chart OCI",
+          "code": "helm show values oci://registry-1.docker.io/bitnamicharts/redis"
+        }
+      ],
+      "tags": [
+        "helm",
+        "oci",
+        "registro"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Comparar upgrades con helm diff",
+      "command": "helm diff upgrade api ./charts/api -n tienda -f values-prod.yaml",
+      "section": "Helm",
+      "topic": "Plugins",
+      "description": "El plugin helm-diff muestra qué cambiaría un upgrade antes de aplicarlo, como un plan de Terraform.",
+      "examples": [
+        {
+          "description": "Instalar el plugin",
+          "code": "helm plugin install https://github.com/databus23/helm-diff"
+        },
+        {
+          "description": "Solo resumen de recursos cambiados",
+          "code": "helm diff upgrade api ./charts/api -n tienda --suppress-secrets --context 3"
+        }
+      ],
+      "tags": [
+        "helm",
+        "diff",
+        "plugins"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Pruebas de un release",
+      "command": "helm test api -n tienda",
+      "section": "Helm",
+      "topic": "Releases",
+      "description": "Ejecuta los pods de test definidos en el chart (anotación helm.sh/hook: test) para validar el despliegue.",
+      "examples": [
+        {
+          "description": "Ver los logs de los tests",
+          "code": "helm test api -n tienda --logs"
+        }
+      ],
+      "tags": [
+        "helm",
+        "test"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Entorno y versión de Helm",
+      "command": "helm version",
+      "section": "Helm",
+      "topic": "Repositorios",
+      "description": "Muestra la versión del cliente y las rutas de caché, configuración y datos que usa Helm.",
+      "examples": [
+        {
+          "description": "Variables de entorno de Helm",
+          "code": "helm env"
+        },
+        {
+          "description": "Plugins instalados",
+          "code": "helm plugin list"
+        }
+      ],
+      "tags": [
+        "helm",
+        "version"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Helm 4 mantiene compatibilidad con charts apiVersion v2; revisa las notas de migración si usas plugins o el SDK de Go."
+    }
+  ]
+}

@@ -1,0 +1,573 @@
+{
+  "category": {
+    "slug": "terraform",
+    "name": "Terraform",
+    "icon": "cloud",
+    "order": 7,
+    "description": "Infraestructura como código con Terraform: flujo plan/apply, estado remoto, módulos, HCL y calidad en CI."
+  },
+  "commands": [
+    {
+      "title": "Fijar versiones de Terraform y providers",
+      "command": "terraform init -upgrade",
+      "section": "HCL",
+      "topic": "Bloque terraform",
+      "description": "El bloque terraform declara versión mínima del binario y providers requeridos con su fuente y restricción de versión.",
+      "examples": [
+        {
+          "description": "versions.tf del módulo raíz",
+          "code": "terraform {\n  required_version = \"~> 1.14\"\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"~> 6.0\"\n    }\n    random = {\n      source  = \"hashicorp/random\"\n      version = \"~> 3.7\"\n    }\n  }\n}"
+        }
+      ],
+      "tags": [
+        "providers",
+        "versiones"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "~> 6.0 permite 6.x pero no 7.0. Combínalo con el lockfile versionado para builds reproducibles."
+    },
+    {
+      "title": "Configurar provider AWS con default_tags",
+      "command": "terraform plan",
+      "section": "HCL",
+      "topic": "Providers",
+      "description": "El provider define región y credenciales; default_tags etiqueta todos los recursos que lo soportan.",
+      "examples": [
+        {
+          "description": "Provider con etiquetas y asumiendo rol",
+          "code": "provider \"aws\" {\n  region = var.region\n  assume_role {\n    role_arn = \"arn:aws:iam::123456789012:role/terraform\"\n  }\n  default_tags {\n    tags = {\n      Proyecto  = \"tienda\"\n      Entorno   = var.entorno\n      ManagedBy = \"terraform\"\n    }\n  }\n}"
+        },
+        {
+          "description": "Provider con alias para otra región",
+          "code": "provider \"aws\" {\n  alias  = \"virginia\"\n  region = \"us-east-1\"\n}\nresource \"aws_acm_certificate\" \"cdn\" {\n  provider          = aws.virginia\n  domain_name       = \"ejemplo.cl\"\n  validation_method = \"DNS\"\n}"
+        }
+      ],
+      "tags": [
+        "providers",
+        "aws",
+        "tags"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Nunca pongas access_key/secret_key en el código: usa perfiles, SSO u OIDC en CI."
+    },
+    {
+      "title": "Variables con tipo y validación",
+      "command": "terraform plan -var='entorno=prod'",
+      "section": "HCL",
+      "topic": "Variables",
+      "description": "Las variables de entrada declaran tipo, valor por defecto, descripción, sensibilidad y reglas de validación con mensajes propios.",
+      "examples": [
+        {
+          "description": "Validación con contains y regex",
+          "code": "variable \"entorno\" {\n  type        = string\n  description = \"Entorno de despliegue\"\n  validation {\n    condition     = contains([\"dev\", \"staging\", \"prod\"], var.entorno)\n    error_message = \"entorno debe ser dev, staging o prod.\"\n  }\n}\nvariable \"bucket_name\" {\n  type = string\n  validation {\n    condition     = can(regex(\"^[a-z0-9.-]{3,63}$\", var.bucket_name))\n    error_message = \"Nombre de bucket S3 inválido.\"\n  }\n}"
+        },
+        {
+          "description": "Tipos complejos con atributos opcionales",
+          "code": "variable \"servicios\" {\n  type = map(object({\n    puerto   = number\n    replicas = optional(number, 2)\n    publico  = optional(bool, false)\n  }))\n}"
+        },
+        {
+          "description": "Variable sensible y no nula",
+          "code": "variable \"db_password\" {\n  type      = string\n  sensitive = true\n  nullable  = false\n}"
+        }
+      ],
+      "tags": [
+        "variables",
+        "validacion",
+        "tipos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud",
+        "Software"
+      ],
+      "notes": "Desde Terraform 1.9 las validaciones pueden referenciar otras variables y data sources, no solo la propia."
+    },
+    {
+      "title": "Archivos tfvars y precedencia de variables",
+      "command": "terraform plan -var-file=env/prod.tfvars",
+      "section": "HCL",
+      "topic": "Variables",
+      "description": "Terraform carga terraform.tfvars y *.auto.tfvars automáticamente; luego -var-file y -var en orden. El último valor gana.",
+      "examples": [
+        {
+          "description": "prod.tfvars",
+          "code": "entorno       = \"prod\"\ninstance_type = \"m7i.large\"\nservicios = {\n  api = { puerto = 8000, replicas = 4, publico = true }\n  worker = { puerto = 9000 }\n}"
+        },
+        {
+          "description": "Orden de precedencia (de menor a mayor)",
+          "code": "# 1. variables de entorno TF_VAR_*\n# 2. terraform.tfvars\n# 3. terraform.tfvars.json\n# 4. *.auto.tfvars en orden alfabético\n# 5. -var y -var-file en el orden de la línea de comandos"
+        }
+      ],
+      "tags": [
+        "tfvars",
+        "variables"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "No versiones tfvars con secretos; usa TF_VAR_ desde el gestor de secretos del CI o ephemeral resources."
+    },
+    {
+      "title": "Valores locales",
+      "command": "terraform console",
+      "section": "HCL",
+      "topic": "Expresiones",
+      "description": "locals asigna nombres a expresiones para no repetirlas: prefijos, etiquetas comunes o mapas derivados.",
+      "examples": [
+        {
+          "description": "Prefijos y etiquetas",
+          "code": "locals {\n  prefijo = \"${var.proyecto}-${var.entorno}\"\n  tags_comunes = merge(var.tags, {\n    Proyecto = var.proyecto\n    Entorno  = var.entorno\n  })\n}\nresource \"aws_s3_bucket\" \"assets\" {\n  bucket = \"${local.prefijo}-assets\"\n  tags   = local.tags_comunes\n}"
+        }
+      ],
+      "tags": [
+        "locals"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Outputs del módulo",
+      "command": "terraform output -json",
+      "section": "HCL",
+      "topic": "Salidas",
+      "description": "Los outputs exponen valores del módulo; pueden marcarse como sensibles y tener precondiciones.",
+      "examples": [
+        {
+          "description": "Outputs típicos",
+          "code": "output \"vpc_id\" {\n  value       = aws_vpc.main.id\n  description = \"ID de la VPC\"\n}\noutput \"db_endpoint\" {\n  value = aws_db_instance.main.endpoint\n}\noutput \"db_password\" {\n  value     = random_password.db.result\n  sensitive = true\n}"
+        }
+      ],
+      "tags": [
+        "outputs",
+        "sensitive"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Múltiples recursos con for_each",
+      "command": "terraform plan",
+      "section": "HCL",
+      "topic": "Meta-argumentos",
+      "description": "for_each crea una instancia por elemento de un mapa o conjunto, con direcciones estables por clave. Preferible a count cuando los elementos tienen identidad.",
+      "examples": [
+        {
+          "description": "Subredes por zona desde un mapa",
+          "code": "variable \"subredes\" {\n  default = {\n    \"us-east-1a\" = \"10.20.1.0/24\"\n    \"us-east-1b\" = \"10.20.2.0/24\"\n  }\n}\nresource \"aws_subnet\" \"private\" {\n  for_each          = var.subredes\n  vpc_id            = aws_vpc.main.id\n  availability_zone = each.key\n  cidr_block        = each.value\n  tags              = { Name = \"private-${each.key}\" }\n}"
+        },
+        {
+          "description": "Referenciar todas las instancias",
+          "code": "output \"subnet_ids\" {\n  value = [for s in aws_subnet.private : s.id]\n}"
+        },
+        {
+          "description": "Usuarios IAM desde un conjunto",
+          "code": "resource \"aws_iam_user\" \"equipo\" {\n  for_each = toset([\"nicolas\", \"camila\", \"diego\"])\n  name     = each.value\n}"
+        }
+      ],
+      "tags": [
+        "for_each",
+        "meta-argumentos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Con count, quitar un elemento del medio desplaza índices y Terraform recrea los siguientes; con for_each solo cambia el elemento afectado."
+    },
+    {
+      "title": "Recursos condicionales con count",
+      "command": "terraform plan -var='crear_bastion=false'",
+      "section": "HCL",
+      "topic": "Meta-argumentos",
+      "description": "count = condición ? 1 : 0 es el patrón para crear un recurso opcionalmente.",
+      "examples": [
+        {
+          "description": "Bastión opcional",
+          "code": "resource \"aws_instance\" \"bastion\" {\n  count         = var.crear_bastion ? 1 : 0\n  ami           = data.aws_ami.ubuntu.id\n  instance_type = \"t3.micro\"\n}\noutput \"bastion_ip\" {\n  value = one(aws_instance.bastion[*].public_ip)\n}"
+        },
+        {
+          "description": "N réplicas idénticas",
+          "code": "resource \"aws_instance\" \"web\" {\n  count         = 3\n  ami           = data.aws_ami.ubuntu.id\n  instance_type = \"t3.small\"\n  tags          = { Name = \"web-${count.index}\" }\n}"
+        }
+      ],
+      "tags": [
+        "count",
+        "condicional"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Bloques dinámicos",
+      "command": "terraform plan",
+      "section": "HCL",
+      "topic": "Expresiones",
+      "description": "dynamic genera bloques anidados repetidos (ingress, setting, tag) a partir de una colección.",
+      "examples": [
+        {
+          "description": "Reglas de security group desde una variable",
+          "code": "variable \"puertos_abiertos\" {\n  default = [80, 443]\n}\nresource \"aws_security_group\" \"web\" {\n  name   = \"web\"\n  vpc_id = aws_vpc.main.id\n  dynamic \"ingress\" {\n    for_each = var.puertos_abiertos\n    content {\n      from_port   = ingress.value\n      to_port     = ingress.value\n      protocol    = \"tcp\"\n      cidr_blocks = [\"0.0.0.0/0\"]\n    }\n  }\n}"
+        }
+      ],
+      "tags": [
+        "dynamic",
+        "bloques"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Úsalo con moderación: muchos dynamic anidados hacen el código difícil de leer."
+    },
+    {
+      "title": "Data sources",
+      "command": "terraform plan",
+      "section": "HCL",
+      "topic": "Data sources",
+      "description": "Los data sources leen información existente (AMIs, zonas, cuentas, secretos) sin gestionarla.",
+      "examples": [
+        {
+          "description": "AMI más reciente de Ubuntu 24.04",
+          "code": "data \"aws_ami\" \"ubuntu\" {\n  most_recent = true\n  owners      = [\"099720109477\"]\n  filter {\n    name   = \"name\"\n    values = [\"ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*\"]\n  }\n}"
+        },
+        {
+          "description": "Zonas disponibles e identidad de la cuenta",
+          "code": "data \"aws_availability_zones\" \"disponibles\" {\n  state = \"available\"\n}\ndata \"aws_caller_identity\" \"actual\" {}\nlocals {\n  azs        = slice(data.aws_availability_zones.disponibles.names, 0, 3)\n  account_id = data.aws_caller_identity.actual.account_id\n}"
+        }
+      ],
+      "tags": [
+        "data",
+        "ami",
+        "aws"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Expresiones for, splat y condicionales",
+      "command": "terraform console",
+      "section": "HCL",
+      "topic": "Expresiones",
+      "description": "for transforma listas y mapas, el splat [*] extrae atributos y el operador ternario elige valores.",
+      "examples": [
+        {
+          "description": "Transformaciones habituales",
+          "code": "locals {\n  nombres_mayus = [for n in var.nombres : upper(n)]\n  ids_por_nombre = { for i in aws_instance.web : i.tags.Name => i.id }\n  solo_publicos = { for k, v in var.servicios : k => v if v.publico }\n  ips = aws_instance.web[*].private_ip\n  tamano = var.entorno == \"prod\" ? \"m7i.large\" : \"t3.small\"\n}"
+        }
+      ],
+      "tags": [
+        "for",
+        "splat",
+        "expresiones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Funciones integradas útiles",
+      "command": "terraform console",
+      "section": "HCL",
+      "topic": "Expresiones",
+      "description": "HCL trae funciones para colecciones, strings, red, codificación y archivos.",
+      "examples": [
+        {
+          "description": "Ejemplos en consola",
+          "code": "> cidrsubnet(\"10.0.0.0/16\", 8, 2)\n\"10.0.2.0/24\"\n> merge({a = 1}, {b = 2})\n> lookup({dev = \"t3.micro\"}, \"prod\", \"t3.small\")\n> try(var.config.puerto, 8080)\n> coalesce(\"\", \"valor-por-defecto\")\n> jsonencode({nombre = \"api\"})\n> yamldecode(file(\"config.yaml\"))\n> format(\"%s-%03d\", \"web\", 7)"
+        },
+        {
+          "description": "Plantilla de user_data",
+          "code": "resource \"aws_instance\" \"app\" {\n  user_data = templatefile(\"${path.module}/cloud-init.yaml.tftpl\", {\n    hostname = \"app-01\"\n    paquetes = [\"nginx\", \"git\"]\n  })\n}"
+        }
+      ],
+      "tags": [
+        "funciones",
+        "templatefile",
+        "cidrsubnet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Ciclo de vida de recursos",
+      "command": "terraform plan",
+      "section": "HCL",
+      "topic": "Meta-argumentos",
+      "description": "lifecycle controla cómo se reemplazan o protegen los recursos: prevent_destroy, create_before_destroy, ignore_changes y replace_triggered_by.",
+      "examples": [
+        {
+          "description": "Protección y cambios ignorados",
+          "code": "resource \"aws_db_instance\" \"main\" {\n  # ...\n  lifecycle {\n    prevent_destroy = true\n    ignore_changes  = [engine_version]\n  }\n}"
+        },
+        {
+          "description": "Reemplazo sin corte y forzado por otro recurso",
+          "code": "resource \"aws_launch_template\" \"app\" {\n  # ...\n  lifecycle { create_before_destroy = true }\n}\nresource \"aws_instance\" \"app\" {\n  # ...\n  lifecycle {\n    replace_triggered_by = [aws_launch_template.app.latest_version]\n  }\n}"
+        }
+      ],
+      "tags": [
+        "lifecycle",
+        "prevent_destroy"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud",
+        "SRE"
+      ],
+      "notes": "ignore_changes oculta drift real; documenta por qué se ignora cada atributo (por ejemplo, porque lo cambia un autoscaler)."
+    },
+    {
+      "title": "Precondiciones y postcondiciones",
+      "command": "terraform plan",
+      "section": "HCL",
+      "topic": "Validación",
+      "description": "Dentro de lifecycle, precondition valida supuestos antes de crear y postcondition verifica el resultado, con mensajes de error claros.",
+      "examples": [
+        {
+          "description": "Validar que la AMI sea x86_64 y que la instancia tenga IP pública",
+          "code": "resource \"aws_instance\" \"web\" {\n  ami           = data.aws_ami.ubuntu.id\n  instance_type = var.instance_type\n  lifecycle {\n    precondition {\n      condition     = data.aws_ami.ubuntu.architecture == \"x86_64\"\n      error_message = \"La AMI debe ser x86_64 para este tipo de instancia.\"\n    }\n    postcondition {\n      condition     = self.public_ip != \"\"\n      error_message = \"La instancia no recibió IP pública.\"\n    }\n  }\n}"
+        }
+      ],
+      "tags": [
+        "precondition",
+        "postcondition",
+        "validacion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Bloques check para validación continua",
+      "command": "terraform plan",
+      "section": "HCL",
+      "topic": "Validación",
+      "description": "check {} evalúa aserciones en cada plan y apply sin bloquear la ejecución: solo advierte. Útil para verificar salud de endpoints o expiración de certificados.",
+      "examples": [
+        {
+          "description": "Comprobar que la API responde",
+          "code": "check \"api_salud\" {\n  data \"http\" \"health\" {\n    url = \"https://api.ejemplo.cl/health\"\n  }\n  assert {\n    condition     = data.http.health.status_code == 200\n    error_message = \"La API devolvió ${data.http.health.status_code}.\"\n  }\n}"
+        }
+      ],
+      "tags": [
+        "check",
+        "validacion",
+        "observabilidad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Dependencias explícitas",
+      "command": "terraform graph",
+      "section": "HCL",
+      "topic": "Meta-argumentos",
+      "description": "depends_on fuerza orden cuando la dependencia no se deduce de las referencias, por ejemplo políticas IAM necesarias antes de usar un servicio.",
+      "examples": [
+        {
+          "description": "Esperar a que la política esté adjunta",
+          "code": "resource \"aws_lambda_function\" \"fn\" {\n  # ...\n  depends_on = [aws_iam_role_policy_attachment.logs]\n}"
+        }
+      ],
+      "tags": [
+        "depends_on",
+        "dependencias"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Abusar de depends_on vuelve los planes más conservadores (más valores 'known after apply'); prefiere referencias implícitas."
+    },
+    {
+      "title": "Recursos efímeros para secretos",
+      "command": "terraform apply",
+      "section": "HCL",
+      "topic": "Secretos",
+      "description": "Los ephemeral resources (Terraform 1.10+) obtienen valores temporales, como secretos, que nunca se guardan en el plan ni en el estado.",
+      "examples": [
+        {
+          "description": "Leer un secreto de AWS Secrets Manager sin persistirlo",
+          "code": "ephemeral \"aws_secretsmanager_secret_version\" \"db\" {\n  secret_id = \"prod/tienda/db\"\n}\nprovider \"postgresql\" {\n  host     = aws_db_instance.main.address\n  username = \"admin\"\n  password = jsondecode(ephemeral.aws_secretsmanager_secret_version.db.secret_string)[\"password\"]\n}"
+        },
+        {
+          "description": "Contraseña aleatoria efímera",
+          "code": "ephemeral \"random_password\" \"db\" {\n  length  = 32\n  special = true\n}"
+        },
+        {
+          "description": "Variable efímera",
+          "code": "variable \"token_api\" {\n  type      = string\n  ephemeral = true\n}"
+        }
+      ],
+      "tags": [
+        "ephemeral",
+        "secretos",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Los valores efímeros solo pueden usarse en contextos que no persisten: providers, provisioners, otros ephemeral y argumentos write-only."
+    },
+    {
+      "title": "Argumentos write-only",
+      "command": "terraform apply -var='db_password_version=2'",
+      "section": "HCL",
+      "topic": "Secretos",
+      "description": "Los argumentos write-only (Terraform 1.11+), como password_wo, se envían al proveedor pero no se guardan en el estado. Se rotan subiendo la versión asociada.",
+      "examples": [
+        {
+          "description": "RDS con contraseña que no queda en el estado",
+          "code": "ephemeral \"random_password\" \"db\" {\n  length = 32\n}\nresource \"aws_db_instance\" \"main\" {\n  identifier          = \"tienda-prod\"\n  engine              = \"postgres\"\n  engine_version      = \"17\"\n  instance_class      = \"db.t4g.medium\"\n  allocated_storage   = 50\n  username            = \"app\"\n  password_wo         = ephemeral.random_password.db.result\n  password_wo_version = var.db_password_version\n  storage_encrypted   = true\n  deletion_protection = true\n  skip_final_snapshot = false\n}"
+        }
+      ],
+      "tags": [
+        "write-only",
+        "secretos",
+        "rds"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Requiere un provider que exponga el argumento *_wo (por ejemplo AWS provider reciente). Alternativa más simple en RDS: manage_master_user_password = true."
+    },
+    {
+      "title": "Ejemplo: instancia EC2 con security group",
+      "command": "terraform apply",
+      "section": "HCL",
+      "topic": "Ejemplos AWS",
+      "description": "Configuración mínima completa de una instancia Ubuntu con acceso SSH restringido y HTTP abierto.",
+      "examples": [
+        {
+          "description": "main.tf",
+          "code": "resource \"aws_security_group\" \"web\" {\n  name   = \"web-sg\"\n  vpc_id = module.vpc.vpc_id\n  ingress {\n    description = \"SSH desde la oficina\"\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [var.ip_oficina]\n  }\n  ingress {\n    from_port   = 80\n    to_port     = 80\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n  egress {\n    from_port   = 0\n    to_port     = 0\n    protocol    = \"-1\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\nresource \"aws_instance\" \"web\" {\n  ami                    = data.aws_ami.ubuntu.id\n  instance_type          = \"t3.small\"\n  subnet_id              = module.vpc.public_subnets[0]\n  vpc_security_group_ids = [aws_security_group.web.id]\n  metadata_options { http_tokens = \"required\" }\n  root_block_device {\n    volume_size = 20\n    encrypted   = true\n  }\n  tags = { Name = \"web-01\" }\n}"
+        }
+      ],
+      "tags": [
+        "aws",
+        "ec2",
+        "security-group"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "http_tokens = required obliga a IMDSv2, recomendación de seguridad estándar en EC2."
+    },
+    {
+      "title": "Ejemplo: bucket S3 privado y cifrado",
+      "command": "terraform apply",
+      "section": "HCL",
+      "topic": "Ejemplos AWS",
+      "description": "Bucket con bloqueo de acceso público, versionado, cifrado y regla de ciclo de vida.",
+      "examples": [
+        {
+          "description": "main.tf",
+          "code": "resource \"aws_s3_bucket\" \"logs\" {\n  bucket = \"nicocano-logs-prod\"\n}\nresource \"aws_s3_bucket_public_access_block\" \"logs\" {\n  bucket                  = aws_s3_bucket.logs.id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}\nresource \"aws_s3_bucket_server_side_encryption_configuration\" \"logs\" {\n  bucket = aws_s3_bucket.logs.id\n  rule {\n    apply_server_side_encryption_by_default { sse_algorithm = \"aws:kms\" }\n  }\n}\nresource \"aws_s3_bucket_lifecycle_configuration\" \"logs\" {\n  bucket = aws_s3_bucket.logs.id\n  rule {\n    id     = \"expirar\"\n    status = \"Enabled\"\n    filter {}\n    expiration { days = 90 }\n  }\n}"
+        }
+      ],
+      "tags": [
+        "aws",
+        "s3",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Ejemplo: recursos en GCP y Azure",
+      "command": "terraform apply",
+      "section": "HCL",
+      "topic": "Ejemplos multicloud",
+      "description": "La misma mecánica aplica a otros proveedores: aquí un bucket de Cloud Storage y un grupo de recursos con cuenta de almacenamiento en Azure.",
+      "examples": [
+        {
+          "description": "Google Cloud Storage",
+          "code": "provider \"google\" {\n  project = \"nicocano-prod\"\n  region  = \"southamerica-west1\"\n}\nresource \"google_storage_bucket\" \"assets\" {\n  name                        = \"nicocano-assets-prod\"\n  location                    = \"SOUTHAMERICA-WEST1\"\n  uniform_bucket_level_access = true\n  public_access_prevention    = \"enforced\"\n  versioning { enabled = true }\n}"
+        },
+        {
+          "description": "Azure",
+          "code": "provider \"azurerm\" {\n  features {}\n  subscription_id = var.subscription_id\n}\nresource \"azurerm_resource_group\" \"rg\" {\n  name     = \"rg-tienda-prod\"\n  location = \"brazilsouth\"\n}\nresource \"azurerm_storage_account\" \"sa\" {\n  name                     = \"nicocanotiendaprod\"\n  resource_group_name      = azurerm_resource_group.rg.name\n  location                 = azurerm_resource_group.rg.location\n  account_tier             = \"Standard\"\n  account_replication_type = \"ZRS\"\n  min_tls_version          = \"TLS1_2\"\n}"
+        }
+      ],
+      "tags": [
+        "gcp",
+        "azure",
+        "multicloud"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Funciones definidas por providers",
+      "command": "terraform console",
+      "section": "HCL",
+      "topic": "Expresiones",
+      "description": "Desde Terraform 1.8 los providers pueden exponer funciones propias, invocadas como provider::<nombre>::<función>.",
+      "examples": [
+        {
+          "description": "Descomponer un ARN con el provider AWS",
+          "code": "locals {\n  arn = provider::aws::arn_parse(\"arn:aws:iam::123456789012:role/terraform\")\n  cuenta = local.arn.account_id\n}"
+        }
+      ],
+      "tags": [
+        "funciones",
+        "providers"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    }
+  ]
+}

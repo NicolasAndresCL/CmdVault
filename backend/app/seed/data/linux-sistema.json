@@ -1,0 +1,1521 @@
+{
+  "category": {
+    "slug": "linux",
+    "name": "Linux",
+    "icon": "terminal",
+    "order": 1,
+    "description": "Administración de servidores Linux: Ubuntu (Debian) y AlmaLinux (RHEL), del día a día a troubleshooting SRE."
+  },
+  "commands": [
+    {
+      "title": "Listar procesos",
+      "command": "ps aux",
+      "section": "Común",
+      "topic": "Procesos y señales",
+      "description": "Muestra todos los procesos del sistema con usuario, PID, uso de CPU y memoria y el comando que los lanzó.",
+      "syntax": "ps [opciones]",
+      "examples": [
+        {
+          "description": "Top 10 procesos por memoria",
+          "code": "ps aux --sort=-%mem | head -11"
+        },
+        {
+          "description": "Árbol de procesos con jerarquía",
+          "code": "ps -ef --forest"
+        },
+        {
+          "description": "Columnas personalizadas para un PID",
+          "code": "ps -o pid,ppid,user,%cpu,%mem,etime,cmd -p 1234"
+        },
+        {
+          "description": "Procesos de un usuario",
+          "code": "ps -u www-data -f"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Buscar procesos por nombre",
+      "command": "pgrep / pidof",
+      "section": "Común",
+      "topic": "Procesos y señales",
+      "description": "Obtiene los PID de procesos que coinciden con un nombre o patrón, sin la fragilidad de 'ps | grep'.",
+      "syntax": "pgrep [opciones] patrón",
+      "examples": [
+        {
+          "description": "PID con el comando completo",
+          "code": "pgrep -af gunicorn"
+        },
+        {
+          "description": "PID exacto de un binario",
+          "code": "pidof nginx"
+        },
+        {
+          "description": "Procesos de un usuario que coinciden",
+          "code": "pgrep -u postgres -l"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "búsqueda"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Enviar señales a procesos",
+      "command": "kill",
+      "section": "Común",
+      "topic": "Procesos y señales",
+      "description": "Envía una señal a un proceso. TERM (15) pide terminar ordenadamente; KILL (9) lo mata sin darle opción a limpiar.",
+      "syntax": "kill [-señal] PID...",
+      "examples": [
+        {
+          "description": "Terminar ordenadamente",
+          "code": "kill 1234"
+        },
+        {
+          "description": "Forzar si no responde",
+          "code": "kill -9 1234"
+        },
+        {
+          "description": "Recargar configuración con SIGHUP",
+          "code": "sudo kill -HUP $(cat /run/nginx.pid)"
+        },
+        {
+          "description": "Listar señales disponibles",
+          "code": "kill -l"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "señales"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Usa -9 como último recurso: no se ejecutan handlers, quedan archivos temporales y locks sin liberar."
+    },
+    {
+      "title": "Matar procesos por nombre",
+      "command": "pkill / killall",
+      "section": "Común",
+      "topic": "Procesos y señales",
+      "description": "Envía señales a todos los procesos que coinciden con un nombre o patrón.",
+      "syntax": "pkill [-señal] [-f] patrón",
+      "examples": [
+        {
+          "description": "Terminar todos los procesos de un patrón",
+          "code": "pkill -f 'celery worker'"
+        },
+        {
+          "description": "Cerrar todas las sesiones de un usuario",
+          "code": "sudo pkill -KILL -u exempleado"
+        },
+        {
+          "description": "Matar por nombre exacto",
+          "code": "sudo killall -TERM node"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "señales"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con -f el patrón se compara con la línea de comando completa: revisa antes con 'pgrep -af' para no matar de más."
+    },
+    {
+      "title": "Prioridad de procesos",
+      "command": "nice / renice",
+      "section": "Común",
+      "topic": "Procesos y señales",
+      "description": "Ajusta la prioridad de CPU de un proceso (-20 máxima, 19 mínima). Útil para respaldos o tareas pesadas que no deben afectar producción.",
+      "syntax": "nice -n N comando",
+      "examples": [
+        {
+          "description": "Lanzar un respaldo con baja prioridad",
+          "code": "nice -n 19 tar -czf /backup/datos.tgz /srv/datos"
+        },
+        {
+          "description": "Bajar prioridad de un proceso en ejecución",
+          "code": "sudo renice -n 10 -p 1234"
+        },
+        {
+          "description": "Baja prioridad también de disco",
+          "code": "ionice -c3 nice -n 19 rsync -a /srv/ /backup/"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Procesos en segundo plano",
+      "command": "jobs / bg / fg / nohup",
+      "section": "Común",
+      "topic": "Procesos y señales",
+      "description": "Controla trabajos de la shell: suspenderlos, mandarlos al fondo o mantenerlos vivos tras cerrar la sesión.",
+      "examples": [
+        {
+          "description": "Lanzar inmune al cierre de sesión",
+          "code": "nohup ./migracion.sh > migracion.log 2>&1 &"
+        },
+        {
+          "description": "Ver trabajos y traer uno al frente",
+          "code": "jobs -l\nfg %1"
+        },
+        {
+          "description": "Desvincular un trabajo de la shell",
+          "code": "disown -h %1"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "shell"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para tareas largas por SSH es preferible tmux o 'systemd-run --unit=tarea comando', que sobreviven y dejan logs en el journal."
+    },
+    {
+      "title": "Sesiones persistentes con tmux",
+      "command": "tmux",
+      "section": "Común",
+      "topic": "Procesos y señales",
+      "description": "Multiplexor de terminal: crea sesiones que siguen corriendo aunque se corte la conexión SSH.",
+      "syntax": "tmux [comando]",
+      "examples": [
+        {
+          "description": "Crear una sesión con nombre",
+          "code": "tmux new -s mantenimiento"
+        },
+        {
+          "description": "Volver a una sesión",
+          "code": "tmux attach -t mantenimiento"
+        },
+        {
+          "description": "Listar sesiones",
+          "code": "tmux ls"
+        },
+        {
+          "description": "Desacoplar sin cerrar",
+          "code": "Ctrl+b d"
+        }
+      ],
+      "tags": [
+        "procesos",
+        "ssh",
+        "productividad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Gestionar servicios con systemctl",
+      "command": "systemctl",
+      "section": "Común",
+      "topic": "systemd y servicios",
+      "description": "Inicia, detiene, reinicia y consulta servicios gestionados por systemd.",
+      "syntax": "systemctl [comando] [unidad]",
+      "examples": [
+        {
+          "description": "Estado detallado de un servicio",
+          "code": "systemctl status nginx"
+        },
+        {
+          "description": "Reiniciar y ver si quedó activo",
+          "code": "sudo systemctl restart nginx && systemctl is-active nginx"
+        },
+        {
+          "description": "Recargar configuración sin cortar conexiones",
+          "code": "sudo systemctl reload nginx"
+        },
+        {
+          "description": "Habilitar e iniciar en un paso",
+          "code": "sudo systemctl enable --now postgresql"
+        }
+      ],
+      "tags": [
+        "systemd",
+        "servicios"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El nombre de algunos servicios difiere: 'ssh' en Ubuntu vs 'sshd' en AlmaLinux; 'apache2' vs 'httpd'."
+    },
+    {
+      "title": "Listar unidades y fallos",
+      "command": "systemctl list-units",
+      "section": "Común",
+      "topic": "systemd y servicios",
+      "description": "Lista unidades de systemd filtrando por tipo o estado; el primer comando al diagnosticar un servidor tras un reinicio.",
+      "examples": [
+        {
+          "description": "Servicios que fallaron",
+          "code": "systemctl --failed"
+        },
+        {
+          "description": "Servicios en ejecución",
+          "code": "systemctl list-units --type=service --state=running"
+        },
+        {
+          "description": "Servicios habilitados al arranque",
+          "code": "systemctl list-unit-files --type=service --state=enabled"
+        },
+        {
+          "description": "Limpiar el estado de fallo",
+          "code": "sudo systemctl reset-failed"
+        }
+      ],
+      "tags": [
+        "systemd",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Crear un servicio systemd",
+      "command": "sudo systemctl edit --force --full app.service",
+      "section": "Común",
+      "topic": "systemd y servicios",
+      "description": "Define un servicio propio para ejecutar una aplicación como demonio con reinicio automático, usuario dedicado y logs en el journal.",
+      "syntax": "/etc/systemd/system/<nombre>.service",
+      "examples": [
+        {
+          "description": "Unidad para una API con Gunicorn/Uvicorn",
+          "code": "[Unit]\nDescription=API de la app\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nUser=appsvc\nWorkingDirectory=/opt/app/current\nEnvironmentFile=/etc/app/app.env\nExecStart=/opt/app/env/bin/gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 127.0.0.1:8000 main:app\nRestart=on-failure\nRestartSec=5\n\n[Install]\nWantedBy=multi-user.target"
+        },
+        {
+          "description": "Recargar systemd y activar",
+          "code": "sudo systemctl daemon-reload\nsudo systemctl enable --now app.service"
+        }
+      ],
+      "tags": [
+        "systemd",
+        "servicios",
+        "despliegue"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Tras editar a mano un .service ejecuta 'systemctl daemon-reload'; 'systemctl edit' lo hace por ti."
+    },
+    {
+      "title": "Sobrescribir configuración de un servicio",
+      "command": "sudo systemctl edit nginx",
+      "section": "Común",
+      "topic": "systemd y servicios",
+      "description": "Crea un drop-in (override.conf) que modifica una unidad del paquete sin tocar el archivo original, de modo que las actualizaciones no pisen tus cambios.",
+      "examples": [
+        {
+          "description": "Aumentar el límite de archivos abiertos",
+          "code": "[Service]\nLimitNOFILE=65535"
+        },
+        {
+          "description": "Ver la unidad efectiva con sus drop-ins",
+          "code": "systemctl cat nginx"
+        },
+        {
+          "description": "Revertir los cambios",
+          "code": "sudo systemctl revert nginx"
+        }
+      ],
+      "tags": [
+        "systemd",
+        "configuración"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para vaciar una directiva de lista (como ExecStart) en un drop-in, primero asígnala vacía: 'ExecStart=' y luego el nuevo valor."
+    },
+    {
+      "title": "Analizar el arranque",
+      "command": "systemd-analyze",
+      "section": "Común",
+      "topic": "systemd y servicios",
+      "description": "Mide cuánto tardó el arranque y qué unidades lo retrasaron; también valida archivos de unidad.",
+      "examples": [
+        {
+          "description": "Tiempo total de arranque",
+          "code": "systemd-analyze"
+        },
+        {
+          "description": "Unidades más lentas",
+          "code": "systemd-analyze blame | head"
+        },
+        {
+          "description": "Cadena crítica de arranque",
+          "code": "systemd-analyze critical-chain"
+        },
+        {
+          "description": "Validar un archivo de unidad",
+          "code": "systemd-analyze verify /etc/systemd/system/app.service"
+        }
+      ],
+      "tags": [
+        "systemd",
+        "rendimiento",
+        "arranque"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Consultar logs con journalctl",
+      "command": "journalctl",
+      "section": "Común",
+      "topic": "systemd y servicios",
+      "description": "Lee los logs centralizados de systemd con filtros por unidad, tiempo, prioridad o arranque.",
+      "syntax": "journalctl [opciones]",
+      "examples": [
+        {
+          "description": "Logs de un servicio en vivo",
+          "code": "journalctl -u nginx -f"
+        },
+        {
+          "description": "Desde hace una hora, solo errores",
+          "code": "journalctl -u app --since '1 hour ago' -p err"
+        },
+        {
+          "description": "Logs del arranque anterior",
+          "code": "journalctl -b -1 -e"
+        },
+        {
+          "description": "Mensajes del kernel",
+          "code": "journalctl -k --since today"
+        }
+      ],
+      "tags": [
+        "logs",
+        "systemd",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para que el journal persista entre reinicios debe existir /var/log/journal (en Ubuntu y AlmaLinux recientes ya existe por defecto)."
+    },
+    {
+      "title": "Controlar el tamaño del journal",
+      "command": "journalctl --vacuum-size",
+      "section": "Común",
+      "topic": "systemd y servicios",
+      "description": "Libera espacio eliminando los logs más antiguos del journal por tamaño o antigüedad.",
+      "examples": [
+        {
+          "description": "Ver cuánto ocupa",
+          "code": "journalctl --disk-usage"
+        },
+        {
+          "description": "Dejar como máximo 500 MB",
+          "code": "sudo journalctl --vacuum-size=500M"
+        },
+        {
+          "description": "Borrar lo anterior a 2 semanas",
+          "code": "sudo journalctl --vacuum-time=2weeks"
+        }
+      ],
+      "tags": [
+        "logs",
+        "disco",
+        "mantenimiento"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Para un límite permanente define SystemMaxUse= en /etc/systemd/journald.conf.d/*.conf y reinicia systemd-journald."
+    },
+    {
+      "title": "Ejecutar comandos como unidad temporal",
+      "command": "systemd-run",
+      "section": "Común",
+      "topic": "systemd y servicios",
+      "description": "Lanza un comando como servicio o timer transitorio, con sus logs en el journal y límites de recursos.",
+      "examples": [
+        {
+          "description": "Tarea larga que sobrevive a la sesión SSH",
+          "code": "sudo systemd-run --unit=reindex /opt/app/bin/reindex.sh"
+        },
+        {
+          "description": "Ejecutar con límite de memoria y CPU",
+          "code": "sudo systemd-run --scope -p MemoryMax=1G -p CPUQuota=50% ./proceso_pesado"
+        },
+        {
+          "description": "Ver sus logs",
+          "code": "journalctl -u reindex -f"
+        }
+      ],
+      "tags": [
+        "systemd",
+        "procesos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Hostname, hora y localización",
+      "command": "hostnamectl / timedatectl",
+      "section": "Común",
+      "topic": "systemd y servicios",
+      "description": "Configura el nombre del equipo, zona horaria, NTP y localización del sistema.",
+      "examples": [
+        {
+          "description": "Cambiar el hostname",
+          "code": "sudo hostnamectl set-hostname web01.ejemplo.cl"
+        },
+        {
+          "description": "Zona horaria de Chile",
+          "code": "sudo timedatectl set-timezone America/Santiago"
+        },
+        {
+          "description": "Verificar sincronización NTP",
+          "code": "timedatectl status"
+        },
+        {
+          "description": "Ver localización y teclado",
+          "code": "localectl status"
+        }
+      ],
+      "tags": [
+        "systemd",
+        "configuración",
+        "tiempo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Ubuntu sincroniza con systemd-timesyncd; AlmaLinux usa chronyd ('chronyc sources -v' para ver servidores)."
+    },
+    {
+      "title": "Instalar paquetes con apt",
+      "command": "sudo apt install",
+      "section": "Ubuntu",
+      "topic": "Paquetes",
+      "description": "Instala paquetes desde los repositorios de Ubuntu resolviendo dependencias. Ejecuta siempre 'apt update' antes para refrescar el índice.",
+      "syntax": "apt install paquete[=versión]...",
+      "examples": [
+        {
+          "description": "Actualizar índice e instalar",
+          "code": "sudo apt update && sudo apt install -y nginx"
+        },
+        {
+          "description": "Instalar sin paquetes recomendados",
+          "code": "sudo apt install --no-install-recommends -y python3-venv"
+        },
+        {
+          "description": "Instalar una versión concreta",
+          "code": "sudo apt install nginx=1.24.0-2ubuntu7"
+        },
+        {
+          "description": "Reinstalar un paquete dañado",
+          "code": "sudo apt install --reinstall openssh-server"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "apt",
+        "ubuntu"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En scripts usa 'apt-get' (interfaz estable) y DEBIAN_FRONTEND=noninteractive para evitar prompts."
+    },
+    {
+      "title": "Actualizar el sistema con apt",
+      "command": "sudo apt update && sudo apt upgrade",
+      "section": "Ubuntu",
+      "topic": "Paquetes",
+      "description": "Actualiza todos los paquetes instalados. full-upgrade además puede instalar o quitar paquetes para resolver dependencias (p. ej. nuevos kernels).",
+      "examples": [
+        {
+          "description": "Actualización completa no interactiva",
+          "code": "sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt-get -y full-upgrade"
+        },
+        {
+          "description": "Ver qué se actualizaría",
+          "code": "apt list --upgradable"
+        },
+        {
+          "description": "Saber si hace falta reiniciar",
+          "code": "[ -f /var/run/reboot-required ] && cat /var/run/reboot-required.pkgs"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "apt",
+        "actualizaciones"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para subir de versión de Ubuntu (p. ej. 24.04 a 26.04 LTS) se usa 'sudo do-release-upgrade', no apt."
+    },
+    {
+      "title": "Buscar e inspeccionar paquetes apt",
+      "command": "apt search / apt show",
+      "section": "Ubuntu",
+      "topic": "Paquetes",
+      "description": "Busca paquetes en los repositorios y muestra versión, dependencias y descripción.",
+      "examples": [
+        {
+          "description": "Buscar por nombre o descripción",
+          "code": "apt search postgresql-16"
+        },
+        {
+          "description": "Detalle de un paquete",
+          "code": "apt show nginx"
+        },
+        {
+          "description": "Versiones disponibles y repositorio de origen",
+          "code": "apt policy nginx"
+        },
+        {
+          "description": "Paquetes instalados que coinciden",
+          "code": "apt list --installed | grep python3"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "apt",
+        "búsqueda"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Eliminar paquetes y limpiar",
+      "command": "sudo apt purge",
+      "section": "Ubuntu",
+      "topic": "Paquetes",
+      "description": "remove desinstala un paquete; purge además borra su configuración. autoremove elimina dependencias huérfanas.",
+      "examples": [
+        {
+          "description": "Eliminar con su configuración",
+          "code": "sudo apt purge -y apache2"
+        },
+        {
+          "description": "Quitar dependencias que ya no se usan",
+          "code": "sudo apt autoremove --purge -y"
+        },
+        {
+          "description": "Vaciar la caché de paquetes descargados",
+          "code": "sudo apt clean"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "apt",
+        "limpieza"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Consultar paquetes con dpkg",
+      "command": "dpkg",
+      "section": "Ubuntu",
+      "topic": "Paquetes",
+      "description": "Herramienta de bajo nivel para paquetes .deb: lista, instala archivos locales y averigua a qué paquete pertenece un archivo.",
+      "examples": [
+        {
+          "description": "¿Qué paquete instaló este archivo?",
+          "code": "dpkg -S /usr/sbin/nginx"
+        },
+        {
+          "description": "Archivos de un paquete",
+          "code": "dpkg -L openssh-server"
+        },
+        {
+          "description": "Instalar un .deb local y resolver dependencias",
+          "code": "sudo apt install ./paquete.deb"
+        },
+        {
+          "description": "Reparar instalaciones interrumpidas",
+          "code": "sudo dpkg --configure -a"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "dpkg",
+        "ubuntu"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Instalar con 'apt install ./archivo.deb' (con ./) resuelve dependencias; 'dpkg -i' no lo hace."
+    },
+    {
+      "title": "Fijar versiones de paquetes",
+      "command": "sudo apt-mark hold",
+      "section": "Ubuntu",
+      "topic": "Paquetes",
+      "description": "Impide que un paquete se actualice, útil para kernels o motores de base de datos en producción.",
+      "examples": [
+        {
+          "description": "Congelar un paquete",
+          "code": "sudo apt-mark hold postgresql-16"
+        },
+        {
+          "description": "Ver paquetes congelados",
+          "code": "apt-mark showhold"
+        },
+        {
+          "description": "Liberar",
+          "code": "sudo apt-mark unhold postgresql-16"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "apt",
+        "estabilidad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Agregar repositorios externos",
+      "command": "sudo add-apt-repository",
+      "section": "Ubuntu",
+      "topic": "Paquetes",
+      "description": "Agrega repositorios o PPA. Lo recomendado hoy es descargar la llave GPG a /etc/apt/keyrings y usar 'signed-by' en el archivo .sources o .list.",
+      "examples": [
+        {
+          "description": "Agregar un PPA",
+          "code": "sudo add-apt-repository -y ppa:deadsnakes/ppa && sudo apt update"
+        },
+        {
+          "description": "Repositorio con llave dedicada (ej. Docker)",
+          "code": "sudo install -m 0755 -d /etc/apt/keyrings\nsudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc\necho \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable\" | sudo tee /etc/apt/sources.list.d/docker.list\nsudo apt update"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "apt",
+        "repositorios"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "apt-key está obsoleto y fue eliminado: no lo uses. Desde Ubuntu 24.04 los repos del sistema usan el formato deb822 en /etc/apt/sources.list.d/ubuntu.sources."
+    },
+    {
+      "title": "Paquetes snap",
+      "command": "snap",
+      "section": "Ubuntu",
+      "topic": "Paquetes",
+      "description": "Gestiona paquetes snap (autocontenidos y con actualización automática), muy usados en Ubuntu para herramientas como certbot o microk8s.",
+      "syntax": "snap [comando] [snap]",
+      "examples": [
+        {
+          "description": "Instalar un snap clásico",
+          "code": "sudo snap install --classic certbot"
+        },
+        {
+          "description": "Listar instalados y canales",
+          "code": "snap list"
+        },
+        {
+          "description": "Cambiar de canal",
+          "code": "sudo snap refresh microk8s --channel=1.31/stable"
+        },
+        {
+          "description": "Retener actualizaciones automáticas",
+          "code": "sudo snap refresh --hold=72h"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "snap",
+        "ubuntu"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Actualizaciones automáticas de seguridad",
+      "command": "sudo dpkg-reconfigure -plow unattended-upgrades",
+      "section": "Ubuntu",
+      "topic": "Paquetes",
+      "description": "Configura Ubuntu para instalar parches de seguridad automáticamente con unattended-upgrades.",
+      "examples": [
+        {
+          "description": "Instalar y activar",
+          "code": "sudo apt install -y unattended-upgrades && sudo dpkg-reconfigure -plow unattended-upgrades"
+        },
+        {
+          "description": "Simular una ejecución",
+          "code": "sudo unattended-upgrade --dry-run --debug"
+        },
+        {
+          "description": "Revisar lo que instaló",
+          "code": "less /var/log/unattended-upgrades/unattended-upgrades.log"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "seguridad",
+        "ubuntu"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El equivalente en AlmaLinux es dnf-automatic."
+    },
+    {
+      "title": "Instalar paquetes con dnf",
+      "command": "sudo dnf install",
+      "section": "AlmaLinux",
+      "topic": "Paquetes",
+      "description": "Instala paquetes desde los repositorios de AlmaLinux resolviendo dependencias.",
+      "syntax": "dnf install paquete...",
+      "examples": [
+        {
+          "description": "Instalar sin confirmar",
+          "code": "sudo dnf install -y nginx"
+        },
+        {
+          "description": "Instalar un RPM local con dependencias",
+          "code": "sudo dnf install ./paquete.rpm"
+        },
+        {
+          "description": "Instalar un grupo de paquetes",
+          "code": "sudo dnf groupinstall -y 'Development Tools'"
+        },
+        {
+          "description": "¿Qué paquete provee este comando?",
+          "code": "dnf provides '*/bin/dig'"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "dnf",
+        "almalinux"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "'yum' sigue existiendo como alias de dnf. 'dnf provides' es clave para encontrar el paquete de un binario (dig está en bind-utils)."
+    },
+    {
+      "title": "Actualizar el sistema con dnf",
+      "command": "sudo dnf upgrade",
+      "section": "AlmaLinux",
+      "topic": "Paquetes",
+      "description": "Actualiza todos los paquetes instalados. Con --security aplica solo parches de seguridad.",
+      "examples": [
+        {
+          "description": "Ver actualizaciones disponibles",
+          "code": "dnf check-update"
+        },
+        {
+          "description": "Solo parches de seguridad",
+          "code": "sudo dnf upgrade --security -y"
+        },
+        {
+          "description": "¿Hace falta reiniciar?",
+          "code": "sudo dnf needs-restarting -r"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "dnf",
+        "actualizaciones"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "needs-restarting viene de dnf-plugins-core en AlmaLinux 9. Para actualizar automáticamente instala dnf-automatic y activa dnf-automatic.timer."
+    },
+    {
+      "title": "Buscar e inspeccionar paquetes dnf",
+      "command": "dnf search / dnf info",
+      "section": "AlmaLinux",
+      "topic": "Paquetes",
+      "description": "Busca paquetes y muestra su versión, repositorio y descripción.",
+      "examples": [
+        {
+          "description": "Buscar",
+          "code": "dnf search postgresql"
+        },
+        {
+          "description": "Información de un paquete",
+          "code": "dnf info nginx"
+        },
+        {
+          "description": "Listar instalados",
+          "code": "dnf list --installed | grep python3"
+        },
+        {
+          "description": "Repositorios habilitados",
+          "code": "dnf repolist"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "dnf",
+        "búsqueda"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Historial de transacciones dnf",
+      "command": "dnf history",
+      "section": "AlmaLinux",
+      "topic": "Paquetes",
+      "description": "Muestra cada transacción de dnf y permite deshacerla, algo muy útil cuando una actualización rompe algo.",
+      "examples": [
+        {
+          "description": "Ver el historial",
+          "code": "sudo dnf history"
+        },
+        {
+          "description": "Detalle de una transacción",
+          "code": "sudo dnf history info 42"
+        },
+        {
+          "description": "Deshacer una transacción",
+          "code": "sudo dnf history undo 42"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "dnf",
+        "rollback"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Habilitar EPEL y CRB",
+      "command": "sudo dnf install epel-release",
+      "section": "AlmaLinux",
+      "topic": "Paquetes",
+      "description": "EPEL aporta miles de paquetes extra (htop, fail2ban, certbot…). Muchos dependen del repositorio CRB, que debe habilitarse.",
+      "examples": [
+        {
+          "description": "Habilitar CRB y EPEL",
+          "code": "sudo dnf config-manager --set-enabled crb\nsudo dnf install -y epel-release"
+        },
+        {
+          "description": "Instalar desde EPEL",
+          "code": "sudo dnf install -y htop fail2ban"
+        },
+        {
+          "description": "Ver repositorios activos",
+          "code": "dnf repolist"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "epel",
+        "repositorios"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux 8 el repositorio equivalente a CRB se llama 'powertools'. config-manager es parte de dnf-plugins-core."
+    },
+    {
+      "title": "Módulos de dnf (AppStream)",
+      "command": "dnf module",
+      "section": "AlmaLinux",
+      "topic": "Paquetes",
+      "description": "Los módulos ofrecen varias versiones de un mismo software (streams) en AppStream, por ejemplo nodejs o postgresql.",
+      "examples": [
+        {
+          "description": "Listar streams disponibles",
+          "code": "dnf module list postgresql"
+        },
+        {
+          "description": "Cambiar al stream deseado e instalar",
+          "code": "sudo dnf module reset -y postgresql\nsudo dnf module enable -y postgresql:16\nsudo dnf install -y postgresql-server"
+        },
+        {
+          "description": "Ver módulos habilitados",
+          "code": "dnf module list --enabled"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "dnf",
+        "módulos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux 9 hay pocos módulos y en AlmaLinux 10 se eliminó la modularidad: las versiones alternativas vienen como paquetes con nombre versionado (p. ej. nodejs22)."
+    },
+    {
+      "title": "Consultar paquetes con rpm",
+      "command": "rpm -q",
+      "section": "AlmaLinux",
+      "topic": "Paquetes",
+      "description": "Herramienta de bajo nivel de paquetes RPM: consulta instalados, archivos y verifica integridad.",
+      "examples": [
+        {
+          "description": "¿Qué paquete instaló este archivo?",
+          "code": "rpm -qf /usr/sbin/nginx"
+        },
+        {
+          "description": "Archivos de un paquete",
+          "code": "rpm -ql openssh-server"
+        },
+        {
+          "description": "Archivos de configuración",
+          "code": "rpm -qc nginx"
+        },
+        {
+          "description": "Verificar archivos modificados",
+          "code": "rpm -V openssh-server"
+        }
+      ],
+      "tags": [
+        "paquetes",
+        "rpm",
+        "almalinux"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Espacio en disco por sistema de archivos",
+      "command": "df -h",
+      "section": "Común",
+      "topic": "Discos, LVM y montajes",
+      "description": "Muestra el espacio total, usado y libre de cada sistema de archivos montado.",
+      "syntax": "df [opciones] [ruta]",
+      "examples": [
+        {
+          "description": "Con tipo de sistema de archivos",
+          "code": "df -hT"
+        },
+        {
+          "description": "Uso de inodos (disco 'lleno' con espacio libre)",
+          "code": "df -i"
+        },
+        {
+          "description": "Solo una ruta",
+          "code": "df -h /var"
+        }
+      ],
+      "tags": [
+        "disco",
+        "almacenamiento",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si df marca 100% pero du no encuentra los archivos, probablemente un proceso mantiene abierto un archivo borrado: revisa 'lsof +L1'."
+    },
+    {
+      "title": "Tamaño de directorios",
+      "command": "du -sh",
+      "section": "Común",
+      "topic": "Discos, LVM y montajes",
+      "description": "Calcula cuánto ocupan archivos y directorios para encontrar qué está llenando el disco.",
+      "examples": [
+        {
+          "description": "Directorios más pesados de /var",
+          "code": "sudo du -xh --max-depth=1 /var | sort -h"
+        },
+        {
+          "description": "Tamaño de un directorio",
+          "code": "du -sh /var/lib/docker"
+        },
+        {
+          "description": "Los 20 elementos más pesados",
+          "code": "sudo du -xah / 2>/dev/null | sort -rh | head -20"
+        }
+      ],
+      "tags": [
+        "disco",
+        "almacenamiento"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "'ncdu' (en EPEL o apt) es una alternativa interactiva muy cómoda."
+    },
+    {
+      "title": "Listar discos y particiones",
+      "command": "lsblk",
+      "section": "Común",
+      "topic": "Discos, LVM y montajes",
+      "description": "Muestra los dispositivos de bloque en árbol: discos, particiones, LVM y puntos de montaje.",
+      "examples": [
+        {
+          "description": "Con sistema de archivos y UUID",
+          "code": "lsblk -f"
+        },
+        {
+          "description": "Columnas útiles",
+          "code": "lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS"
+        },
+        {
+          "description": "UUID de una partición",
+          "code": "sudo blkid /dev/sdb1"
+        }
+      ],
+      "tags": [
+        "disco",
+        "almacenamiento"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Particionar discos",
+      "command": "sudo parted",
+      "section": "Común",
+      "topic": "Discos, LVM y montajes",
+      "description": "Crea tablas de partición GPT y particiones en discos nuevos de forma scriptable.",
+      "examples": [
+        {
+          "description": "Etiqueta GPT y una partición completa",
+          "code": "sudo parted -s /dev/sdb mklabel gpt mkpart primary 0% 100%"
+        },
+        {
+          "description": "Ver la tabla de particiones",
+          "code": "sudo parted -l"
+        },
+        {
+          "description": "Alternativa interactiva",
+          "code": "sudo fdisk /dev/sdb"
+        }
+      ],
+      "tags": [
+        "disco",
+        "particiones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Verifica con lsblk que el dispositivo es el correcto: particionar el disco equivocado destruye datos."
+    },
+    {
+      "title": "Crear sistemas de archivos",
+      "command": "mkfs",
+      "section": "Común",
+      "topic": "Discos, LVM y montajes",
+      "description": "Formatea una partición o volumen con ext4, xfs u otro sistema de archivos.",
+      "examples": [
+        {
+          "description": "Formatear en XFS (por defecto en AlmaLinux)",
+          "code": "sudo mkfs.xfs /dev/sdb1"
+        },
+        {
+          "description": "Formatear en ext4 (por defecto en Ubuntu) con etiqueta",
+          "code": "sudo mkfs.ext4 -L datos /dev/sdb1"
+        }
+      ],
+      "tags": [
+        "disco",
+        "sistemas-de-archivos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "XFS se puede agrandar pero NO achicar; ext4 permite ambas cosas (achicar solo desmontado)."
+    },
+    {
+      "title": "Montar sistemas de archivos",
+      "command": "mount / fstab",
+      "section": "Común",
+      "topic": "Discos, LVM y montajes",
+      "description": "Monta un dispositivo en un directorio; para hacerlo persistente se agrega a /etc/fstab usando el UUID.",
+      "examples": [
+        {
+          "description": "Montar temporalmente",
+          "code": "sudo mount /dev/sdb1 /mnt/datos"
+        },
+        {
+          "description": "Línea en /etc/fstab",
+          "code": "UUID=3f2a1c9e-1b2c-4d5e-8f90-123456789abc /srv/datos xfs defaults,nofail 0 0"
+        },
+        {
+          "description": "Probar fstab antes de reiniciar",
+          "code": "sudo findmnt --verify && sudo mount -a && sudo systemctl daemon-reload"
+        },
+        {
+          "description": "Ver montajes en árbol",
+          "code": "findmnt"
+        }
+      ],
+      "tags": [
+        "disco",
+        "montaje",
+        "fstab"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Un error en fstab puede dejar el servidor en modo emergencia; 'nofail' evita que un disco ausente bloquee el arranque."
+    },
+    {
+      "title": "Crear volúmenes LVM",
+      "command": "pvcreate / vgcreate / lvcreate",
+      "section": "Común",
+      "topic": "Discos, LVM y montajes",
+      "description": "LVM agrupa discos físicos en grupos de volúmenes y permite crear volúmenes lógicos redimensionables.",
+      "examples": [
+        {
+          "description": "Crear PV, VG y LV",
+          "code": "sudo pvcreate /dev/sdb\nsudo vgcreate vg_datos /dev/sdb\nsudo lvcreate -n lv_app -L 50G vg_datos\nsudo mkfs.xfs /dev/vg_datos/lv_app"
+        },
+        {
+          "description": "Ver el estado",
+          "code": "sudo pvs && sudo vgs && sudo lvs"
+        },
+        {
+          "description": "Usar todo el espacio libre",
+          "code": "sudo lvcreate -n lv_logs -l 100%FREE vg_datos"
+        }
+      ],
+      "tags": [
+        "lvm",
+        "disco",
+        "almacenamiento"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Extender un volumen LVM",
+      "command": "sudo lvextend -r",
+      "section": "Común",
+      "topic": "Discos, LVM y montajes",
+      "description": "Agranda un volumen lógico y su sistema de archivos en caliente; -r redimensiona el FS automáticamente (ext4 o xfs).",
+      "examples": [
+        {
+          "description": "Agregar 20 GB al volumen",
+          "code": "sudo lvextend -r -L +20G /dev/vg_datos/lv_app"
+        },
+        {
+          "description": "Agregar un disco nuevo al grupo",
+          "code": "sudo pvcreate /dev/sdc && sudo vgextend vg_datos /dev/sdc"
+        },
+        {
+          "description": "Usar todo el espacio libre del VG",
+          "code": "sudo lvextend -r -l +100%FREE /dev/vg_datos/lv_app"
+        }
+      ],
+      "tags": [
+        "lvm",
+        "disco",
+        "redimensionar"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "En VMs cloud primero agranda el disco virtual, luego la partición ('growpart /dev/sda 3'), después 'pvresize' y recién ahí lvextend."
+    },
+    {
+      "title": "Crear y activar swap",
+      "command": "sudo mkswap",
+      "section": "Común",
+      "topic": "Discos, LVM y montajes",
+      "description": "Crea un archivo de intercambio para dar margen de memoria a servidores pequeños.",
+      "examples": [
+        {
+          "description": "Archivo swap de 2 GB",
+          "code": "sudo fallocate -l 2G /swapfile\nsudo chmod 600 /swapfile\nsudo mkswap /swapfile\nsudo swapon /swapfile\necho '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab"
+        },
+        {
+          "description": "Ver swap activa",
+          "code": "swapon --show"
+        }
+      ],
+      "tags": [
+        "memoria",
+        "swap",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En XFS fallocate funciona para swap; si da problemas usa 'dd if=/dev/zero of=/swapfile bs=1M count=2048'."
+    },
+    {
+      "title": "Programar tareas con cron",
+      "command": "crontab -e",
+      "section": "Común",
+      "topic": "Tareas programadas",
+      "description": "Edita las tareas periódicas del usuario. Cada línea define minuto, hora, día del mes, mes y día de la semana.",
+      "syntax": "m h dom mon dow comando",
+      "examples": [
+        {
+          "description": "Respaldo diario a las 03:30",
+          "code": "30 3 * * * /opt/scripts/backup.sh >> /var/log/backup.log 2>&1"
+        },
+        {
+          "description": "Cada 5 minutos en días hábiles",
+          "code": "*/5 * * * 1-5 /opt/scripts/healthcheck.sh"
+        },
+        {
+          "description": "Listar las tareas actuales",
+          "code": "crontab -l"
+        },
+        {
+          "description": "Editar el crontab de otro usuario",
+          "code": "sudo crontab -u deploy -e"
+        }
+      ],
+      "tags": [
+        "cron",
+        "automatización"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "cron corre con un PATH mínimo y sin tu entorno: usa rutas absolutas y redirige stdout/stderr para ver errores. En AlmaLinux el servicio es 'crond'; en Ubuntu, 'cron'."
+    },
+    {
+      "title": "Crear timers de systemd",
+      "command": "systemctl list-timers",
+      "section": "Común",
+      "topic": "Tareas programadas",
+      "description": "Los timers de systemd reemplazan a cron con logs en el journal, dependencias y ejecución de tareas perdidas (Persistent=true).",
+      "examples": [
+        {
+          "description": "Timer diario (respaldo.timer)",
+          "code": "[Unit]\nDescription=Respaldo diario\n\n[Timer]\nOnCalendar=*-*-* 03:30:00\nPersistent=true\n\n[Install]\nWantedBy=timers.target"
+        },
+        {
+          "description": "Servicio asociado (respaldo.service)",
+          "code": "[Unit]\nDescription=Ejecuta el respaldo\n\n[Service]\nType=oneshot\nExecStart=/opt/scripts/backup.sh"
+        },
+        {
+          "description": "Activar y verificar",
+          "code": "sudo systemctl daemon-reload\nsudo systemctl enable --now respaldo.timer\nsystemctl list-timers --all"
+        },
+        {
+          "description": "Probar una expresión de calendario",
+          "code": "systemd-analyze calendar 'Mon..Fri 08:00'"
+        }
+      ],
+      "tags": [
+        "systemd",
+        "timers",
+        "automatización"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ejecutar una tarea una sola vez",
+      "command": "at",
+      "section": "Común",
+      "topic": "Tareas programadas",
+      "description": "Programa un comando para ejecutarse una única vez en un momento futuro.",
+      "examples": [
+        {
+          "description": "Reiniciar un servicio a medianoche",
+          "code": "echo 'systemctl restart app' | sudo at 00:00"
+        },
+        {
+          "description": "En 30 minutos",
+          "code": "echo '/opt/scripts/limpieza.sh' | at now + 30 minutes"
+        },
+        {
+          "description": "Ver y cancelar tareas pendientes",
+          "code": "atq\natrm 3"
+        }
+      ],
+      "tags": [
+        "automatización",
+        "programación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Requiere el paquete 'at' y el servicio atd activo."
+    },
+    {
+      "title": "Rotar logs con logrotate",
+      "command": "logrotate",
+      "section": "Común",
+      "topic": "Logs",
+      "description": "Rota, comprime y elimina logs antiguos según reglas en /etc/logrotate.d/.",
+      "examples": [
+        {
+          "description": "Regla para los logs de una app",
+          "code": "/var/log/app/*.log {\n    daily\n    rotate 14\n    compress\n    delaycompress\n    missingok\n    notifempty\n    copytruncate\n}"
+        },
+        {
+          "description": "Probar la configuración sin aplicar",
+          "code": "sudo logrotate -d /etc/logrotate.d/app"
+        },
+        {
+          "description": "Forzar una rotación",
+          "code": "sudo logrotate -f /etc/logrotate.d/app"
+        }
+      ],
+      "tags": [
+        "logs",
+        "mantenimiento",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "copytruncate sirve para apps que no reabren el archivo; si la app soporta señal de reapertura, es mejor usar postrotate con un reload."
+    },
+    {
+      "title": "Ubicación de logs del sistema",
+      "command": "ls /var/log",
+      "section": "Común",
+      "topic": "Logs",
+      "description": "Los logs tradicionales viven en /var/log. Su ubicación cambia entre familias de distribución.",
+      "examples": [
+        {
+          "description": "Log general (Ubuntu / AlmaLinux)",
+          "code": "sudo tail -f /var/log/syslog      # Ubuntu\nsudo tail -f /var/log/messages    # AlmaLinux"
+        },
+        {
+          "description": "Autenticación y sudo",
+          "code": "sudo tail -f /var/log/auth.log    # Ubuntu\nsudo tail -f /var/log/secure      # AlmaLinux"
+        },
+        {
+          "description": "Escribir al log del sistema desde un script",
+          "code": "logger -t backup 'Respaldo completado OK'"
+        }
+      ],
+      "tags": [
+        "logs",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    }
+  ]
+}

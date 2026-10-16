@@ -1,0 +1,510 @@
+{
+  "category": {
+    "slug": "kubernetes",
+    "name": "Kubernetes",
+    "icon": "hub",
+    "order": 6,
+    "description": "Orquestación con Kubernetes: kubectl, workloads, redes, configuración, troubleshooting y Helm."
+  },
+  "commands": [
+    {
+      "title": "Ver y cambiar contextos",
+      "command": "kubectl config get-contexts",
+      "section": "Clúster y contexto",
+      "topic": "Kubeconfig",
+      "description": "Lista los contextos (clúster + usuario + namespace) del kubeconfig y marca el activo.",
+      "examples": [
+        {
+          "description": "Cambiar de contexto",
+          "code": "kubectl config use-context kind-dev"
+        },
+        {
+          "description": "Contexto actual",
+          "code": "kubectl config current-context"
+        },
+        {
+          "description": "Ejecutar en otro contexto sin cambiar el activo",
+          "code": "kubectl --context prod-eks get nodes"
+        }
+      ],
+      "tags": [
+        "config",
+        "contexto"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Antes de un comando destructivo revisa el contexto activo: apuntar a producción por error es el incidente clásico."
+    },
+    {
+      "title": "Fijar namespace por defecto",
+      "command": "kubectl config set-context --current --namespace=tienda",
+      "section": "Clúster y contexto",
+      "topic": "Kubeconfig",
+      "description": "Cambia el namespace por defecto del contexto actual para no escribir -n en cada comando.",
+      "examples": [
+        {
+          "description": "Crear un contexto nuevo con otro namespace",
+          "code": "kubectl config set-context tienda-dev --cluster=kind-dev --user=kind-dev --namespace=tienda"
+        },
+        {
+          "description": "Ver el namespace activo",
+          "code": "kubectl config view --minify -o jsonpath='{..namespace}'"
+        }
+      ],
+      "tags": [
+        "config",
+        "namespace"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Gestionar kubeconfig",
+      "command": "kubectl config view --minify",
+      "section": "Clúster y contexto",
+      "topic": "Kubeconfig",
+      "description": "Muestra y edita el kubeconfig: clústeres, usuarios y contextos. KUBECONFIG permite combinar varios archivos.",
+      "examples": [
+        {
+          "description": "Combinar dos kubeconfig en uno",
+          "code": "KUBECONFIG=~/.kube/config:~/Descargas/eks.yaml kubectl config view --flatten > /tmp/merged && mv /tmp/merged ~/.kube/config"
+        },
+        {
+          "description": "Renombrar y borrar contextos",
+          "code": "kubectl config rename-context arn:aws:eks:us-east-1:123:cluster/prod prod && kubectl config delete-context viejo"
+        },
+        {
+          "description": "Obtener kubeconfig de EKS",
+          "code": "aws eks update-kubeconfig --region us-east-1 --name prod --alias prod"
+        },
+        {
+          "description": "Obtener credenciales de GKE",
+          "code": "gcloud container clusters get-credentials prod --region southamerica-west1"
+        }
+      ],
+      "tags": [
+        "kubeconfig",
+        "eks",
+        "gke"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "El kubeconfig contiene credenciales: permisos 600 y nunca en el repositorio."
+    },
+    {
+      "title": "Información del clúster",
+      "command": "kubectl cluster-info",
+      "section": "Clúster y contexto",
+      "topic": "Clúster",
+      "description": "Muestra las URL del control plane y servicios del sistema. dump vuelca estado y logs para diagnósticos.",
+      "examples": [
+        {
+          "description": "Volcado completo para análisis offline",
+          "code": "kubectl cluster-info dump --output-directory=/tmp/dump"
+        },
+        {
+          "description": "Versiones de cliente y servidor",
+          "code": "kubectl version"
+        },
+        {
+          "description": "Salud del API server",
+          "code": "kubectl get --raw='/livez?verbose'"
+        }
+      ],
+      "tags": [
+        "cluster-info",
+        "version"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "kubectl soporta una versión menor de diferencia (hacia arriba o abajo) con el API server."
+    },
+    {
+      "title": "Listar nodos",
+      "command": "kubectl get nodes -o wide",
+      "section": "Clúster y contexto",
+      "topic": "Nodos",
+      "description": "Muestra nodos con estado, roles, versión de kubelet, IP, SO y runtime de contenedores.",
+      "examples": [
+        {
+          "description": "Etiquetas de zona y tipo de instancia",
+          "code": "kubectl get nodes -L topology.kubernetes.io/zone,node.kubernetes.io/instance-type"
+        },
+        {
+          "description": "Condiciones de un nodo",
+          "code": "kubectl get node worker-1 -o jsonpath='{range .status.conditions[*]}{.type}={.status}{\"\\n\"}{end}'"
+        }
+      ],
+      "tags": [
+        "nodos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Cordon, drain y uncordon de nodos",
+      "command": "kubectl drain worker-1 --ignore-daemonsets --delete-emptydir-data",
+      "section": "Clúster y contexto",
+      "topic": "Nodos",
+      "description": "cordon marca el nodo como no programable; drain además desaloja sus pods respetando PodDisruptionBudgets; uncordon lo devuelve al servicio. Flujo estándar de mantenimiento.",
+      "examples": [
+        {
+          "description": "Solo impedir nuevos pods",
+          "code": "kubectl cordon worker-1"
+        },
+        {
+          "description": "Drain con plazo y timeout",
+          "code": "kubectl drain worker-1 --ignore-daemonsets --delete-emptydir-data --grace-period=60 --timeout=10m"
+        },
+        {
+          "description": "Reincorporar el nodo",
+          "code": "kubectl uncordon worker-1"
+        }
+      ],
+      "tags": [
+        "drain",
+        "cordon",
+        "mantenimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Un PDB con minAvailable igual a las réplicas bloquea el drain indefinidamente. --delete-emptydir-data borra datos de volúmenes emptyDir."
+    },
+    {
+      "title": "Taints y tolerations",
+      "command": "kubectl taint nodes gpu-1 dedicado=gpu:NoSchedule",
+      "section": "Clúster y contexto",
+      "topic": "Nodos",
+      "description": "Un taint repele pods que no lo toleren. Se usa para dedicar nodos (GPU, producción) o sacar nodos con problemas.",
+      "examples": [
+        {
+          "description": "Quitar el taint",
+          "code": "kubectl taint nodes gpu-1 dedicado=gpu:NoSchedule-"
+        },
+        {
+          "description": "Toleration en el pod",
+          "code": "tolerations:\n  - key: dedicado\n    operator: Equal\n    value: gpu\n    effect: NoSchedule"
+        },
+        {
+          "description": "Ver taints de todos los nodos",
+          "code": "kubectl get nodes -o custom-columns='NODO:.metadata.name,TAINTS:.spec.taints[*].key'"
+        }
+      ],
+      "tags": [
+        "taint",
+        "toleration",
+        "scheduling"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "La toleration permite, no obliga: para forzar que el pod vaya al nodo combina con nodeSelector o nodeAffinity."
+    },
+    {
+      "title": "Clúster local con kind",
+      "command": "kind create cluster --name dev",
+      "section": "Clúster y contexto",
+      "topic": "Clúster local",
+      "description": "kind levanta Kubernetes dentro de contenedores Docker. Rápido de crear y destruir, ideal para CI y pruebas.",
+      "examples": [
+        {
+          "description": "Configuración multi-nodo con puertos al host",
+          "code": "# kind.yaml\nkind: Cluster\napiVersion: kind.x-k8s.io/v1alpha4\nnodes:\n  - role: control-plane\n    extraPortMappings:\n      - containerPort: 30080\n        hostPort: 8080\n  - role: worker\n  - role: worker"
+        },
+        {
+          "description": "Crear con esa configuración",
+          "code": "kind create cluster --name dev --config kind.yaml"
+        },
+        {
+          "description": "Cargar una imagen local sin registro",
+          "code": "kind load docker-image app:dev --name dev"
+        },
+        {
+          "description": "Eliminar el clúster",
+          "code": "kind delete cluster --name dev"
+        }
+      ],
+      "tags": [
+        "kind",
+        "local",
+        "ci"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Con imagePullPolicy: Always el pod intentará descargar la imagen cargada con kind load y fallará; usa IfNotPresent y un tag distinto de latest."
+    },
+    {
+      "title": "Clúster local con minikube",
+      "command": "minikube start --driver=docker --cpus=4 --memory=8g",
+      "section": "Clúster y contexto",
+      "topic": "Clúster local",
+      "description": "minikube crea un clúster de un nodo con addons listos (ingress, metrics-server, dashboard).",
+      "examples": [
+        {
+          "description": "Habilitar addons",
+          "code": "minikube addons enable ingress && minikube addons enable metrics-server"
+        },
+        {
+          "description": "Abrir un servicio en el navegador",
+          "code": "minikube service web -n tienda"
+        },
+        {
+          "description": "Exponer LoadBalancer en localhost",
+          "code": "minikube tunnel"
+        },
+        {
+          "description": "Usar el Docker interno de minikube",
+          "code": "eval $(minikube docker-env)"
+        }
+      ],
+      "tags": [
+        "minikube",
+        "local"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Clúster local con k3d",
+      "command": "k3d cluster create dev --agents 2 -p '8080:80@loadbalancer'",
+      "section": "Clúster y contexto",
+      "topic": "Clúster local",
+      "description": "k3d ejecuta k3s en Docker con un balanceador integrado, muy liviano y con Traefik incluido.",
+      "examples": [
+        {
+          "description": "Con registro local integrado",
+          "code": "k3d cluster create dev --registry-create dev-registry:0.0.0.0:5001"
+        },
+        {
+          "description": "Importar una imagen",
+          "code": "k3d image import app:dev -c dev"
+        },
+        {
+          "description": "Listar y borrar",
+          "code": "k3d cluster list && k3d cluster delete dev"
+        }
+      ],
+      "tags": [
+        "k3d",
+        "k3s",
+        "local"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Plugins con krew: ctx y ns",
+      "command": "kubectl krew install ctx ns",
+      "section": "Clúster y contexto",
+      "topic": "Herramientas",
+      "description": "krew es el gestor de plugins de kubectl. ctx y ns cambian de contexto y namespace de forma rápida (con fzf es interactivo).",
+      "examples": [
+        {
+          "description": "Cambiar de contexto y namespace",
+          "code": "kubectl ctx prod && kubectl ns tienda"
+        },
+        {
+          "description": "Volver al contexto anterior",
+          "code": "kubectl ctx -"
+        },
+        {
+          "description": "Buscar e instalar otros plugins útiles",
+          "code": "kubectl krew search && kubectl krew install neat tree stern"
+        }
+      ],
+      "tags": [
+        "krew",
+        "plugins",
+        "kubectx"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los mismos binarios existen como kubectx y kubens instalables por paquete."
+    },
+    {
+      "title": "Comprobar permisos con auth can-i",
+      "command": "kubectl auth can-i create deployments -n tienda",
+      "section": "Clúster y contexto",
+      "topic": "RBAC",
+      "description": "Pregunta al API server si tu identidad (o una suplantada) puede realizar una acción. Clave para depurar RBAC.",
+      "examples": [
+        {
+          "description": "Todo lo que puedo hacer en un namespace",
+          "code": "kubectl auth can-i --list -n tienda"
+        },
+        {
+          "description": "Probar como una ServiceAccount",
+          "code": "kubectl auth can-i get secrets --as=system:serviceaccount:tienda:api -n tienda"
+        },
+        {
+          "description": "Quién soy para el clúster",
+          "code": "kubectl auth whoami"
+        }
+      ],
+      "tags": [
+        "rbac",
+        "auth",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "RBAC: Role y RoleBinding",
+      "command": "kubectl create role lector-pods --verb=get,list,watch --resource=pods,pods/log -n tienda",
+      "section": "Clúster y contexto",
+      "topic": "RBAC",
+      "description": "Role define permisos dentro de un namespace y RoleBinding los asigna a usuarios, grupos o ServiceAccounts. ClusterRole y ClusterRoleBinding son el equivalente global.",
+      "examples": [
+        {
+          "description": "Asignar el rol a una ServiceAccount",
+          "code": "kubectl create rolebinding api-lector --role=lector-pods --serviceaccount=tienda:api -n tienda"
+        },
+        {
+          "description": "Dar el rol predefinido view en un namespace",
+          "code": "kubectl create rolebinding equipo-view --clusterrole=view --group=liveops -n tienda"
+        },
+        {
+          "description": "Manifiesto equivalente",
+          "code": "apiVersion: rbac.authorization.k8s.io/v1\nkind: Role\nmetadata: { name: lector-pods, namespace: tienda }\nrules:\n  - apiGroups: [\"\"]\n    resources: [\"pods\", \"pods/log\"]\n    verbs: [\"get\", \"list\", \"watch\"]"
+        }
+      ],
+      "tags": [
+        "rbac",
+        "role",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "ServiceAccount y token",
+      "command": "kubectl create serviceaccount ci-deployer -n tienda",
+      "section": "Clúster y contexto",
+      "topic": "RBAC",
+      "description": "Crea identidades para procesos dentro o fuera del clúster y emite tokens de corta duración ligados a ellas.",
+      "examples": [
+        {
+          "description": "Token temporal de 1 hora",
+          "code": "kubectl create token ci-deployer -n tienda --duration=1h"
+        },
+        {
+          "description": "Desactivar el montaje automático del token en pods",
+          "code": "apiVersion: v1\nkind: ServiceAccount\nmetadata: { name: api, namespace: tienda }\nautomountServiceAccountToken: false"
+        }
+      ],
+      "tags": [
+        "serviceaccount",
+        "token",
+        "rbac"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Desde Kubernetes 1.24 no se crean Secrets de token permanentes automáticamente; usa kubectl create token o tokens proyectados."
+    },
+    {
+      "title": "Gestionar namespaces",
+      "command": "kubectl create namespace tienda",
+      "section": "Clúster y contexto",
+      "topic": "Clúster",
+      "description": "Los namespaces separan equipos o entornos y son el ámbito de RBAC, cuotas y NetworkPolicies.",
+      "examples": [
+        {
+          "description": "Listar namespaces",
+          "code": "kubectl get ns"
+        },
+        {
+          "description": "Namespace con Pod Security Admission restringido",
+          "code": "kubectl label ns tienda pod-security.kubernetes.io/enforce=restricted"
+        },
+        {
+          "description": "Cuota de recursos para el namespace",
+          "code": "kubectl create quota tienda-cuota --hard=requests.cpu=4,requests.memory=8Gi,pods=40 -n tienda"
+        }
+      ],
+      "tags": [
+        "namespace",
+        "cuotas",
+        "pod-security"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Aprobar certificados de nodos o usuarios",
+      "command": "kubectl certificate approve csr-8f2kd",
+      "section": "Clúster y contexto",
+      "topic": "Clúster",
+      "description": "Gestiona CertificateSigningRequests, por ejemplo para emitir credenciales de un usuario nuevo o aprobar kubelets.",
+      "examples": [
+        {
+          "description": "Listar solicitudes pendientes",
+          "code": "kubectl get csr"
+        },
+        {
+          "description": "Rechazar una solicitud",
+          "code": "kubectl certificate deny csr-8f2kd"
+        }
+      ],
+      "tags": [
+        "certificados",
+        "csr"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE"
+      ]
+    }
+  ]
+}

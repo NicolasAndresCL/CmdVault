@@ -1,0 +1,695 @@
+{
+  "category": {
+    "slug": "ansible",
+    "name": "Ansible",
+    "icon": "settings_suggest",
+    "order": 8,
+    "description": "Gestión de configuración con Ansible: ad-hoc, playbooks, inventarios, roles, Vault y calidad."
+  },
+  "commands": [
+    {
+      "title": "Ejecutar un playbook",
+      "command": "ansible-playbook -i inventories/prod site.yml",
+      "section": "Playbooks",
+      "topic": "Ejecución",
+      "description": "Ejecuta las plays del playbook contra los hosts del inventario.",
+      "syntax": "ansible-playbook [-i INV] PLAYBOOK.yml [-l LÍMITE] [-t TAGS] [-e VARS] [-C] [-D]",
+      "examples": [
+        {
+          "description": "Con contraseña de sudo y verbosidad",
+          "code": "ansible-playbook -i inventories/prod site.yml -K -v"
+        },
+        {
+          "description": "Más hosts en paralelo",
+          "code": "ansible-playbook site.yml -f 25"
+        },
+        {
+          "description": "Usuario y llave concretos",
+          "code": "ansible-playbook site.yml -u deploy --private-key ~/.ssh/deploy_ed25519"
+        }
+      ],
+      "tags": [
+        "ansible-playbook",
+        "ejecucion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Simular cambios con check y diff",
+      "command": "ansible-playbook site.yml --check --diff",
+      "section": "Playbooks",
+      "topic": "Ejecución",
+      "description": "--check no aplica cambios y --diff muestra las diferencias en archivos y plantillas. Combinados son el 'plan' de Ansible.",
+      "examples": [
+        {
+          "description": "Solo diff aplicando cambios",
+          "code": "ansible-playbook site.yml --diff"
+        },
+        {
+          "description": "Tarea que siempre corre aunque haya check",
+          "code": "- name: Leer versión instalada\n  ansible.builtin.command: nginx -v\n  register: nginx_v\n  changed_when: false\n  check_mode: false"
+        }
+      ],
+      "tags": [
+        "check",
+        "diff",
+        "dry-run"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los módulos command/shell no soportan check mode y se omiten; las tareas que dependan de su resultado pueden fallar en simulación."
+    },
+    {
+      "title": "Ejecutar por etiquetas",
+      "command": "ansible-playbook site.yml --tags nginx",
+      "section": "Playbooks",
+      "topic": "Ejecución",
+      "description": "Las tags permiten correr o saltar partes del playbook.",
+      "examples": [
+        {
+          "description": "Saltar etiquetas",
+          "code": "ansible-playbook site.yml --skip-tags lento,backups"
+        },
+        {
+          "description": "Listar etiquetas disponibles",
+          "code": "ansible-playbook site.yml --list-tags"
+        },
+        {
+          "description": "Etiquetas especiales",
+          "code": "- name: Siempre se ejecuta\n  ansible.builtin.debug: { msg: \"inicio\" }\n  tags: [always]\n- name: Solo si se pide explícitamente\n  ansible.builtin.command: /opt/app/reindex\n  tags: [never, reindex]"
+        }
+      ],
+      "tags": [
+        "tags"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Retomar o avanzar paso a paso",
+      "command": "ansible-playbook site.yml --start-at-task 'Configurar nginx'",
+      "section": "Playbooks",
+      "topic": "Ejecución",
+      "description": "--start-at-task salta hasta una tarea por nombre y --step pide confirmación antes de cada tarea.",
+      "examples": [
+        {
+          "description": "Confirmación interactiva",
+          "code": "ansible-playbook site.yml --step"
+        },
+        {
+          "description": "Ver las tareas antes de elegir",
+          "code": "ansible-playbook site.yml --list-tasks"
+        }
+      ],
+      "tags": [
+        "start-at-task",
+        "step"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Variables extra en línea de comandos",
+      "command": "ansible-playbook deploy.yml -e 'version=1.4.2 entorno=prod'",
+      "section": "Playbooks",
+      "topic": "Variables",
+      "description": "-e (--extra-vars) tiene la máxima precedencia. Acepta clave=valor, JSON o un archivo con @.",
+      "examples": [
+        {
+          "description": "JSON para tipos correctos",
+          "code": "ansible-playbook deploy.yml -e '{\"replicas\": 3, \"debug\": false}'"
+        },
+        {
+          "description": "Desde un archivo",
+          "code": "ansible-playbook deploy.yml -e @vars/prod.yml"
+        }
+      ],
+      "tags": [
+        "extra-vars",
+        "variables"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con clave=valor todo llega como string: 'debug=false' es el texto \"false\", que en una condición es verdadero. Usa JSON para booleanos y números."
+    },
+    {
+      "title": "Verificar sintaxis y listar hosts",
+      "command": "ansible-playbook site.yml --syntax-check",
+      "section": "Playbooks",
+      "topic": "Ejecución",
+      "description": "Valida la sintaxis YAML y la estructura del playbook sin conectarse a los hosts.",
+      "examples": [
+        {
+          "description": "Hosts que se verían afectados",
+          "code": "ansible-playbook -i inventories/prod site.yml --list-hosts"
+        },
+        {
+          "description": "Todo junto en CI",
+          "code": "ansible-playbook -i inventories/prod site.yml --syntax-check && ansible-playbook -i inventories/prod site.yml --list-tasks"
+        }
+      ],
+      "tags": [
+        "syntax-check",
+        "list-hosts",
+        "ci"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Estructura base de un playbook",
+      "command": "ansible-playbook -i inventory.yml web.yml",
+      "section": "Playbooks",
+      "topic": "Estructura",
+      "description": "Una play define hosts, privilegios, variables, tareas y handlers. Este ejemplo instala y configura nginx en Ubuntu y AlmaLinux.",
+      "examples": [
+        {
+          "description": "web.yml",
+          "code": "- name: Servidor web\n  hosts: web\n  become: true\n  vars:\n    app_port: 8000\n  tasks:\n    - name: Instalar nginx\n      ansible.builtin.package:\n        name: nginx\n        state: present\n\n    - name: Plantilla del sitio\n      ansible.builtin.template:\n        src: templates/sitio.conf.j2\n        dest: \"{{ '/etc/nginx/conf.d/sitio.conf' if ansible_os_family == 'RedHat' else '/etc/nginx/sites-enabled/sitio.conf' }}\"\n        mode: \"0644\"\n        validate: nginx -t -c /etc/nginx/nginx.conf\n      notify: Recargar nginx\n\n    - name: nginx habilitado y en marcha\n      ansible.builtin.service:\n        name: nginx\n        state: started\n        enabled: true\n\n  handlers:\n    - name: Recargar nginx\n      ansible.builtin.service:\n        name: nginx\n        state: reloaded"
+        }
+      ],
+      "tags": [
+        "playbook",
+        "estructura",
+        "nginx"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Usa siempre nombres FQCN (ansible.builtin.copy) en lugar de nombres cortos: ansible-lint lo exige y evita ambigüedades entre colecciones."
+    },
+    {
+      "title": "Handlers y notify",
+      "command": "ansible-playbook web.yml",
+      "section": "Playbooks",
+      "topic": "Estructura",
+      "description": "Los handlers se ejecutan una sola vez al final de la play, y solo si alguna tarea que los notifica reportó cambios.",
+      "examples": [
+        {
+          "description": "Varios handlers con listen",
+          "code": "tasks:\n  - name: Configuración principal\n    ansible.builtin.template: { src: app.conf.j2, dest: /etc/app/app.conf }\n    notify: reiniciar stack\nhandlers:\n  - name: Reiniciar app\n    ansible.builtin.systemd_service: { name: app, state: restarted }\n    listen: reiniciar stack\n  - name: Recargar nginx\n    ansible.builtin.service: { name: nginx, state: reloaded }\n    listen: reiniciar stack"
+        },
+        {
+          "description": "Forzar handlers pendientes a mitad de play",
+          "code": "- name: Aplicar handlers ahora\n  ansible.builtin.meta: flush_handlers"
+        }
+      ],
+      "tags": [
+        "handlers",
+        "notify"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Si una tarea posterior falla, los handlers notificados no corren; usa --force-handlers o force_handlers: true en la play."
+    },
+    {
+      "title": "Bucles con loop",
+      "command": "ansible-playbook usuarios.yml",
+      "section": "Playbooks",
+      "topic": "Control de flujo",
+      "description": "loop repite una tarea sobre una lista o diccionario; loop_control ajusta la etiqueta y el nombre de la variable.",
+      "examples": [
+        {
+          "description": "Lista de paquetes (mejor pasar la lista entera)",
+          "code": "- name: Paquetes base\n  ansible.builtin.package:\n    name: [git, curl, vim, chrony]\n    state: present"
+        },
+        {
+          "description": "Usuarios con atributos",
+          "code": "- name: Crear usuarios del equipo\n  ansible.builtin.user:\n    name: \"{{ item.nombre }}\"\n    groups: \"{{ item.grupos }}\"\n    append: true\n  loop:\n    - { nombre: nicolas, grupos: [sudo] }\n    - { nombre: camila, grupos: [developers] }\n  loop_control:\n    label: \"{{ item.nombre }}\""
+        },
+        {
+          "description": "Recorrer un diccionario",
+          "code": "- name: Parámetros sysctl\n  ansible.posix.sysctl:\n    name: \"{{ item.key }}\"\n    value: \"{{ item.value }}\"\n  loop: \"{{ sysctl_params | dict2items }}\""
+        }
+      ],
+      "tags": [
+        "loop",
+        "bucles"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Condicionales con when",
+      "command": "ansible-playbook site.yml",
+      "section": "Playbooks",
+      "topic": "Control de flujo",
+      "description": "when evalúa una expresión Jinja sin llaves; la tarea se salta si es falsa. Típico para diferenciar Ubuntu de AlmaLinux.",
+      "examples": [
+        {
+          "description": "Por familia de SO",
+          "code": "- name: Paquetes en Debian/Ubuntu\n  ansible.builtin.apt:\n    name: unattended-upgrades\n    update_cache: true\n    cache_valid_time: 3600\n  when: ansible_os_family == \"Debian\"\n\n- name: Paquetes en AlmaLinux\n  ansible.builtin.dnf:\n    name: dnf-automatic\n  when:\n    - ansible_os_family == \"RedHat\"\n    - ansible_distribution_major_version | int >= 9"
+        },
+        {
+          "description": "Según el resultado de otra tarea",
+          "code": "- name: ¿Existe la config?\n  ansible.builtin.stat: { path: /etc/app/app.conf }\n  register: conf\n- name: Generar config por defecto\n  ansible.builtin.template: { src: app.conf.j2, dest: /etc/app/app.conf }\n  when: not conf.stat.exists"
+        }
+      ],
+      "tags": [
+        "when",
+        "condicionales"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "En ansible-core 2.19 los condicionales deben producir un booleano real: cadenas como \"false\" o variables de texto ya no se aceptan de forma implícita y fallan. Convierte con | bool."
+    },
+    {
+      "title": "Registrar resultados con register",
+      "command": "ansible-playbook site.yml -v",
+      "section": "Playbooks",
+      "topic": "Control de flujo",
+      "description": "register guarda la salida de una tarea en una variable; changed_when y failed_when definen cuándo cuenta como cambio o error.",
+      "examples": [
+        {
+          "description": "Comando idempotente",
+          "code": "- name: Estado de migraciones\n  ansible.builtin.command: /opt/app/venv/bin/python manage.py showmigrations --plan\n  register: migraciones\n  changed_when: false\n\n- name: Migrar si hay pendientes\n  ansible.builtin.command: /opt/app/venv/bin/python manage.py migrate --noinput\n  when: \"'[ ]' in migraciones.stdout\""
+        },
+        {
+          "description": "Fallo personalizado",
+          "code": "- name: Verificar salud\n  ansible.builtin.uri:\n    url: http://localhost:8000/health\n    return_content: true\n  register: salud\n  failed_when: \"'ok' not in salud.content\""
+        }
+      ],
+      "tags": [
+        "register",
+        "changed_when",
+        "failed_when"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Manejo de errores con block y rescue",
+      "command": "ansible-playbook deploy.yml",
+      "section": "Playbooks",
+      "topic": "Control de flujo",
+      "description": "block agrupa tareas; rescue se ejecuta si alguna falla y always siempre. Permite implementar rollbacks.",
+      "examples": [
+        {
+          "description": "Despliegue con rollback",
+          "code": "- name: Desplegar versión\n  block:\n    - name: Cambiar symlink a la nueva release\n      ansible.builtin.file:\n        src: \"/opt/app/releases/{{ version }}\"\n        dest: /opt/app/current\n        state: link\n    - name: Reiniciar\n      ansible.builtin.systemd_service: { name: app, state: restarted }\n    - name: Comprobar salud\n      ansible.builtin.uri: { url: http://localhost:8000/health }\n      retries: 10\n      delay: 3\n      register: r\n      until: r.status == 200\n  rescue:\n    - name: Volver a la release anterior\n      ansible.builtin.file:\n        src: \"/opt/app/releases/{{ version_anterior }}\"\n        dest: /opt/app/current\n        state: link\n    - name: Reiniciar con la anterior\n      ansible.builtin.systemd_service: { name: app, state: restarted }\n  always:\n    - name: Avisar resultado\n      ansible.builtin.debug: { msg: \"Despliegue terminado en {{ inventory_hostname }}\" }"
+        }
+      ],
+      "tags": [
+        "block",
+        "rescue",
+        "rollback"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Actualizaciones graduales con serial",
+      "command": "ansible-playbook rolling.yml",
+      "section": "Playbooks",
+      "topic": "Orquestación",
+      "description": "serial ejecuta la play por tandas de hosts; max_fail_percentage detiene el despliegue si fallan demasiados.",
+      "examples": [
+        {
+          "description": "Rolling update sacando el nodo del balanceador",
+          "code": "- name: Rolling update de la API\n  hosts: api\n  become: true\n  serial: [1, \"30%\"]\n  max_fail_percentage: 0\n  tasks:\n    - name: Sacar del balanceador\n      ansible.builtin.uri:\n        url: \"http://lb.interno/api/nodes/{{ inventory_hostname }}/drain\"\n        method: POST\n      delegate_to: localhost\n    - name: Actualizar paquete\n      ansible.builtin.apt: { name: \"app={{ version }}\", state: present }\n    - name: Reiniciar y esperar puerto\n      ansible.builtin.systemd_service: { name: app, state: restarted }\n    - ansible.builtin.wait_for: { port: 8000, timeout: 60 }\n    - name: Devolver al balanceador\n      ansible.builtin.uri:\n        url: \"http://lb.interno/api/nodes/{{ inventory_hostname }}/enable\"\n        method: POST\n      delegate_to: localhost"
+        }
+      ],
+      "tags": [
+        "serial",
+        "rolling-update",
+        "orquestacion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "serial: [1, \"30%\"] hace un canario con 1 host y luego avanza de a 30 %."
+    },
+    {
+      "title": "Delegar tareas y ejecutar una sola vez",
+      "command": "ansible-playbook deploy.yml",
+      "section": "Playbooks",
+      "topic": "Orquestación",
+      "description": "delegate_to ejecuta la tarea en otro host (por ejemplo localhost o el balanceador) y run_once la ejecuta una sola vez para todo el grupo.",
+      "examples": [
+        {
+          "description": "Migración una sola vez y aviso local",
+          "code": "- name: Migraciones de base de datos\n  ansible.builtin.command: /opt/app/venv/bin/python manage.py migrate --noinput\n  run_once: true\n\n- name: Notificar en Slack desde el controlador\n  community.general.slack:\n    token: \"{{ slack_token }}\"\n    msg: \"Deploy {{ version }} en {{ inventory_hostname }}\"\n  delegate_to: localhost"
+        }
+      ],
+      "tags": [
+        "delegate_to",
+        "run_once"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Usar facts en tareas",
+      "command": "ansible-playbook site.yml",
+      "section": "Playbooks",
+      "topic": "Facts",
+      "description": "Los facts recolectados (ansible_facts) permiten decidir según SO, memoria o IPs. gather_facts: false acelera plays que no los necesitan.",
+      "examples": [
+        {
+          "description": "Ajustar según memoria y CPU",
+          "code": "- name: Configurar workers según CPU\n  ansible.builtin.lineinfile:\n    path: /etc/app/app.env\n    regexp: '^WORKERS='\n    line: \"WORKERS={{ ansible_facts['processor_vcpus'] * 2 + 1 }}\""
+        },
+        {
+          "description": "Play sin facts y con subconjunto mínimo",
+          "code": "- hosts: all\n  gather_facts: true\n  gather_subset: [min, network]\n  tasks:\n    - ansible.builtin.debug:\n        msg: \"{{ ansible_facts['default_ipv4']['address'] }}\""
+        },
+        {
+          "description": "Fact propio con set_fact",
+          "code": "- ansible.builtin.set_fact:\n    es_produccion: \"{{ 'prod' in group_names }}\""
+        }
+      ],
+      "tags": [
+        "facts",
+        "set_fact"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Prefiere ansible_facts['distribution'] a la variable inyectada ansible_distribution; la inyección de facts como variables de nivel superior está en vías de quedar desactivada por defecto."
+    },
+    {
+      "title": "Módulos de archivos: template, copy y file",
+      "command": "ansible-playbook config.yml --diff",
+      "section": "Playbooks",
+      "topic": "Módulos comunes",
+      "description": "template renderiza Jinja2 con variables, copy envía archivos tal cual y file gestiona permisos, directorios y enlaces.",
+      "examples": [
+        {
+          "description": "Plantilla con respaldo y validación",
+          "code": "- name: Configuración de la app\n  ansible.builtin.template:\n    src: app.env.j2\n    dest: /etc/app/app.env\n    owner: app\n    group: app\n    mode: \"0640\"\n    backup: true\n  notify: Reiniciar app"
+        },
+        {
+          "description": "Directorio y symlink",
+          "code": "- ansible.builtin.file:\n    path: /opt/app/releases\n    state: directory\n    owner: app\n    mode: \"0755\"\n- ansible.builtin.file:\n    src: /opt/app/releases/1.4.2\n    dest: /opt/app/current\n    state: link"
+        },
+        {
+          "description": "Plantilla Jinja2 app.env.j2",
+          "code": "APP_PORT={{ app_port }}\nDEBUG={{ 'true' if entorno != 'prod' else 'false' }}\n{% for k, v in extra_env.items() %}\n{{ k }}={{ v }}\n{% endfor %}"
+        }
+      ],
+      "tags": [
+        "template",
+        "copy",
+        "file"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Editar líneas y bloques de archivos",
+      "command": "ansible-playbook hardening.yml --check --diff",
+      "section": "Playbooks",
+      "topic": "Módulos comunes",
+      "description": "lineinfile asegura una línea por expresión regular; blockinfile mantiene un bloque marcado. Útiles para archivos que no controlas por completo.",
+      "examples": [
+        {
+          "description": "Endurecer SSH con validación",
+          "code": "- name: Desactivar login root por SSH\n  ansible.builtin.lineinfile:\n    path: /etc/ssh/sshd_config\n    regexp: '^#?PermitRootLogin'\n    line: 'PermitRootLogin no'\n    validate: 'sshd -t -f %s'\n  notify: Reiniciar sshd"
+        },
+        {
+          "description": "Bloque gestionado en /etc/hosts",
+          "code": "- ansible.builtin.blockinfile:\n    path: /etc/hosts\n    marker: \"# {mark} ANSIBLE hosts internos\"\n    block: |\n      10.0.1.11 web01\n      10.0.2.21 db01"
+        }
+      ],
+      "tags": [
+        "lineinfile",
+        "blockinfile",
+        "ssh"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En Ubuntu 24.04 el servicio se llama ssh y en AlmaLinux sshd: tenlo en cuenta en el handler."
+    },
+    {
+      "title": "Comandos idempotentes con command y shell",
+      "command": "ansible-playbook setup.yml",
+      "section": "Playbooks",
+      "topic": "Módulos comunes",
+      "description": "command y shell no son idempotentes por sí solos: creates, removes y changed_when les dan ese comportamiento.",
+      "examples": [
+        {
+          "description": "Solo si no existe el resultado",
+          "code": "- name: Inicializar base de datos\n  ansible.builtin.command:\n    cmd: /usr/bin/postgresql-setup --initdb\n    creates: /var/lib/pgsql/data/PG_VERSION"
+        },
+        {
+          "description": "Shell con pipefail",
+          "code": "- name: Contar conexiones\n  ansible.builtin.shell: set -o pipefail && ss -tn | grep -c ':5432'\n  args:\n    executable: /bin/bash\n  register: conexiones\n  changed_when: false"
+        }
+      ],
+      "tags": [
+        "command",
+        "shell",
+        "idempotencia"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Antes de usar shell busca un módulo específico: casi siempre existe y es idempotente."
+    },
+    {
+      "title": "Repositorios y descargas: git, get_url, unarchive",
+      "command": "ansible-playbook deploy.yml",
+      "section": "Playbooks",
+      "topic": "Módulos comunes",
+      "description": "git clona o actualiza repositorios; get_url descarga con checksum y unarchive extrae archivos locales o remotos.",
+      "examples": [
+        {
+          "description": "Clonar en una versión concreta",
+          "code": "- ansible.builtin.git:\n    repo: https://github.com/nicocano/app.git\n    dest: /opt/app/src\n    version: v1.4.2\n    force: true"
+        },
+        {
+          "description": "Descargar binario verificando checksum y extraer",
+          "code": "- ansible.builtin.get_url:\n    url: https://github.com/prometheus/node_exporter/releases/download/v1.9.1/node_exporter-1.9.1.linux-amd64.tar.gz\n    dest: /tmp/node_exporter.tar.gz\n    checksum: \"sha256:https://github.com/prometheus/node_exporter/releases/download/v1.9.1/sha256sums.txt\"\n- ansible.builtin.unarchive:\n    src: /tmp/node_exporter.tar.gz\n    dest: /opt\n    remote_src: true\n    creates: /opt/node_exporter-1.9.1.linux-amd64"
+        }
+      ],
+      "tags": [
+        "git",
+        "get_url",
+        "unarchive"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Llamadas HTTP y esperas: uri y wait_for",
+      "command": "ansible-playbook smoke.yml",
+      "section": "Playbooks",
+      "topic": "Módulos comunes",
+      "description": "uri hace peticiones HTTP (APIs, health checks) y wait_for espera puertos, archivos o textos en logs.",
+      "examples": [
+        {
+          "description": "Reintentar hasta que la API responda",
+          "code": "- ansible.builtin.uri:\n    url: \"https://{{ inventory_hostname }}/health\"\n    status_code: 200\n    validate_certs: true\n  register: r\n  until: r.status == 200\n  retries: 20\n  delay: 5"
+        },
+        {
+          "description": "POST JSON con token",
+          "code": "- ansible.builtin.uri:\n    url: https://api.ejemplo.cl/v1/deploys\n    method: POST\n    headers: { Authorization: \"Bearer {{ api_token }}\" }\n    body_format: json\n    body: { version: \"{{ version }}\", host: \"{{ inventory_hostname }}\" }\n    status_code: [200, 201]\n  no_log: true"
+        },
+        {
+          "description": "Esperar a que un puerto se abra",
+          "code": "- ansible.builtin.wait_for:\n    port: 5432\n    host: \"{{ ansible_host }}\"\n    timeout: 120"
+        }
+      ],
+      "tags": [
+        "uri",
+        "wait_for",
+        "http"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Firewall con firewalld y ufw",
+      "command": "ansible-galaxy collection install ansible.posix community.general",
+      "section": "Playbooks",
+      "topic": "Módulos comunes",
+      "description": "AlmaLinux usa firewalld (colección ansible.posix) y Ubuntu suele usar ufw (community.general).",
+      "examples": [
+        {
+          "description": "AlmaLinux: abrir HTTP y HTTPS de forma permanente",
+          "code": "- ansible.posix.firewalld:\n    service: \"{{ item }}\"\n    state: enabled\n    permanent: true\n    immediate: true\n  loop: [http, https]\n  when: ansible_os_family == \"RedHat\""
+        },
+        {
+          "description": "Ubuntu: permitir SSH y activar ufw denegando por defecto",
+          "code": "- community.general.ufw:\n    rule: allow\n    name: OpenSSH\n- community.general.ufw:\n    state: enabled\n    policy: deny\n  when: ansible_os_family == \"Debian\""
+        }
+      ],
+      "tags": [
+        "firewalld",
+        "ufw",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Permite SSH antes de activar ufw con política deny o perderás el acceso al servidor."
+    },
+    {
+      "title": "Contenedores con community.docker",
+      "command": "ansible-galaxy collection install community.docker",
+      "section": "Playbooks",
+      "topic": "Módulos comunes",
+      "description": "community.docker.docker_container gestiona contenedores de forma declarativa; docker_compose_v2 opera proyectos Compose.",
+      "examples": [
+        {
+          "description": "Contenedor con puertos, volumen y restart",
+          "code": "- community.docker.docker_container:\n    name: redis\n    image: redis:8-alpine\n    state: started\n    restart_policy: unless-stopped\n    published_ports: [\"127.0.0.1:6379:6379\"]\n    volumes: [\"redis-data:/data\"]"
+        },
+        {
+          "description": "Proyecto Compose",
+          "code": "- community.docker.docker_compose_v2:\n    project_src: /opt/stack\n    state: present\n    pull: always"
+        }
+      ],
+      "tags": [
+        "docker",
+        "contenedores",
+        "community"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Requiere el SDK de Python para Docker (paquete python3-docker o pip install docker) en el host gestionado."
+    },
+    {
+      "title": "Incluir e importar tareas",
+      "command": "ansible-playbook site.yml --list-tasks",
+      "section": "Playbooks",
+      "topic": "Estructura",
+      "description": "import_tasks es estático (se resuelve al parsear, permite tags y --list-tasks); include_tasks es dinámico (admite loops y variables en el nombre).",
+      "examples": [
+        {
+          "description": "Tareas por familia de SO",
+          "code": "- name: Tareas específicas del SO\n  ansible.builtin.include_tasks: \"{{ ansible_os_family | lower }}.yml\""
+        },
+        {
+          "description": "Importar un playbook completo",
+          "code": "- ansible.builtin.import_playbook: base.yml\n- ansible.builtin.import_playbook: web.yml"
+        }
+      ],
+      "tags": [
+        "include_tasks",
+        "import_tasks"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Tareas asíncronas de larga duración",
+      "command": "ansible-playbook backup.yml",
+      "section": "Playbooks",
+      "topic": "Orquestación",
+      "description": "async y poll ejecutan tareas largas sin cortar por timeout de SSH; con poll: 0 se lanzan en paralelo y se consultan con async_status.",
+      "examples": [
+        {
+          "description": "Lanzar y esperar después",
+          "code": "- name: Respaldo largo en segundo plano\n  ansible.builtin.command: /usr/local/bin/backup-completo.sh\n  async: 3600\n  poll: 0\n  register: job\n\n- name: Esperar a que termine\n  ansible.builtin.async_status:\n    jid: \"{{ job.ansible_job_id }}\"\n  register: estado\n  until: estado.finished\n  retries: 120\n  delay: 30"
+        }
+      ],
+      "tags": [
+        "async",
+        "poll"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Validar supuestos con assert",
+      "command": "ansible-playbook site.yml",
+      "section": "Playbooks",
+      "topic": "Control de flujo",
+      "description": "assert detiene la ejecución con un mensaje claro si no se cumplen precondiciones (versión de SO, variables obligatorias).",
+      "examples": [
+        {
+          "description": "Precondiciones del despliegue",
+          "code": "- ansible.builtin.assert:\n    that:\n      - version is defined\n      - version is match('^\\d+\\.\\d+\\.\\d+$')\n      - ansible_facts['distribution'] in ['Ubuntu', 'AlmaLinux']\n    fail_msg: \"Falta version semántica o SO no soportado\"\n    quiet: true"
+        }
+      ],
+      "tags": [
+        "assert",
+        "validacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    }
+  ]
+}

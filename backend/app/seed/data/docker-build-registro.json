@@ -1,0 +1,655 @@
+{
+  "category": {
+    "slug": "docker",
+    "name": "Docker",
+    "icon": "directions_boat",
+    "order": 5,
+    "description": "Contenedores con Docker Engine y Compose actualizados: imágenes, buildx, redes, volúmenes, seguridad y diagnóstico."
+  },
+  "commands": [
+    {
+      "title": "Construir imagen",
+      "command": "docker build -t app:1.0 .",
+      "section": "Build y registro",
+      "topic": "Build",
+      "description": "Construye una imagen a partir del Dockerfile del contexto indicado. En Engine moderno docker build usa BuildKit (buildx) por defecto.",
+      "syntax": "docker build [opciones] -t NOMBRE:TAG CONTEXTO",
+      "examples": [
+        {
+          "description": "Dockerfile alternativo y argumentos de build",
+          "code": "docker build -f docker/Dockerfile.prod --build-arg PYTHON_VERSION=3.14 -t app:prod ."
+        },
+        {
+          "description": "Construir solo hasta una etapa",
+          "code": "docker build --target test -t app:test ."
+        },
+        {
+          "description": "Sin caché y con salida completa para depurar",
+          "code": "docker build --no-cache --progress=plain -t app:1.0 ."
+        },
+        {
+          "description": "Varios tags en un solo build",
+          "code": "docker build -t app:1.0 -t app:latest ."
+        }
+      ],
+      "tags": [
+        "build",
+        "buildkit",
+        "dockerfile"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Todo el directorio de contexto se envía al builder: sin .dockerignore puedes mandar node_modules, .git o .env (y filtrar secretos dentro de la imagen)."
+    },
+    {
+      "title": "Build multi-arquitectura con buildx",
+      "command": "docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/nicocano/app:1.0 --push .",
+      "section": "Build y registro",
+      "topic": "Buildx",
+      "description": "Construye la imagen para varias plataformas y publica un índice OCI multi-arch. Requiere un builder con driver docker-container (o el almacén containerd) y QEMU o nodos nativos.",
+      "examples": [
+        {
+          "description": "Registrar emuladores QEMU en el host",
+          "code": "docker run --privileged --rm tonistiigi/binfmt --install all"
+        },
+        {
+          "description": "Cargar en el motor local una sola plataforma",
+          "code": "docker buildx build --platform linux/arm64 -t app:arm64 --load ."
+        },
+        {
+          "description": "Exportar el resultado como tar OCI",
+          "code": "docker buildx build --platform linux/amd64,linux/arm64 -o type=oci,dest=app.tar ."
+        }
+      ],
+      "tags": [
+        "buildx",
+        "multi-arch",
+        "arm64"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "--load con varias plataformas solo funciona con el almacén de imágenes de containerd; con el clásico usa --push."
+    },
+    {
+      "title": "Caché de build remota",
+      "command": "docker buildx build --cache-from type=registry,ref=ghcr.io/nicocano/app:buildcache --cache-to type=registry,ref=ghcr.io/nicocano/app:buildcache,mode=max -t ghcr.io/nicocano/app:1.0 --push .",
+      "section": "Build y registro",
+      "topic": "Buildx",
+      "description": "Exporta e importa la caché de capas a un registro u otro backend para acelerar builds en CI, donde cada runner parte vacío.",
+      "examples": [
+        {
+          "description": "Caché de GitHub Actions",
+          "code": "docker buildx build --cache-from type=gha --cache-to type=gha,mode=max -t app:ci ."
+        },
+        {
+          "description": "Caché en directorio local",
+          "code": "docker buildx build --cache-from type=local,src=/tmp/.buildx --cache-to type=local,dest=/tmp/.buildx,mode=max ."
+        }
+      ],
+      "tags": [
+        "buildx",
+        "cache",
+        "ci"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "mode=max exporta también las capas de etapas intermedias; mode=min (por defecto) solo las de la imagen final."
+    },
+    {
+      "title": "Pasar secretos al build",
+      "command": "docker buildx build --secret id=npmrc,src=$HOME/.npmrc -t app:1.0 .",
+      "section": "Build y registro",
+      "topic": "Buildx",
+      "description": "Monta un secreto solo durante un RUN, sin que quede en ninguna capa ni en el historial de la imagen.",
+      "examples": [
+        {
+          "description": "Uso en el Dockerfile",
+          "code": "RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci"
+        },
+        {
+          "description": "Secreto desde una variable de entorno",
+          "code": "GH_TOKEN=xxx docker buildx build --secret id=gh,env=GH_TOKEN ."
+        },
+        {
+          "description": "Leer el secreto como variable en el RUN",
+          "code": "RUN --mount=type=secret,id=gh,env=GH_TOKEN gh release download"
+        }
+      ],
+      "tags": [
+        "buildx",
+        "secretos",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Nunca uses ARG o ENV para tokens: quedan visibles con docker history."
+    },
+    {
+      "title": "Reenviar agente SSH al build",
+      "command": "docker buildx build --ssh default -t app:1.0 .",
+      "section": "Build y registro",
+      "topic": "Buildx",
+      "description": "Expone el agente SSH del host a instrucciones RUN para clonar repositorios privados sin copiar llaves a la imagen.",
+      "examples": [
+        {
+          "description": "Uso en el Dockerfile",
+          "code": "RUN --mount=type=ssh git clone git@github.com:nicocano/privado.git /src"
+        },
+        {
+          "description": "Llave específica",
+          "code": "docker buildx build --ssh default=$HOME/.ssh/id_ed25519 ."
+        }
+      ],
+      "tags": [
+        "buildx",
+        "ssh",
+        "git"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Verificar Dockerfile con build checks",
+      "command": "docker build --check .",
+      "section": "Build y registro",
+      "topic": "Build",
+      "description": "Ejecuta las reglas de lint integradas de BuildKit sobre el Dockerfile sin construir la imagen (por ejemplo JSONArgsRecommended o FromAsCasing).",
+      "examples": [
+        {
+          "description": "Fallar el build ante advertencias, en el Dockerfile",
+          "code": "# check=error=true"
+        },
+        {
+          "description": "Omitir una regla concreta",
+          "code": "# check=skip=JSONArgsRecommended"
+        }
+      ],
+      "tags": [
+        "build",
+        "lint",
+        "calidad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Complementa con hadolint: docker run --rm -i hadolint/hadolint < Dockerfile."
+    },
+    {
+      "title": "Gestionar builders de buildx",
+      "command": "docker buildx create --name multi --driver docker-container --use --bootstrap",
+      "section": "Build y registro",
+      "topic": "Buildx",
+      "description": "Crea un builder aislado con BuildKit en contenedor, necesario para multi-arch con el almacén clásico y para exportar caché.",
+      "examples": [
+        {
+          "description": "Listar builders y plataformas soportadas",
+          "code": "docker buildx ls"
+        },
+        {
+          "description": "Inspeccionar el builder activo",
+          "code": "docker buildx inspect --bootstrap"
+        },
+        {
+          "description": "Eliminar un builder",
+          "code": "docker buildx rm multi"
+        },
+        {
+          "description": "Builder remoto sobre otra máquina por SSH",
+          "code": "docker buildx create --name arm --driver docker-container ssh://ubuntu@arm-builder"
+        }
+      ],
+      "tags": [
+        "buildx",
+        "builder"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Limpiar caché de build",
+      "command": "docker buildx prune -f",
+      "section": "Build y registro",
+      "topic": "Buildx",
+      "description": "Libera el espacio ocupado por la caché de BuildKit, que suele ser lo que más crece en máquinas de desarrollo.",
+      "examples": [
+        {
+          "description": "Ver uso de caché",
+          "code": "docker buildx du"
+        },
+        {
+          "description": "Conservar solo lo usado en las últimas 48 h",
+          "code": "docker buildx prune -f --filter until=48h"
+        },
+        {
+          "description": "Limpiar todo, incluida caché interna",
+          "code": "docker buildx prune -a -f"
+        }
+      ],
+      "tags": [
+        "buildx",
+        "cache",
+        "disco"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Build declarativo con buildx bake",
+      "command": "docker buildx bake",
+      "section": "Build y registro",
+      "topic": "Buildx",
+      "description": "Construye varios targets definidos en docker-bake.hcl (o compose.yaml) en paralelo, compartiendo configuración.",
+      "examples": [
+        {
+          "description": "Archivo docker-bake.hcl de ejemplo",
+          "code": "variable \"TAG\" { default = \"dev\" }\ngroup \"default\" { targets = [\"api\", \"worker\"] }\ntarget \"api\" {\n  context    = \".\"\n  dockerfile = \"Dockerfile\"\n  target     = \"api\"\n  tags       = [\"ghcr.io/nicocano/api:${TAG}\"]\n  platforms  = [\"linux/amd64\", \"linux/arm64\"]\n}\ntarget \"worker\" {\n  inherits = [\"api\"]\n  target   = \"worker\"\n  tags     = [\"ghcr.io/nicocano/worker:${TAG}\"]\n}"
+        },
+        {
+          "description": "Ver la configuración resuelta sin construir",
+          "code": "docker buildx bake --print"
+        },
+        {
+          "description": "Sobrescribir variable y publicar",
+          "code": "TAG=1.4.0 docker buildx bake --push"
+        },
+        {
+          "description": "Sobrescribir un atributo de un target",
+          "code": "docker buildx bake --set api.platform=linux/amd64 api"
+        }
+      ],
+      "tags": [
+        "buildx",
+        "bake",
+        "hcl"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Generar SBOM y provenance",
+      "command": "docker buildx build --sbom=true --provenance=mode=max -t ghcr.io/nicocano/app:1.0 --push .",
+      "section": "Build y registro",
+      "topic": "Buildx",
+      "description": "Adjunta attestations de supply chain al publicar: lista de paquetes (SBOM SPDX) y procedencia SLSA del build.",
+      "examples": [
+        {
+          "description": "Ver la procedencia publicada",
+          "code": "docker buildx imagetools inspect --format '{{json .Provenance}}' ghcr.io/nicocano/app:1.0"
+        }
+      ],
+      "tags": [
+        "sbom",
+        "supply-chain",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Generar archivos Docker con docker init",
+      "command": "docker init",
+      "section": "Build y registro",
+      "topic": "Build",
+      "description": "Asistente interactivo que detecta el lenguaje (Python, Node, Go, Rust, Java, .NET, PHP) y crea Dockerfile, compose.yaml, .dockerignore y README.Docker.md con buenas prácticas.",
+      "examples": [
+        {
+          "description": "Uso típico y prueba inmediata",
+          "code": "cd mi-proyecto && docker init && docker compose up --build"
+        }
+      ],
+      "tags": [
+        "init",
+        "scaffolding"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "Revisa lo generado: es un buen punto de partida, pero conviene fijar versiones y ajustar el usuario y el healthcheck."
+    },
+    {
+      "title": "Iniciar sesión en un registro",
+      "command": "docker login ghcr.io -u nicocano --password-stdin < token.txt",
+      "section": "Build y registro",
+      "topic": "Registro",
+      "description": "Autentica la CLI contra un registro. --password-stdin evita que la contraseña quede en el historial del shell.",
+      "examples": [
+        {
+          "description": "Docker Hub con flujo de dispositivo web",
+          "code": "docker login"
+        },
+        {
+          "description": "Amazon ECR",
+          "code": "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 123456789012.dkr.ecr.us-east-1.amazonaws.com"
+        },
+        {
+          "description": "Google Artifact Registry",
+          "code": "gcloud auth configure-docker southamerica-west1-docker.pkg.dev"
+        },
+        {
+          "description": "Cerrar sesión",
+          "code": "docker logout ghcr.io"
+        }
+      ],
+      "tags": [
+        "login",
+        "registro",
+        "credenciales"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Las credenciales se guardan en ~/.docker/config.json; configura un credsStore (desktop, pass, secretservice) para no dejarlas en base64 plano."
+    },
+    {
+      "title": "Registro privado local",
+      "command": "docker run -d -p 5000:5000 --name registry -v registry-data:/var/lib/registry registry:3",
+      "section": "Build y registro",
+      "topic": "Registro",
+      "description": "Levanta un registro OCI propio, útil para laboratorios, clústeres kind/k3d o entornos sin internet.",
+      "examples": [
+        {
+          "description": "Subir una imagen al registro local",
+          "code": "docker tag app:1.0 localhost:5000/app:1.0 && docker push localhost:5000/app:1.0"
+        },
+        {
+          "description": "Listar repositorios vía API",
+          "code": "curl -s http://localhost:5000/v2/_catalog"
+        }
+      ],
+      "tags": [
+        "registry",
+        "registro",
+        "laboratorio"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Fuera de localhost exige TLS; de lo contrario hay que declararlo en insecure-registries del daemon (solo laboratorio)."
+    },
+    {
+      "title": "Snippet Dockerfile multi-stage para Python",
+      "command": "docker build -t api:1.0 .",
+      "section": "Build y registro",
+      "topic": "Dockerfile",
+      "description": "Patrón multi-stage: una etapa instala dependencias con herramientas de compilación y la final solo copia el entorno virtual, con usuario no root y healthcheck.",
+      "examples": [
+        {
+          "description": "Dockerfile",
+          "code": "# syntax=docker/dockerfile:1\nFROM python:3.14-slim AS build\nWORKDIR /app\nRUN python -m venv /opt/venv\nENV PATH=\"/opt/venv/bin:$PATH\"\nCOPY requirements.txt .\nRUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt\n\nFROM python:3.14-slim AS runtime\nRUN useradd --create-home --uid 10001 app\nCOPY --from=build /opt/venv /opt/venv\nENV PATH=\"/opt/venv/bin:$PATH\" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1\nWORKDIR /app\nCOPY --chown=app:app . .\nUSER app\nEXPOSE 8000\nHEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \\\n  CMD python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')\" || exit 1\nCMD [\"uvicorn\", \"app.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]"
+        }
+      ],
+      "tags": [
+        "dockerfile",
+        "multi-stage",
+        "python",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "La imagen slim no trae curl: por eso el healthcheck usa Python. Pon COPY requirements.txt antes del código para aprovechar la caché de capas."
+    },
+    {
+      "title": "Snippet Dockerfile multi-stage para Node",
+      "command": "docker build -t web:1.0 .",
+      "section": "Build y registro",
+      "topic": "Dockerfile",
+      "description": "Compila con todas las dependencias y publica solo el resultado con dependencias de producción, corriendo como el usuario node.",
+      "examples": [
+        {
+          "description": "Dockerfile",
+          "code": "# syntax=docker/dockerfile:1\nFROM node:24-alpine AS deps\nWORKDIR /app\nCOPY package*.json ./\nRUN --mount=type=cache,target=/root/.npm npm ci\n\nFROM deps AS build\nCOPY . .\nRUN npm run build && npm prune --omit=dev\n\nFROM node:24-alpine\nENV NODE_ENV=production\nWORKDIR /app\nCOPY --from=build --chown=node:node /app/node_modules ./node_modules\nCOPY --from=build --chown=node:node /app/dist ./dist\nUSER node\nEXPOSE 3000\nCMD [\"node\", \"dist/server.js\"]"
+        }
+      ],
+      "tags": [
+        "dockerfile",
+        "multi-stage",
+        "node",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Fullstack",
+        "Software"
+      ]
+    },
+    {
+      "title": "Snippet Dockerfile Go sobre distroless",
+      "command": "docker build -t svc:1.0 .",
+      "section": "Build y registro",
+      "topic": "Dockerfile",
+      "description": "Compila un binario estático y lo copia a una imagen distroless nonroot de pocos MB, sin shell ni gestor de paquetes.",
+      "examples": [
+        {
+          "description": "Dockerfile con compilación cruzada nativa",
+          "code": "# syntax=docker/dockerfile:1\nFROM --platform=$BUILDPLATFORM golang:1.25 AS build\nARG TARGETOS TARGETARCH\nWORKDIR /src\nCOPY go.mod go.sum ./\nRUN go mod download\nCOPY . .\nRUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags=\"-s -w\" -o /out/svc ./cmd/svc\n\nFROM gcr.io/distroless/static-debian12:nonroot\nCOPY --from=build /out/svc /svc\nUSER nonroot:nonroot\nENTRYPOINT [\"/svc\"]"
+        }
+      ],
+      "tags": [
+        "dockerfile",
+        "go",
+        "distroless",
+        "snippet"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud",
+        "Software"
+      ],
+      "notes": "--platform=$BUILDPLATFORM compila en la arquitectura del builder y cruza con GOARCH, mucho más rápido que emular con QEMU."
+    },
+    {
+      "title": "Snippet .dockerignore",
+      "command": "cat .dockerignore",
+      "section": "Build y registro",
+      "topic": "Dockerfile",
+      "description": "Excluye del contexto de build archivos pesados o sensibles. Acelera el build y evita filtrar secretos a la imagen.",
+      "examples": [
+        {
+          "description": ".dockerignore típico",
+          "code": ".git\n.github\n**/__pycache__\n**/*.pyc\n.venv\nenv\nnode_modules\ndist\n.env\n.env.*\n!.env.example\n*.log\nDockerfile*\ncompose*.yaml\n.dockerignore"
+        }
+      ],
+      "tags": [
+        "dockerignore",
+        "contexto",
+        "snippet"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "Las reglas con ! reincluyen archivos. Cada Dockerfile puede tener su propio Dockerfile.dockerignore junto a él."
+    },
+    {
+      "title": "Snippet de usuario no root en Dockerfile",
+      "command": "docker run --rm app:1.0 id",
+      "section": "Build y registro",
+      "topic": "Dockerfile",
+      "description": "Crea un usuario de sistema con UID fijo y cambia a él antes del CMD, para que el proceso no corra como root.",
+      "examples": [
+        {
+          "description": "Debian/Ubuntu",
+          "code": "RUN groupadd --system --gid 10001 app \\\n && useradd --system --uid 10001 --gid app --no-create-home app\nUSER 10001:10001"
+        },
+        {
+          "description": "Alpine",
+          "code": "RUN addgroup -S -g 10001 app && adduser -S -u 10001 -G app app\nUSER app"
+        }
+      ],
+      "tags": [
+        "dockerfile",
+        "non-root",
+        "seguridad",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Usar el UID numérico en USER permite que Kubernetes verifique runAsNonRoot sin resolver nombres."
+    },
+    {
+      "title": "Snippet HEALTHCHECK en Dockerfile",
+      "command": "docker inspect -f '{{.State.Health.Status}}' api",
+      "section": "Build y registro",
+      "topic": "Dockerfile",
+      "description": "Declara en la imagen cómo comprobar que la aplicación responde. Docker y Compose lo usan para el estado healthy.",
+      "examples": [
+        {
+          "description": "Con curl o wget disponible",
+          "code": "HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \\\n  CMD wget -qO- http://127.0.0.1:8080/health || exit 1"
+        },
+        {
+          "description": "Para Postgres",
+          "code": "HEALTHCHECK CMD pg_isready -U postgres || exit 1"
+        }
+      ],
+      "tags": [
+        "dockerfile",
+        "healthcheck",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "En Kubernetes la instrucción HEALTHCHECK se ignora: allí se usan liveness/readiness probes."
+    },
+    {
+      "title": "Snippet de caché de dependencias en RUN",
+      "command": "docker build -t app:1.0 .",
+      "section": "Build y registro",
+      "topic": "Dockerfile",
+      "description": "RUN --mount=type=cache conserva la caché del gestor de paquetes entre builds sin que quede dentro de la imagen.",
+      "examples": [
+        {
+          "description": "apt sin borrar listas",
+          "code": "RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \\\n    --mount=type=cache,target=/var/lib/apt,sharing=locked \\\n    apt-get update && apt-get install -y --no-install-recommends build-essential"
+        },
+        {
+          "description": "uv para Python",
+          "code": "COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv\nRUN --mount=type=cache,target=/root/.cache/uv \\\n    --mount=type=bind,source=uv.lock,target=uv.lock \\\n    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \\\n    uv sync --frozen --no-install-project"
+        }
+      ],
+      "tags": [
+        "dockerfile",
+        "cache",
+        "buildkit",
+        "snippet"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "En producción fija el tag de la imagen de uv (p. ej. ghcr.io/astral-sh/uv:0.9) en vez de latest."
+    },
+    {
+      "title": "Snippet ENTRYPOINT y CMD en forma exec",
+      "command": "docker run --rm app:1.0 --help",
+      "section": "Build y registro",
+      "topic": "Dockerfile",
+      "description": "La forma exec (JSON) hace que la app sea PID 1 y reciba SIGTERM; ENTRYPOINT fija el binario y CMD los argumentos por defecto, sobrescribibles al ejecutar.",
+      "examples": [
+        {
+          "description": "Combinación típica",
+          "code": "ENTRYPOINT [\"python\", \"-m\", \"app\"]\nCMD [\"serve\", \"--port\", \"8000\"]"
+        },
+        {
+          "description": "Sobrescribir el entrypoint al ejecutar",
+          "code": "docker run --rm --entrypoint sh -it app:1.0"
+        }
+      ],
+      "tags": [
+        "dockerfile",
+        "entrypoint",
+        "cmd",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "La forma shell (CMD python app.py) ejecuta /bin/sh -c y las señales no llegan a tu proceso: el contenedor tarda el timeout completo en detenerse."
+    },
+    {
+      "title": "Snippet de labels OCI y argumentos de build",
+      "command": "docker build --build-arg VERSION=1.4.0 -t app:1.4.0 .",
+      "section": "Build y registro",
+      "topic": "Dockerfile",
+      "description": "Anota la imagen con metadatos estándar OCI (origen, versión, revisión) para trazar qué código contiene.",
+      "examples": [
+        {
+          "description": "Dockerfile",
+          "code": "ARG VERSION=dev\nARG REVISION=unknown\nLABEL org.opencontainers.image.source=\"https://github.com/nicocano/app\" \\\n      org.opencontainers.image.version=\"$VERSION\" \\\n      org.opencontainers.image.revision=\"$REVISION\""
+        },
+        {
+          "description": "Pasar la revisión de git",
+          "code": "docker build --build-arg VERSION=1.4.0 --build-arg REVISION=$(git rev-parse HEAD) -t app:1.4.0 ."
+        }
+      ],
+      "tags": [
+        "dockerfile",
+        "labels",
+        "oci",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Un ARG declarado antes de FROM solo sirve para el FROM; vuelve a declararlo dentro de la etapa para usarlo."
+    }
+  ]
+}

@@ -1,0 +1,248 @@
+{
+  "category": {
+    "slug": "kubernetes",
+    "name": "Kubernetes",
+    "icon": "hub",
+    "order": 6,
+    "description": "Orquestación con Kubernetes: kubectl, workloads, redes, configuración, troubleshooting y Helm."
+  },
+  "commands": [
+    {
+      "title": "Exponer un Deployment como Service",
+      "command": "kubectl expose deploy api --port=80 --target-port=8000",
+      "section": "Redes y servicios",
+      "topic": "Services",
+      "description": "Crea un Service que balancea tráfico hacia los pods del Deployment usando su selector. Por defecto es ClusterIP.",
+      "examples": [
+        {
+          "description": "NodePort para pruebas",
+          "code": "kubectl expose deploy web --type=NodePort --port=80"
+        },
+        {
+          "description": "LoadBalancer en la nube",
+          "code": "kubectl expose deploy web --type=LoadBalancer --port=443 --target-port=8443 --name=web-lb"
+        },
+        {
+          "description": "Service en YAML",
+          "code": "apiVersion: v1\nkind: Service\nmetadata: { name: api }\nspec:\n  selector: { app: api }\n  ports:\n    - name: http\n      port: 80\n      targetPort: http"
+        }
+      ],
+      "tags": [
+        "service",
+        "clusterip",
+        "loadbalancer"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Ver endpoints de un Service",
+      "command": "kubectl get endpointslices -l kubernetes.io/service-name=api",
+      "section": "Redes y servicios",
+      "topic": "Services",
+      "description": "Muestra a qué IP de pods enruta realmente el Service. Si está vacío, el selector no coincide o los pods no están listos.",
+      "examples": [
+        {
+          "description": "Comparar selector y etiquetas",
+          "code": "kubectl get svc api -o jsonpath='{.spec.selector}' && kubectl get pods -l app=api --show-labels"
+        },
+        {
+          "description": "Vista detallada",
+          "code": "kubectl describe svc api"
+        }
+      ],
+      "tags": [
+        "service",
+        "endpoints",
+        "troubleshooting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "El recurso Endpoints clásico está obsoleto en favor de EndpointSlice en versiones recientes."
+    },
+    {
+      "title": "Redirigir puertos con port-forward",
+      "command": "kubectl port-forward svc/api 8080:80",
+      "section": "Redes y servicios",
+      "topic": "Acceso local",
+      "description": "Abre un túnel desde tu máquina hasta un pod o Service sin exponerlo. Ideal para depurar o usar herramientas locales.",
+      "examples": [
+        {
+          "description": "A un pod concreto",
+          "code": "kubectl port-forward pod/postgres-0 5432:5432 -n datos"
+        },
+        {
+          "description": "Escuchar en todas las interfaces",
+          "code": "kubectl port-forward --address 0.0.0.0 deploy/grafana 3000:3000 -n monitoring"
+        },
+        {
+          "description": "Puerto local aleatorio",
+          "code": "kubectl port-forward svc/api :80"
+        }
+      ],
+      "tags": [
+        "port-forward",
+        "acceso"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Ingress HTTP",
+      "command": "kubectl create ingress api --class=nginx --rule='api.ejemplo.cl/*=api:80,tls=api-tls'",
+      "section": "Redes y servicios",
+      "topic": "Ingress y Gateway",
+      "description": "Ingress enruta HTTP(S) por host y ruta hacia Services. Requiere un controlador instalado (Traefik, HAProxy, NGINX Inc., etc.).",
+      "examples": [
+        {
+          "description": "Manifiesto con TLS",
+          "code": "apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: api\n  annotations:\n    cert-manager.io/cluster-issuer: letsencrypt\nspec:\n  ingressClassName: traefik\n  tls:\n    - hosts: [api.ejemplo.cl]\n      secretName: api-tls\n  rules:\n    - host: api.ejemplo.cl\n      http:\n        paths:\n          - path: /\n            pathType: Prefix\n            backend:\n              service: { name: api, port: { number: 80 } }"
+        },
+        {
+          "description": "Clases de ingress disponibles",
+          "code": "kubectl get ingressclass"
+        }
+      ],
+      "tags": [
+        "ingress",
+        "http",
+        "tls"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "El controlador comunitario ingress-nginx fue retirado (sin mantenimiento desde marzo de 2026). Para nuevos despliegues, Gateway API es el sucesor recomendado de Ingress."
+    },
+    {
+      "title": "Gateway API con HTTPRoute",
+      "command": "kubectl get gateway,httproute -A",
+      "section": "Redes y servicios",
+      "topic": "Ingress y Gateway",
+      "description": "Gateway API separa la infraestructura (GatewayClass, Gateway) de las rutas (HTTPRoute) y soporta divisiones de tráfico, cabeceras y más protocolos. Es el sucesor de Ingress.",
+      "examples": [
+        {
+          "description": "Gateway y HTTPRoute con canary 90/10",
+          "code": "apiVersion: gateway.networking.k8s.io/v1\nkind: Gateway\nmetadata: { name: publico, namespace: infra }\nspec:\n  gatewayClassName: envoy\n  listeners:\n    - name: https\n      protocol: HTTPS\n      port: 443\n      hostname: \"*.ejemplo.cl\"\n      tls:\n        certificateRefs: [{ name: comodin-tls }]\n      allowedRoutes: { namespaces: { from: All } }\n---\napiVersion: gateway.networking.k8s.io/v1\nkind: HTTPRoute\nmetadata: { name: api, namespace: tienda }\nspec:\n  parentRefs: [{ name: publico, namespace: infra }]\n  hostnames: [api.ejemplo.cl]\n  rules:\n    - backendRefs:\n        - { name: api-v1, port: 80, weight: 90 }\n        - { name: api-v2, port: 80, weight: 10 }"
+        },
+        {
+          "description": "Instalar los CRDs estándar",
+          "code": "kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml"
+        },
+        {
+          "description": "Ver el estado de aceptación de la ruta",
+          "code": "kubectl describe httproute api -n tienda"
+        }
+      ],
+      "tags": [
+        "gateway-api",
+        "httproute",
+        "trafico"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Los CRDs no vienen en el clúster por defecto; revisa la versión estable más reciente del proyecto antes de instalarlos."
+    },
+    {
+      "title": "NetworkPolicy de denegación por defecto",
+      "command": "kubectl get networkpolicy -n tienda",
+      "section": "Redes y servicios",
+      "topic": "NetworkPolicy",
+      "description": "Las NetworkPolicies restringen el tráfico entre pods. El patrón base es denegar todo y luego permitir lo necesario.",
+      "examples": [
+        {
+          "description": "Denegar todo el ingreso del namespace",
+          "code": "apiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata: { name: default-deny, namespace: tienda }\nspec:\n  podSelector: {}\n  policyTypes: [Ingress]"
+        },
+        {
+          "description": "Permitir solo de api a postgres en 5432",
+          "code": "apiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata: { name: postgres-desde-api, namespace: tienda }\nspec:\n  podSelector: { matchLabels: { app: postgres } }\n  ingress:\n    - from:\n        - podSelector: { matchLabels: { app: api } }\n      ports: [{ protocol: TCP, port: 5432 }]"
+        }
+      ],
+      "tags": [
+        "networkpolicy",
+        "seguridad",
+        "red"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Solo surten efecto si el CNI las implementa (Calico, Cilium, etc.). Si niegas Egress, recuerda permitir DNS (UDP/TCP 53 hacia kube-dns)."
+    },
+    {
+      "title": "Probar DNS interno del clúster",
+      "command": "kubectl run dns-test --rm -it --image=busybox:1.37 --restart=Never -- nslookup api.tienda.svc.cluster.local",
+      "section": "Redes y servicios",
+      "topic": "DNS",
+      "description": "Cada Service tiene un nombre DNS <servicio>.<namespace>.svc.cluster.local. Probarlo descarta problemas de red frente a problemas de app.",
+      "examples": [
+        {
+          "description": "Revisar CoreDNS",
+          "code": "kubectl get pods -n kube-system -l k8s-app=kube-dns && kubectl logs -n kube-system -l k8s-app=kube-dns --tail=50"
+        },
+        {
+          "description": "Ver el resolv.conf que recibe un pod",
+          "code": "kubectl exec api-xyz -- cat /etc/resolv.conf"
+        }
+      ],
+      "tags": [
+        "dns",
+        "coredns",
+        "troubleshooting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Service headless y ExternalName",
+      "command": "kubectl get svc postgres -o yaml",
+      "section": "Redes y servicios",
+      "topic": "Services",
+      "description": "Headless (clusterIP: None) devuelve las IPs de cada pod por DNS, necesario para StatefulSets. ExternalName crea un alias DNS hacia un host externo.",
+      "examples": [
+        {
+          "description": "Service headless",
+          "code": "apiVersion: v1\nkind: Service\nmetadata: { name: postgres }\nspec:\n  clusterIP: None\n  selector: { app: postgres }\n  ports: [{ port: 5432 }]"
+        },
+        {
+          "description": "Alias a una base de datos gestionada",
+          "code": "apiVersion: v1\nkind: Service\nmetadata: { name: db-externa }\nspec:\n  type: ExternalName\n  externalName: prod.abc123.us-east-1.rds.amazonaws.com"
+        }
+      ],
+      "tags": [
+        "service",
+        "headless",
+        "externalname"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    }
+  ]
+}

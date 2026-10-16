@@ -1,0 +1,232 @@
+{
+  "category": {
+    "slug": "terraform",
+    "name": "Terraform",
+    "icon": "cloud",
+    "order": 7,
+    "description": "Infraestructura como código con Terraform: flujo plan/apply, estado remoto, módulos, HCL y calidad en CI."
+  },
+  "commands": [
+    {
+      "title": "Usar un módulo del registro",
+      "command": "terraform init",
+      "section": "Módulos y workspaces",
+      "topic": "Módulos",
+      "description": "Un bloque module reutiliza configuración empaquetada. Desde el registro público se fija la versión con version.",
+      "examples": [
+        {
+          "description": "VPC con el módulo oficial de la comunidad",
+          "code": "module \"vpc\" {\n  source  = \"terraform-aws-modules/vpc/aws\"\n  version = \"~> 6.0\"\n\n  name            = \"tienda-prod\"\n  cidr            = \"10.20.0.0/16\"\n  azs             = [\"us-east-1a\", \"us-east-1b\", \"us-east-1c\"]\n  private_subnets = [\"10.20.1.0/24\", \"10.20.2.0/24\", \"10.20.3.0/24\"]\n  public_subnets  = [\"10.20.101.0/24\", \"10.20.102.0/24\", \"10.20.103.0/24\"]\n\n  enable_nat_gateway = true\n  single_nat_gateway = true\n}"
+        },
+        {
+          "description": "Usar sus outputs",
+          "code": "resource \"aws_security_group\" \"api\" {\n  vpc_id = module.vpc.vpc_id\n}"
+        }
+      ],
+      "tags": [
+        "modulos",
+        "registry",
+        "vpc"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Revisa la versión mayor vigente del módulo en el registro antes de fijarla; los saltos de mayor suelen romper argumentos."
+    },
+    {
+      "title": "Fuentes de módulos: local, Git y registro privado",
+      "command": "terraform get -update",
+      "section": "Módulos y workspaces",
+      "topic": "Módulos",
+      "description": "Los módulos pueden venir de rutas locales, repositorios Git con ref fija, buckets o registros privados de HCP Terraform.",
+      "examples": [
+        {
+          "description": "Ruta local",
+          "code": "module \"network\" {\n  source = \"./modules/network\"\n}"
+        },
+        {
+          "description": "Git con tag (inmutable)",
+          "code": "module \"rds\" {\n  source = \"git::https://github.com/nicocano/tf-modules.git//rds?ref=v2.3.1\"\n}"
+        },
+        {
+          "description": "Registro privado",
+          "code": "module \"eks\" {\n  source  = \"app.terraform.io/nicocano/eks/aws\"\n  version = \"1.8.0\"\n}"
+        },
+        {
+          "description": "Volver a descargar módulos",
+          "code": "terraform get -update"
+        }
+      ],
+      "tags": [
+        "modulos",
+        "git"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "No apuntes a una rama (ref=main): cada init podría traer código distinto."
+    },
+    {
+      "title": "Estructura de un módulo propio",
+      "command": "tree modules/network",
+      "section": "Módulos y workspaces",
+      "topic": "Módulos",
+      "description": "Un módulo es un directorio con variables (entradas), outputs (salidas) y recursos. Un contrato claro facilita versionarlo y probarlo.",
+      "examples": [
+        {
+          "description": "Layout recomendado",
+          "code": "modules/network/\n├── main.tf\n├── variables.tf\n├── outputs.tf\n├── versions.tf\n├── README.md\n└── tests/\n    └── network.tftest.hcl"
+        },
+        {
+          "description": "versions.tf del módulo",
+          "code": "terraform {\n  required_version = \">= 1.10\"\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \">= 6.0\"\n    }\n  }\n}"
+        }
+      ],
+      "tags": [
+        "modulos",
+        "estructura"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "En módulos reutilizables declara restricciones mínimas (>=) y fija versiones exactas (~>) solo en el módulo raíz."
+    },
+    {
+      "title": "Módulos con for_each y providers alias",
+      "command": "terraform plan",
+      "section": "Módulos y workspaces",
+      "topic": "Módulos",
+      "description": "Los módulos admiten count y for_each, y reciben providers con alias para desplegar en varias regiones o cuentas.",
+      "examples": [
+        {
+          "description": "Un bucket por entorno con for_each",
+          "code": "module \"bucket\" {\n  source   = \"./modules/bucket\"\n  for_each = toset([\"dev\", \"staging\", \"prod\"])\n  name     = \"nicocano-${each.key}-assets\"\n}"
+        },
+        {
+          "description": "Pasar un provider de otra región",
+          "code": "provider \"aws\" {\n  alias  = \"sa\"\n  region = \"sa-east-1\"\n}\nmodule \"replica\" {\n  source    = \"./modules/bucket\"\n  providers = { aws = aws.sa }\n  name      = \"nicocano-replica\"\n}"
+        }
+      ],
+      "tags": [
+        "modulos",
+        "for_each",
+        "multi-region"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Crear y seleccionar workspaces",
+      "command": "terraform workspace new staging",
+      "section": "Módulos y workspaces",
+      "topic": "Workspaces",
+      "description": "Los workspaces CLI mantienen varios estados para la misma configuración. Útiles para entornos efímeros o idénticos.",
+      "examples": [
+        {
+          "description": "Listar y ver el activo",
+          "code": "terraform workspace list && terraform workspace show"
+        },
+        {
+          "description": "Cambiar o crear si no existe",
+          "code": "terraform workspace select -or-create staging"
+        },
+        {
+          "description": "Eliminar un workspace vacío",
+          "code": "terraform workspace delete feature-123"
+        }
+      ],
+      "tags": [
+        "workspace",
+        "entornos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Para entornos con diferencias reales (cuentas, tamaños) suelen ser más claros directorios separados por entorno con su propio backend."
+    },
+    {
+      "title": "Usar el workspace en la configuración",
+      "command": "terraform plan",
+      "section": "Módulos y workspaces",
+      "topic": "Workspaces",
+      "description": "terraform.workspace permite variar nombres o tamaños según el workspace activo.",
+      "examples": [
+        {
+          "description": "Tamaño por workspace",
+          "code": "locals {\n  tamanos = { default = \"t3.micro\", staging = \"t3.small\", prod = \"m7i.large\" }\n  instance_type = lookup(local.tamanos, terraform.workspace, \"t3.micro\")\n}\nresource \"aws_instance\" \"app\" {\n  ami           = data.aws_ami.ubuntu.id\n  instance_type = local.instance_type\n  tags          = { Name = \"app-${terraform.workspace}\" }\n}"
+        }
+      ],
+      "tags": [
+        "workspace",
+        "hcl"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Leer estado de otra configuración",
+      "command": "terraform plan",
+      "section": "Módulos y workspaces",
+      "topic": "Composición",
+      "description": "El data source terraform_remote_state lee outputs de otro estado, por ejemplo la VPC creada por el equipo de red.",
+      "examples": [
+        {
+          "description": "Leer outputs de la capa de red",
+          "code": "data \"terraform_remote_state\" \"network\" {\n  backend = \"s3\"\n  config = {\n    bucket = \"nicocano-tfstate\"\n    key    = \"network/prod/terraform.tfstate\"\n    region = \"us-east-1\"\n  }\n}\nresource \"aws_instance\" \"app\" {\n  subnet_id = data.terraform_remote_state.network.outputs.private_subnet_ids[0]\n}"
+        }
+      ],
+      "tags": [
+        "remote-state",
+        "composicion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "Exige permisos de lectura sobre todo el estado ajeno; como alternativa más acotada usa data sources del provider o SSM Parameter Store."
+    },
+    {
+      "title": "Estructura de repositorio por entornos",
+      "command": "cd envs/prod && terraform init && terraform plan",
+      "section": "Módulos y workspaces",
+      "topic": "Composición",
+      "description": "Separar módulos reutilizables de los directorios raíz por entorno aísla estados y facilita permisos distintos.",
+      "examples": [
+        {
+          "description": "Layout típico",
+          "code": "infra/\n├── modules/\n│   ├── network/\n│   └── app/\n└── envs/\n    ├── dev/\n    │   ├── main.tf\n    │   ├── backend.tf\n    │   └── terraform.tfvars\n    └── prod/\n        ├── main.tf\n        ├── backend.tf\n        └── terraform.tfvars"
+        },
+        {
+          "description": "Ejecutar con chdir desde la raíz",
+          "code": "terraform -chdir=envs/prod plan -out=tfplan"
+        }
+      ],
+      "tags": [
+        "estructura",
+        "entornos",
+        "monorepo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud",
+        "Software"
+      ]
+    }
+  ]
+}

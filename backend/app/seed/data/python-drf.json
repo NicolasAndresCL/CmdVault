@@ -1,0 +1,692 @@
+{
+  "category": {
+    "slug": "python",
+    "name": "Python",
+    "icon": "code",
+    "order": 2,
+    "description": "Python moderno y sus frameworks backend: Django, Django REST Framework y FastAPI."
+  },
+  "commands": [
+    {
+      "title": "Instalar y configurar DRF",
+      "command": "pip install djangorestframework",
+      "section": "DRF",
+      "topic": "Configuración",
+      "description": "Instala Django REST Framework y define la configuración global en REST_FRAMEWORK (autenticación, permisos, paginación).",
+      "examples": [
+        {
+          "description": "Instalar y registrar",
+          "code": "python -m pip install \"djangorestframework>=3.16\" django-filter drf-spectacular\n# settings.py\nINSTALLED_APPS += [\"rest_framework\", \"django_filters\", \"drf_spectacular\"]"
+        },
+        {
+          "description": "Configuración global recomendada",
+          "code": "REST_FRAMEWORK = {\n    \"DEFAULT_AUTHENTICATION_CLASSES\": [\n        \"rest_framework_simplejwt.authentication.JWTAuthentication\",\n        \"rest_framework.authentication.SessionAuthentication\",\n    ],\n    \"DEFAULT_PERMISSION_CLASSES\": [\"rest_framework.permissions.IsAuthenticated\"],\n    \"DEFAULT_PAGINATION_CLASS\": \"rest_framework.pagination.PageNumberPagination\",\n    \"PAGE_SIZE\": 20,\n    \"DEFAULT_FILTER_BACKENDS\": [\"django_filters.rest_framework.DjangoFilterBackend\"],\n    \"DEFAULT_SCHEMA_CLASS\": \"drf_spectacular.openapi.AutoSchema\",\n}"
+        }
+      ],
+      "tags": [
+        "drf",
+        "configuración",
+        "api"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Por defecto DRF permite todo (AllowAny): define siempre DEFAULT_PERMISSION_CLASSES explícitamente."
+    },
+    {
+      "title": "ModelSerializer",
+      "command": "serializers.ModelSerializer",
+      "section": "DRF",
+      "topic": "Serializers",
+      "description": "Genera automáticamente campos y validaciones a partir de un modelo de Django.",
+      "examples": [
+        {
+          "description": "Serializer con campos de solo lectura",
+          "code": "from rest_framework import serializers\n\nfrom .models import Pedido\n\n\nclass PedidoSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Pedido\n        fields = [\"id\", \"cliente\", \"estado\", \"total\", \"creado\"]\n        read_only_fields = [\"id\", \"creado\"]"
+        },
+        {
+          "description": "Usarlo en la shell",
+          "code": "s = PedidoSerializer(data={\"cliente\": 1, \"total\": \"15990.00\"})\ns.is_valid(raise_exception=True)\npedido = s.save()\nPedidoSerializer(pedido).data"
+        }
+      ],
+      "tags": [
+        "drf",
+        "serializers"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Evita fields = \"__all__\": expone campos nuevos sin querer cuando cambia el modelo."
+    },
+    {
+      "title": "Validaciones en serializers",
+      "command": "validate_<campo> / validate",
+      "section": "DRF",
+      "topic": "Serializers",
+      "description": "Valida campos individuales o combinaciones de campos antes de guardar, devolviendo errores 400 estructurados.",
+      "examples": [
+        {
+          "description": "Validación por campo y cruzada",
+          "code": "class ReservaSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Reserva\n        fields = [\"id\", \"inicio\", \"fin\", \"personas\"]\n\n    def validate_personas(self, value):\n        if value > 12:\n            raise serializers.ValidationError(\"Máximo 12 personas por reserva.\")\n        return value\n\n    def validate(self, attrs):\n        if attrs[\"fin\"] <= attrs[\"inicio\"]:\n            raise serializers.ValidationError({\"fin\": \"Debe ser posterior al inicio.\"})\n        return attrs"
+        },
+        {
+          "description": "Validador de unicidad",
+          "code": "from rest_framework.validators import UniqueValidator\n\nemail = serializers.EmailField(validators=[UniqueValidator(queryset=Cliente.objects.all())])"
+        }
+      ],
+      "tags": [
+        "drf",
+        "serializers",
+        "validación"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Serializers anidados y campos calculados",
+      "command": "SerializerMethodField",
+      "section": "DRF",
+      "topic": "Serializers",
+      "description": "Incluye objetos relacionados o valores calculados en la respuesta, separando lectura y escritura.",
+      "examples": [
+        {
+          "description": "Lectura anidada + escritura por id",
+          "code": "class ClienteMiniSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = Cliente\n        fields = [\"id\", \"nombre\"]\n\n\nclass PedidoSerializer(serializers.ModelSerializer):\n    cliente = ClienteMiniSerializer(read_only=True)\n    cliente_id = serializers.PrimaryKeyRelatedField(\n        queryset=Cliente.objects.all(), source=\"cliente\", write_only=True\n    )\n    total_con_iva = serializers.SerializerMethodField()\n\n    class Meta:\n        model = Pedido\n        fields = [\"id\", \"cliente\", \"cliente_id\", \"total\", \"total_con_iva\"]\n\n    def get_total_con_iva(self, obj):\n        return round(obj.total * 119 / 100, 2)"
+        }
+      ],
+      "tags": [
+        "drf",
+        "serializers",
+        "relaciones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Los serializers anidados disparan N+1: acompáñalos de select_related/prefetch_related en get_queryset."
+    },
+    {
+      "title": "Serializer con usuario del request",
+      "command": "CurrentUserDefault / perform_create",
+      "section": "DRF",
+      "topic": "Serializers",
+      "description": "Asigna automáticamente el usuario autenticado al crear un objeto, sin aceptarlo desde el cliente.",
+      "examples": [
+        {
+          "description": "En el serializer",
+          "code": "class NotaSerializer(serializers.ModelSerializer):\n    autor = serializers.HiddenField(default=serializers.CurrentUserDefault())\n\n    class Meta:\n        model = Nota\n        fields = [\"id\", \"titulo\", \"contenido\", \"autor\"]"
+        },
+        {
+          "description": "O en la vista",
+          "code": "def perform_create(self, serializer):\n    serializer.save(autor=self.request.user)"
+        }
+      ],
+      "tags": [
+        "drf",
+        "serializers",
+        "usuarios"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "APIView",
+      "command": "APIView",
+      "section": "DRF",
+      "topic": "Vistas y routers",
+      "description": "Vista base de DRF con negociación de contenido, autenticación y permisos; útil para endpoints que no son CRUD.",
+      "examples": [
+        {
+          "description": "Endpoint de estadísticas",
+          "code": "from rest_framework.response import Response\nfrom rest_framework.views import APIView\nfrom django.db.models import Count\n\n\nclass EstadisticasView(APIView):\n    def get(self, request):\n        data = Pedido.objects.values(\"estado\").annotate(n=Count(\"id\"))\n        return Response(list(data))"
+        }
+      ],
+      "tags": [
+        "drf",
+        "vistas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Vistas genéricas",
+      "command": "generics.ListCreateAPIView",
+      "section": "DRF",
+      "topic": "Vistas y routers",
+      "description": "Vistas genéricas que combinan mixins para listar, crear, ver, actualizar o borrar con muy poco código.",
+      "examples": [
+        {
+          "description": "Listado/creación y detalle",
+          "code": "from rest_framework import generics\n\n\nclass PedidoListCreate(generics.ListCreateAPIView):\n    serializer_class = PedidoSerializer\n\n    def get_queryset(self):\n        return Pedido.objects.filter(cliente__usuario=self.request.user)\n\n\nclass PedidoDetail(generics.RetrieveUpdateDestroyAPIView):\n    serializer_class = PedidoSerializer\n\n    def get_queryset(self):\n        return Pedido.objects.filter(cliente__usuario=self.request.user)"
+        },
+        {
+          "description": "URLs",
+          "code": "urlpatterns = [\n    path(\"pedidos/\", PedidoListCreate.as_view()),\n    path(\"pedidos/<int:pk>/\", PedidoDetail.as_view()),\n]"
+        }
+      ],
+      "tags": [
+        "drf",
+        "vistas",
+        "crud"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "ModelViewSet",
+      "command": "viewsets.ModelViewSet",
+      "section": "DRF",
+      "topic": "Vistas y routers",
+      "description": "Agrupa todas las acciones CRUD (list, create, retrieve, update, partial_update, destroy) en una sola clase.",
+      "examples": [
+        {
+          "description": "ViewSet filtrado por usuario",
+          "code": "from rest_framework import viewsets\n\n\nclass PedidoViewSet(viewsets.ModelViewSet):\n    serializer_class = PedidoSerializer\n\n    def get_queryset(self):\n        return (\n            Pedido.objects.filter(cliente__usuario=self.request.user)\n            .select_related(\"cliente\")\n        )\n\n    def perform_create(self, serializer):\n        serializer.save(cliente=self.request.user.cliente)"
+        },
+        {
+          "description": "Solo lectura",
+          "code": "class CategoriaViewSet(viewsets.ReadOnlyModelViewSet):\n    queryset = Categoria.objects.all()\n    serializer_class = CategoriaSerializer"
+        }
+      ],
+      "tags": [
+        "drf",
+        "viewsets",
+        "crud"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Filtrar en get_queryset (y no en queryset fijo) evita que un usuario acceda a objetos ajenos cambiando el id."
+    },
+    {
+      "title": "Acciones personalizadas en ViewSets",
+      "command": "@action",
+      "section": "DRF",
+      "topic": "Vistas y routers",
+      "description": "Agrega endpoints extra a un ViewSet, a nivel de objeto (detail=True) o de colección (detail=False).",
+      "examples": [
+        {
+          "description": "Acción para pagar un pedido",
+          "code": "from rest_framework.decorators import action\nfrom rest_framework.response import Response\n\n\nclass PedidoViewSet(viewsets.ModelViewSet):\n    # ...\n    @action(detail=True, methods=[\"post\"])\n    def pagar(self, request, pk=None):\n        pedido = self.get_object()\n        pedido.estado = Pedido.Estado.PAGADO\n        pedido.save(update_fields=[\"estado\"])\n        return Response({\"estado\": pedido.estado})\n\n    @action(detail=False, methods=[\"get\"])\n    def pendientes(self, request):\n        qs = self.get_queryset().filter(estado=Pedido.Estado.PENDIENTE)\n        return Response(self.get_serializer(qs, many=True).data)"
+        },
+        {
+          "description": "Rutas generadas",
+          "code": "POST /api/pedidos/{id}/pagar/\nGET  /api/pedidos/pendientes/"
+        }
+      ],
+      "tags": [
+        "drf",
+        "viewsets",
+        "acciones"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Routers de DRF",
+      "command": "routers.DefaultRouter",
+      "section": "DRF",
+      "topic": "Vistas y routers",
+      "description": "Genera automáticamente las URLs de los ViewSets, incluyendo una raíz navegable de la API.",
+      "examples": [
+        {
+          "description": "Registrar ViewSets",
+          "code": "from django.urls import include, path\nfrom rest_framework.routers import DefaultRouter\n\nfrom .views import CategoriaViewSet, PedidoViewSet\n\nrouter = DefaultRouter()\nrouter.register(\"pedidos\", PedidoViewSet, basename=\"pedido\")\nrouter.register(\"categorias\", CategoriaViewSet)\n\nurlpatterns = [path(\"api/\", include(router.urls))]"
+        }
+      ],
+      "tags": [
+        "drf",
+        "routers",
+        "urls"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "basename es obligatorio cuando el ViewSet no define el atributo queryset (porque usa get_queryset)."
+    },
+    {
+      "title": "Manejo de errores personalizado",
+      "command": "EXCEPTION_HANDLER",
+      "section": "DRF",
+      "topic": "Vistas y routers",
+      "description": "Unifica el formato de los errores de la API y traduce excepciones de dominio a respuestas HTTP.",
+      "examples": [
+        {
+          "description": "Handler propio",
+          "code": "from rest_framework.views import exception_handler\n\n\ndef api_exception_handler(exc, context):\n    response = exception_handler(exc, context)\n    if response is not None:\n        response.data = {\"error\": response.data, \"status\": response.status_code}\n    return response\n\n# settings.py\nREST_FRAMEWORK[\"EXCEPTION_HANDLER\"] = \"api.errors.api_exception_handler\""
+        },
+        {
+          "description": "Excepción de dominio con código propio",
+          "code": "from rest_framework.exceptions import APIException\n\n\nclass StockInsuficiente(APIException):\n    status_code = 409\n    default_detail = \"No hay stock suficiente.\"\n    default_code = \"stock_insuficiente\""
+        }
+      ],
+      "tags": [
+        "drf",
+        "errores",
+        "excepciones"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Permisos de DRF",
+      "command": "permission_classes",
+      "section": "DRF",
+      "topic": "Autenticación y permisos",
+      "description": "Controlan quién puede acceder a una vista. Se pueden combinar con & | ~.",
+      "examples": [
+        {
+          "description": "Lectura pública, escritura autenticada",
+          "code": "from rest_framework.permissions import IsAuthenticatedOrReadOnly\n\nclass ProductoViewSet(viewsets.ModelViewSet):\n    permission_classes = [IsAuthenticatedOrReadOnly]"
+        },
+        {
+          "description": "Combinar permisos",
+          "code": "from rest_framework.permissions import IsAdminUser, IsAuthenticated\n\npermission_classes = [IsAuthenticated & (IsAdminUser | EsDueno)]"
+        },
+        {
+          "description": "Permisos distintos por acción",
+          "code": "def get_permissions(self):\n    if self.action in (\"destroy\", \"update\", \"partial_update\"):\n        return [IsAdminUser()]\n    return super().get_permissions()"
+        }
+      ],
+      "tags": [
+        "drf",
+        "permisos",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Permiso a nivel de objeto",
+      "command": "BasePermission.has_object_permission",
+      "section": "DRF",
+      "topic": "Autenticación y permisos",
+      "description": "Define reglas propias, por ejemplo que solo el dueño pueda modificar un recurso.",
+      "examples": [
+        {
+          "description": "Solo el dueño puede editar",
+          "code": "from rest_framework.permissions import SAFE_METHODS, BasePermission\n\n\nclass EsDuenoOSoloLectura(BasePermission):\n    message = \"Solo el autor puede modificar este recurso.\"\n\n    def has_object_permission(self, request, view, obj):\n        if request.method in SAFE_METHODS:\n            return True\n        return obj.autor_id == request.user.id"
+        }
+      ],
+      "tags": [
+        "drf",
+        "permisos",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "has_object_permission solo se evalúa cuando la vista llama a get_object(); en listados filtra por usuario en get_queryset."
+    },
+    {
+      "title": "Autenticación por token",
+      "command": "rest_framework.authtoken",
+      "section": "DRF",
+      "topic": "Autenticación y permisos",
+      "description": "Autenticación simple con un token por usuario almacenado en base de datos, enviado como 'Authorization: Token <clave>'.",
+      "examples": [
+        {
+          "description": "Configurar y exponer el endpoint de login",
+          "code": "INSTALLED_APPS += [\"rest_framework.authtoken\"]\n\n# urls.py\nfrom rest_framework.authtoken.views import obtain_auth_token\nurlpatterns += [path(\"api/token/\", obtain_auth_token)]"
+        },
+        {
+          "description": "Crear o ver el token de un usuario",
+          "code": "python manage.py migrate\npython manage.py drf_create_token nicolas"
+        },
+        {
+          "description": "Usar el token",
+          "code": "curl -H 'Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b' http://localhost:8000/api/pedidos/"
+        }
+      ],
+      "tags": [
+        "drf",
+        "autenticación",
+        "token"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Autenticación JWT con simplejwt",
+      "command": "djangorestframework-simplejwt",
+      "section": "DRF",
+      "topic": "Autenticación y permisos",
+      "description": "Emite access y refresh tokens JWT; el access se envía como 'Authorization: Bearer <token>'.",
+      "examples": [
+        {
+          "description": "Instalar y configurar",
+          "code": "python -m pip install djangorestframework-simplejwt\n\n# settings.py\nfrom datetime import timedelta\nSIMPLE_JWT = {\n    \"ACCESS_TOKEN_LIFETIME\": timedelta(minutes=15),\n    \"REFRESH_TOKEN_LIFETIME\": timedelta(days=7),\n    \"ROTATE_REFRESH_TOKENS\": True,\n}"
+        },
+        {
+          "description": "Endpoints",
+          "code": "from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView\n\nurlpatterns += [\n    path(\"api/token/\", TokenObtainPairView.as_view()),\n    path(\"api/token/refresh/\", TokenRefreshView.as_view()),\n]"
+        },
+        {
+          "description": "Obtener y usar el token con curl",
+          "code": "TOKEN=$(curl -s -X POST http://localhost:8000/api/token/ -H 'Content-Type: application/json' -d '{\"username\":\"nicolas\",\"password\":\"secreto\"}' | jq -r .access)\ncurl -H \"Authorization: Bearer $TOKEN\" http://localhost:8000/api/pedidos/"
+        }
+      ],
+      "tags": [
+        "drf",
+        "jwt",
+        "autenticación"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Para revocar refresh tokens agrega 'rest_framework_simplejwt.token_blacklist' a INSTALLED_APPS y BLACKLIST_AFTER_ROTATION=True."
+    },
+    {
+      "title": "Paginación",
+      "command": "PageNumberPagination",
+      "section": "DRF",
+      "topic": "Filtros, paginación y throttling",
+      "description": "Divide los listados en páginas. Puede configurarse globalmente o por vista con una clase propia.",
+      "examples": [
+        {
+          "description": "Paginación propia con tamaño variable",
+          "code": "from rest_framework.pagination import PageNumberPagination\n\n\nclass PaginacionEstandar(PageNumberPagination):\n    page_size = 20\n    page_size_query_param = \"page_size\"\n    max_page_size = 100\n\n\nclass PedidoViewSet(viewsets.ModelViewSet):\n    pagination_class = PaginacionEstandar"
+        },
+        {
+          "description": "Consumir",
+          "code": "curl 'http://localhost:8000/api/pedidos/?page=2&page_size=50'"
+        }
+      ],
+      "tags": [
+        "drf",
+        "paginación"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Paginación por cursor y offset",
+      "command": "CursorPagination / LimitOffsetPagination",
+      "section": "DRF",
+      "topic": "Filtros, paginación y throttling",
+      "description": "LimitOffset permite ?limit=&offset=; Cursor es estable y eficiente en tablas grandes o feeds que cambian constantemente.",
+      "examples": [
+        {
+          "description": "Cursor ordenado por fecha",
+          "code": "from rest_framework.pagination import CursorPagination\n\n\nclass FeedPagination(CursorPagination):\n    page_size = 50\n    ordering = \"-creado\""
+        },
+        {
+          "description": "Limit/offset global",
+          "code": "REST_FRAMEWORK[\"DEFAULT_PAGINATION_CLASS\"] = \"rest_framework.pagination.LimitOffsetPagination\"\n# GET /api/pedidos/?limit=25&offset=50"
+        }
+      ],
+      "tags": [
+        "drf",
+        "paginación",
+        "rendimiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "El campo de ordering del cursor debe ser único o casi único e inmutable, idealmente indexado."
+    },
+    {
+      "title": "Filtros con django-filter",
+      "command": "DjangoFilterBackend",
+      "section": "DRF",
+      "topic": "Filtros, paginación y throttling",
+      "description": "Agrega filtros por query string a los listados declarando campos o un FilterSet.",
+      "examples": [
+        {
+          "description": "Filtros simples",
+          "code": "from django_filters.rest_framework import DjangoFilterBackend\n\n\nclass PedidoViewSet(viewsets.ModelViewSet):\n    filter_backends = [DjangoFilterBackend]\n    filterset_fields = [\"estado\", \"cliente\"]\n# GET /api/pedidos/?estado=pagado"
+        },
+        {
+          "description": "FilterSet con rangos",
+          "code": "import django_filters\n\n\nclass PedidoFilter(django_filters.FilterSet):\n    total_min = django_filters.NumberFilter(field_name=\"total\", lookup_expr=\"gte\")\n    desde = django_filters.DateFilter(field_name=\"creado\", lookup_expr=\"date__gte\")\n\n    class Meta:\n        model = Pedido\n        fields = [\"estado\"]\n\n# en la vista: filterset_class = PedidoFilter"
+        }
+      ],
+      "tags": [
+        "drf",
+        "filtros",
+        "django-filter"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Búsqueda y ordenamiento",
+      "command": "SearchFilter / OrderingFilter",
+      "section": "DRF",
+      "topic": "Filtros, paginación y throttling",
+      "description": "Agrega búsqueda de texto (?search=) y ordenamiento (?ordering=) a cualquier listado.",
+      "examples": [
+        {
+          "description": "Configurar en la vista",
+          "code": "from rest_framework import filters\n\n\nclass ClienteViewSet(viewsets.ModelViewSet):\n    filter_backends = [filters.SearchFilter, filters.OrderingFilter]\n    search_fields = [\"nombre\", \"^rut\", \"=email\"]\n    ordering_fields = [\"nombre\", \"creado\"]\n    ordering = [\"nombre\"]"
+        },
+        {
+          "description": "Consumir",
+          "code": "curl 'http://localhost:8000/api/clientes/?search=cano&ordering=-creado'"
+        }
+      ],
+      "tags": [
+        "drf",
+        "filtros",
+        "búsqueda"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ],
+      "notes": "Prefijos en search_fields: '^' empieza con, '=' coincidencia exacta, '@' búsqueda full-text (PostgreSQL)."
+    },
+    {
+      "title": "Limitar peticiones (throttling)",
+      "command": "DEFAULT_THROTTLE_RATES",
+      "section": "DRF",
+      "topic": "Filtros, paginación y throttling",
+      "description": "Limita la cantidad de peticiones por usuario o IP para proteger la API de abusos.",
+      "examples": [
+        {
+          "description": "Configuración global",
+          "code": "REST_FRAMEWORK.update({\n    \"DEFAULT_THROTTLE_CLASSES\": [\n        \"rest_framework.throttling.AnonRateThrottle\",\n        \"rest_framework.throttling.UserRateThrottle\",\n    ],\n    \"DEFAULT_THROTTLE_RATES\": {\"anon\": \"30/min\", \"user\": \"1000/day\", \"login\": \"5/min\"},\n})"
+        },
+        {
+          "description": "Límite específico para un endpoint",
+          "code": "from rest_framework.throttling import ScopedRateThrottle\n\n\nclass LoginView(APIView):\n    throttle_classes = [ScopedRateThrottle]\n    throttle_scope = \"login\""
+        }
+      ],
+      "tags": [
+        "drf",
+        "throttling",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "SRE"
+      ],
+      "notes": "El throttling usa la caché de Django: con varios workers configura una caché compartida (Redis), o cada proceso contará por separado."
+    },
+    {
+      "title": "Esquema OpenAPI con drf-spectacular",
+      "command": "drf-spectacular",
+      "section": "DRF",
+      "topic": "Documentación OpenAPI",
+      "description": "Genera un esquema OpenAPI 3 a partir de las vistas y serializers, con Swagger UI y ReDoc.",
+      "examples": [
+        {
+          "description": "URLs de esquema y documentación",
+          "code": "from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView\n\nurlpatterns += [\n    path(\"api/schema/\", SpectacularAPIView.as_view(), name=\"schema\"),\n    path(\"api/docs/\", SpectacularSwaggerView.as_view(url_name=\"schema\")),\n    path(\"api/redoc/\", SpectacularRedocView.as_view(url_name=\"schema\")),\n]"
+        },
+        {
+          "description": "Metadatos",
+          "code": "SPECTACULAR_SETTINGS = {\n    \"TITLE\": \"API de Pedidos\",\n    \"VERSION\": \"1.0.0\",\n    \"SERVE_INCLUDE_SCHEMA\": False,\n}"
+        }
+      ],
+      "tags": [
+        "drf",
+        "openapi",
+        "documentación"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Exportar y validar el esquema OpenAPI",
+      "command": "python manage.py spectacular",
+      "section": "DRF",
+      "topic": "Documentación OpenAPI",
+      "description": "Genera el archivo del esquema desde la línea de comandos; útil para versionarlo, generar clientes o validarlo en CI.",
+      "examples": [
+        {
+          "description": "Generar y validar",
+          "code": "python manage.py spectacular --color --file schema.yml --validate"
+        },
+        {
+          "description": "Fallar en CI ante advertencias",
+          "code": "python manage.py spectacular --file schema.yml --validate --fail-on-warn"
+        },
+        {
+          "description": "Documentar un endpoint manualmente",
+          "code": "from drf_spectacular.utils import OpenApiParameter, extend_schema\n\n@extend_schema(parameters=[OpenApiParameter(\"estado\", str)], responses=PedidoSerializer(many=True))\n@action(detail=False)\ndef pendientes(self, request): ..."
+        }
+      ],
+      "tags": [
+        "drf",
+        "openapi",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "Fullstack",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Tests de API con APIClient",
+      "command": "APIClient",
+      "section": "DRF",
+      "topic": "Testing",
+      "description": "Cliente de pruebas de DRF que serializa JSON y permite autenticar usuarios sin pasar por el login.",
+      "examples": [
+        {
+          "description": "Test con usuario autenticado (pytest-django)",
+          "code": "import pytest\nfrom django.contrib.auth import get_user_model\nfrom rest_framework.test import APIClient\n\n\n@pytest.fixture\ndef api(db):\n    user = get_user_model().objects.create_user(\"ana\", password=\"x\")\n    client = APIClient()\n    client.force_authenticate(user=user)\n    return client\n\n\ndef test_crear_pedido(api, cliente):\n    resp = api.post(\"/api/pedidos/\", {\"cliente_id\": cliente.id, \"total\": \"1000\"}, format=\"json\")\n    assert resp.status_code == 201\n    assert resp.json()[\"total\"] == \"1000.00\""
+        },
+        {
+          "description": "Probar que un anónimo es rechazado",
+          "code": "def test_anonimo_401(db):\n    resp = APIClient().get(\"/api/pedidos/\")\n    assert resp.status_code in (401, 403)"
+        }
+      ],
+      "tags": [
+        "drf",
+        "testing",
+        "pytest"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "Con JWT como primera clase de autenticación el anónimo recibe 401; con solo SessionAuthentication recibe 403."
+    },
+    {
+      "title": "Tests con APITestCase",
+      "command": "APITestCase",
+      "section": "DRF",
+      "topic": "Testing",
+      "description": "Clase de test de DRF basada en TestCase de Django, con self.client como APIClient y transacciones por test.",
+      "examples": [
+        {
+          "description": "Caso de prueba con reverse de router",
+          "code": "from django.urls import reverse\nfrom rest_framework import status\nfrom rest_framework.test import APITestCase\n\n\nclass PedidoAPITests(APITestCase):\n    def setUp(self):\n        self.user = User.objects.create_user(\"ana\", password=\"x\")\n        self.client.force_authenticate(self.user)\n\n    def test_lista(self):\n        resp = self.client.get(reverse(\"pedido-list\"))\n        self.assertEqual(resp.status_code, status.HTTP_200_OK)"
+        }
+      ],
+      "tags": [
+        "drf",
+        "testing"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "Los nombres de ruta del router son '<basename>-list' y '<basename>-detail'."
+    },
+    {
+      "title": "Versionado de la API",
+      "command": "URLPathVersioning",
+      "section": "DRF",
+      "topic": "Vistas y routers",
+      "description": "Permite mantener varias versiones de la API en paralelo y consultar la versión en request.version.",
+      "examples": [
+        {
+          "description": "Versionado por URL",
+          "code": "REST_FRAMEWORK[\"DEFAULT_VERSIONING_CLASS\"] = \"rest_framework.versioning.URLPathVersioning\"\nREST_FRAMEWORK[\"ALLOWED_VERSIONS\"] = [\"v1\", \"v2\"]\n\n# urls.py\nurlpatterns = [path(\"api/<str:version>/\", include(router.urls))]"
+        },
+        {
+          "description": "Serializer distinto por versión",
+          "code": "def get_serializer_class(self):\n    if self.request.version == \"v2\":\n        return PedidoV2Serializer\n    return PedidoSerializer"
+        }
+      ],
+      "tags": [
+        "drf",
+        "versionado",
+        "api"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "Fullstack"
+      ]
+    }
+  ]
+}

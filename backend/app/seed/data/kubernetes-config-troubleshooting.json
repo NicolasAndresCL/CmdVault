@@ -1,0 +1,724 @@
+{
+  "category": {
+    "slug": "kubernetes",
+    "name": "Kubernetes",
+    "icon": "hub",
+    "order": 6,
+    "description": "Orquestación con Kubernetes: kubectl, workloads, redes, configuración, troubleshooting y Helm."
+  },
+  "commands": [
+    {
+      "title": "Crear ConfigMap",
+      "command": "kubectl create configmap api-config --from-literal=LOG_LEVEL=info --from-literal=TZ=America/Santiago",
+      "section": "Configuración y secretos",
+      "topic": "ConfigMaps",
+      "description": "Guarda configuración no sensible como pares clave-valor o archivos, para inyectarla como variables o montarla como volumen.",
+      "examples": [
+        {
+          "description": "Desde un archivo .env",
+          "code": "kubectl create configmap api-config --from-env-file=api.env"
+        },
+        {
+          "description": "Desde archivos de configuración",
+          "code": "kubectl create configmap nginx-conf --from-file=nginx.conf --from-file=conf.d/"
+        },
+        {
+          "description": "Regenerar de forma idempotente",
+          "code": "kubectl create configmap api-config --from-env-file=api.env --dry-run=client -o yaml | kubectl apply -f -"
+        }
+      ],
+      "tags": [
+        "configmap",
+        "configuracion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Usar ConfigMap y Secret en un pod",
+      "command": "kubectl exec api-xyz -- env | sort",
+      "section": "Configuración y secretos",
+      "topic": "ConfigMaps",
+      "description": "Se pueden cargar completos con envFrom, clave a clave con valueFrom o montar como archivos.",
+      "examples": [
+        {
+          "description": "envFrom y una clave concreta",
+          "code": "containers:\n  - name: api\n    envFrom:\n      - configMapRef: { name: api-config }\n      - secretRef: { name: api-secrets }\n    env:\n      - name: DB_PASSWORD\n        valueFrom:\n          secretKeyRef: { name: db-cred, key: password }"
+        },
+        {
+          "description": "Montar como archivos",
+          "code": "volumeMounts:\n  - { name: conf, mountPath: /etc/nginx/conf.d, readOnly: true }\nvolumes:\n  - name: conf\n    configMap: { name: nginx-conf }"
+        }
+      ],
+      "tags": [
+        "configmap",
+        "secret",
+        "env",
+        "snippet"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Las variables de entorno no se actualizan al cambiar el ConfigMap; los volúmenes sí (con retraso), salvo si usas subPath."
+    },
+    {
+      "title": "Crear Secret genérico",
+      "command": "kubectl create secret generic db-cred --from-literal=username=app --from-literal=password='S3cr3t!'",
+      "section": "Configuración y secretos",
+      "topic": "Secrets",
+      "description": "Guarda datos sensibles codificados en base64. Kubernetes los entrega como variables o archivos a los pods autorizados.",
+      "examples": [
+        {
+          "description": "Desde archivos",
+          "code": "kubectl create secret generic gcp-sa --from-file=key.json=./sa.json"
+        },
+        {
+          "description": "Desde un .env sin dejar rastro en el historial",
+          "code": "kubectl create secret generic api-secrets --from-env-file=secrets.env"
+        },
+        {
+          "description": "Generar el YAML sin aplicarlo",
+          "code": "kubectl create secret generic db-cred --from-literal=password=x --dry-run=client -o yaml"
+        }
+      ],
+      "tags": [
+        "secret",
+        "credenciales"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Base64 no es cifrado: cualquiera con get secrets los lee. Habilita cifrado en reposo (EncryptionConfiguration o KMS) y no versiones Secrets en texto plano."
+    },
+    {
+      "title": "Leer un Secret decodificado",
+      "command": "kubectl get secret db-cred -o jsonpath='{.data.password}' | base64 -d",
+      "section": "Configuración y secretos",
+      "topic": "Secrets",
+      "description": "Extrae y decodifica una clave de un Secret para verificar su valor.",
+      "examples": [
+        {
+          "description": "Todas las claves decodificadas con jq",
+          "code": "kubectl get secret db-cred -o json | jq '.data | map_values(@base64d)'"
+        },
+        {
+          "description": "Con go-template",
+          "code": "kubectl get secret db-cred -o go-template='{{range $k,$v := .data}}{{$k}}={{$v | base64decode}}{{\"\\n\"}}{{end}}'"
+        },
+        {
+          "description": "PowerShell",
+          "code": "[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String((kubectl get secret db-cred -o jsonpath='{.data.password}')))"
+        }
+      ],
+      "tags": [
+        "secret",
+        "base64"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Secret TLS",
+      "command": "kubectl create secret tls api-tls --cert=tls.crt --key=tls.key",
+      "section": "Configuración y secretos",
+      "topic": "Secrets",
+      "description": "Crea un Secret de tipo kubernetes.io/tls con certificado y llave, usado por Ingress y Gateway.",
+      "examples": [
+        {
+          "description": "Ver fecha de expiración del certificado",
+          "code": "kubectl get secret api-tls -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -noout -enddate"
+        }
+      ],
+      "tags": [
+        "secret",
+        "tls",
+        "certificados"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para renovaciones automáticas usa cert-manager con un ClusterIssuer de Let's Encrypt."
+    },
+    {
+      "title": "Secret para registro privado",
+      "command": "kubectl create secret docker-registry ghcr-cred --docker-server=ghcr.io --docker-username=nicocano --docker-password=$GHCR_TOKEN",
+      "section": "Configuración y secretos",
+      "topic": "Secrets",
+      "description": "Credenciales para que los nodos descarguen imágenes privadas, referenciadas con imagePullSecrets.",
+      "examples": [
+        {
+          "description": "Usarlo en el pod",
+          "code": "spec:\n  imagePullSecrets:\n    - name: ghcr-cred"
+        },
+        {
+          "description": "Asociarlo a la ServiceAccount por defecto",
+          "code": "kubectl patch sa default -p '{\"imagePullSecrets\":[{\"name\":\"ghcr-cred\"}]}'"
+        }
+      ],
+      "tags": [
+        "secret",
+        "registro",
+        "imagenes"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Secretos sincronizados con External Secrets",
+      "command": "kubectl get externalsecrets -A",
+      "section": "Configuración y secretos",
+      "topic": "Secrets",
+      "description": "External Secrets Operator sincroniza Secrets de Kubernetes desde AWS Secrets Manager, GCP Secret Manager, Vault, etc., para no guardar secretos en Git.",
+      "examples": [
+        {
+          "description": "ExternalSecret desde AWS Secrets Manager",
+          "code": "apiVersion: external-secrets.io/v1\nkind: ExternalSecret\nmetadata: { name: db-cred, namespace: tienda }\nspec:\n  refreshInterval: 1h\n  secretStoreRef: { name: aws-sm, kind: ClusterSecretStore }\n  target: { name: db-cred }\n  data:\n    - secretKey: password\n      remoteRef: { key: prod/tienda/db, property: password }"
+        },
+        {
+          "description": "Ver el estado de sincronización",
+          "code": "kubectl describe externalsecret db-cred -n tienda"
+        }
+      ],
+      "tags": [
+        "external-secrets",
+        "gitops",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Alternativas: Sealed Secrets (cifrado en Git) o SOPS con age/KMS."
+    },
+    {
+      "title": "Volúmenes persistentes con PVC",
+      "command": "kubectl get pvc -A",
+      "section": "Configuración y secretos",
+      "topic": "Almacenamiento",
+      "description": "Un PersistentVolumeClaim solicita almacenamiento a una StorageClass, que lo aprovisiona dinámicamente (EBS, PD, discos locales).",
+      "examples": [
+        {
+          "description": "PVC de 10 GiB",
+          "code": "apiVersion: v1\nkind: PersistentVolumeClaim\nmetadata: { name: datos }\nspec:\n  accessModes: [ReadWriteOnce]\n  storageClassName: gp3\n  resources:\n    requests:\n      storage: 10Gi"
+        },
+        {
+          "description": "Ampliar un PVC (si la StorageClass lo permite)",
+          "code": "kubectl patch pvc datos -p '{\"spec\":{\"resources\":{\"requests\":{\"storage\":\"20Gi\"}}}}'"
+        },
+        {
+          "description": "Ver PV y su política de retención",
+          "code": "kubectl get pv -o custom-columns=PV:.metadata.name,CLAIM:.spec.claimRef.name,RECLAIM:.spec.persistentVolumeReclaimPolicy"
+        }
+      ],
+      "tags": [
+        "pvc",
+        "almacenamiento"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Con reclaimPolicy Delete (habitual por defecto), borrar el PVC borra el disco. Para datos críticos usa Retain."
+    },
+    {
+      "title": "StorageClass",
+      "command": "kubectl get storageclass",
+      "section": "Configuración y secretos",
+      "topic": "Almacenamiento",
+      "description": "Define tipos de almacenamiento y su provisionador. La marcada como default se usa cuando el PVC no indica clase.",
+      "examples": [
+        {
+          "description": "StorageClass gp3 de AWS EBS CSI",
+          "code": "apiVersion: storage.k8s.io/v1\nkind: StorageClass\nmetadata:\n  name: gp3\n  annotations:\n    storageclass.kubernetes.io/is-default-class: \"true\"\nprovisioner: ebs.csi.aws.com\nparameters: { type: gp3, encrypted: \"true\" }\nreclaimPolicy: Retain\nallowVolumeExpansion: true\nvolumeBindingMode: WaitForFirstConsumer"
+        },
+        {
+          "description": "Quitar la marca de default a otra clase",
+          "code": "kubectl patch storageclass standard -p '{\"metadata\":{\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"false\"}}}'"
+        }
+      ],
+      "tags": [
+        "storageclass",
+        "csi",
+        "aws"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "WaitForFirstConsumer crea el disco en la zona donde se programa el pod y evita PVCs atados a una zona sin nodos."
+    },
+    {
+      "title": "SecurityContext restringido",
+      "command": "kubectl label ns tienda pod-security.kubernetes.io/enforce=restricted --overwrite",
+      "section": "Configuración y secretos",
+      "topic": "Seguridad de pods",
+      "description": "Configura el pod para cumplir el estándar Pod Security restricted: no root, sin escalada, sin capabilities y con seccomp.",
+      "examples": [
+        {
+          "description": "Bloque de seguridad completo",
+          "code": "spec:\n  securityContext:\n    runAsNonRoot: true\n    runAsUser: 10001\n    fsGroup: 10001\n    seccompProfile: { type: RuntimeDefault }\n  containers:\n    - name: api\n      securityContext:\n        allowPrivilegeEscalation: false\n        readOnlyRootFilesystem: true\n        capabilities: { drop: [\"ALL\"] }"
+        },
+        {
+          "description": "Auditar sin bloquear antes de exigir",
+          "code": "kubectl label ns tienda pod-security.kubernetes.io/warn=restricted pod-security.kubernetes.io/audit=restricted"
+        }
+      ],
+      "tags": [
+        "securitycontext",
+        "pod-security",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Copiar archivos con kubectl cp",
+      "command": "kubectl cp tienda/api-xyz:/app/reports ./reports",
+      "section": "Configuración y secretos",
+      "topic": "Archivos",
+      "description": "Copia archivos entre la máquina local y un contenedor. Requiere tar dentro del contenedor.",
+      "examples": [
+        {
+          "description": "Subir un archivo a un contenedor concreto",
+          "code": "kubectl cp ./dump.sql postgres-0:/tmp/dump.sql -c postgres -n datos"
+        },
+        {
+          "description": "Alternativa cuando no hay tar",
+          "code": "kubectl exec -i postgres-0 -n datos -- sh -c 'cat > /tmp/dump.sql' < dump.sql"
+        }
+      ],
+      "tags": [
+        "cp",
+        "archivos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Logs de un pod",
+      "command": "kubectl logs -f deploy/api",
+      "section": "Troubleshooting",
+      "topic": "Logs",
+      "description": "Muestra stdout/stderr de un contenedor. Puedes apuntar a un pod, a un Deployment o a un selector.",
+      "syntax": "kubectl logs [-f] [-p] [-c CONTENEDOR] (POD | TIPO/NOMBRE | -l SELECTOR)",
+      "examples": [
+        {
+          "description": "Contenedor anterior tras un crash",
+          "code": "kubectl logs api-xyz --previous"
+        },
+        {
+          "description": "Contenedor específico de un pod multi-contenedor",
+          "code": "kubectl logs api-xyz -c log-shipper"
+        },
+        {
+          "description": "Todos los pods de una app con prefijo y desde hace 1 h",
+          "code": "kubectl logs -l app=api --all-containers --prefix --since=1h --max-log-requests=10"
+        },
+        {
+          "description": "Últimas líneas con timestamp",
+          "code": "kubectl logs api-xyz --tail=200 --timestamps"
+        }
+      ],
+      "tags": [
+        "logs",
+        "crashloop"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "--previous es la clave en CrashLoopBackOff: los logs del contenedor actual suelen estar vacíos porque acaba de arrancar. Para varios pods en vivo, stern es más cómodo."
+    },
+    {
+      "title": "Entrar a un contenedor con exec",
+      "command": "kubectl exec -it api-xyz -- sh",
+      "section": "Troubleshooting",
+      "topic": "Acceso",
+      "description": "Ejecuta un comando o una shell dentro de un contenedor en marcha.",
+      "examples": [
+        {
+          "description": "Contenedor concreto",
+          "code": "kubectl exec -it api-xyz -c api -- bash"
+        },
+        {
+          "description": "Sobre el primer pod de un Deployment",
+          "code": "kubectl exec deploy/api -- python manage.py showmigrations"
+        },
+        {
+          "description": "Probar conectividad desde dentro",
+          "code": "kubectl exec api-xyz -- wget -qO- http://postgres:5432 || true"
+        }
+      ],
+      "tags": [
+        "exec",
+        "shell"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Eventos ordenados por tiempo",
+      "command": "kubectl get events --sort-by=.lastTimestamp -n tienda",
+      "section": "Troubleshooting",
+      "topic": "Eventos",
+      "description": "Los eventos explican por qué falla el scheduling, el pull de la imagen, las probes o el montaje de volúmenes.",
+      "examples": [
+        {
+          "description": "Solo advertencias con el comando events",
+          "code": "kubectl events -n tienda --types=Warning"
+        },
+        {
+          "description": "Eventos de un objeto concreto",
+          "code": "kubectl events --for pod/api-xyz -n tienda"
+        },
+        {
+          "description": "Seguir en vivo en todo el clúster",
+          "code": "kubectl get events -A -w"
+        }
+      ],
+      "tags": [
+        "eventos",
+        "diagnostico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Los eventos se conservan por defecto solo una hora; si llegas tarde, revisa tu sistema de logs."
+    },
+    {
+      "title": "Depurar con contenedores efímeros",
+      "command": "kubectl debug -it api-xyz --image=nicolaka/netshoot --target=api",
+      "section": "Troubleshooting",
+      "topic": "kubectl debug",
+      "description": "Inyecta un contenedor temporal en un pod en marcha compartiendo el namespace de procesos del contenedor objetivo. Ideal para imágenes distroless.",
+      "examples": [
+        {
+          "description": "Copia del pod con otra imagen o comando",
+          "code": "kubectl debug api-xyz -it --copy-to=api-debug --container=api --image=ghcr.io/nicocano/api:debug -- sh"
+        },
+        {
+          "description": "Copia que arranca con shell en lugar del entrypoint (CrashLoop)",
+          "code": "kubectl debug api-xyz -it --copy-to=api-debug --container=api -- sh"
+        },
+        {
+          "description": "Con perfil de capacidades de red",
+          "code": "kubectl debug -it api-xyz --image=nicolaka/netshoot --profile=netadmin"
+        }
+      ],
+      "tags": [
+        "debug",
+        "ephemeral",
+        "distroless"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Los contenedores efímeros no se pueden quitar del pod; desaparecen cuando el pod se recrea."
+    },
+    {
+      "title": "Depurar un nodo con kubectl debug",
+      "command": "kubectl debug node/worker-1 -it --image=ubuntu:24.04",
+      "section": "Troubleshooting",
+      "topic": "kubectl debug",
+      "description": "Crea un pod privilegiado en el nodo con el sistema de archivos del host montado en /host, sin necesidad de SSH.",
+      "examples": [
+        {
+          "description": "Revisar logs del kubelet",
+          "code": "kubectl debug node/worker-1 -it --image=ubuntu:24.04 -- chroot /host journalctl -u kubelet -n 100"
+        },
+        {
+          "description": "Con perfil sysadmin",
+          "code": "kubectl debug node/worker-1 -it --profile=sysadmin --image=busybox:1.37"
+        },
+        {
+          "description": "Encontrar y borrar el pod de depuración al terminar",
+          "code": "kubectl get pods -o name | grep node-debugger | xargs -r kubectl delete"
+        }
+      ],
+      "tags": [
+        "debug",
+        "nodos",
+        "kubelet"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "El pod de depuración queda creado al salir (node-debugger-...); bórralo manualmente con kubectl delete pod."
+    },
+    {
+      "title": "Uso de CPU y memoria con top",
+      "command": "kubectl top pods -A --sort-by=memory",
+      "section": "Troubleshooting",
+      "topic": "Recursos",
+      "description": "Muestra consumo actual de nodos y pods según metrics-server. Útil para ajustar requests y detectar fugas.",
+      "examples": [
+        {
+          "description": "Por contenedor",
+          "code": "kubectl top pod api-xyz --containers"
+        },
+        {
+          "description": "Nodos ordenados por CPU",
+          "code": "kubectl top nodes --sort-by=cpu"
+        },
+        {
+          "description": "Instalar metrics-server",
+          "code": "kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"
+        }
+      ],
+      "tags": [
+        "top",
+        "metricas",
+        "recursos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Si devuelve 'Metrics API not available', falta metrics-server. En kind suele requerir el argumento --kubelet-insecure-tls."
+    },
+    {
+      "title": "Diagnosticar CrashLoopBackOff",
+      "command": "kubectl describe pod api-xyz",
+      "section": "Troubleshooting",
+      "topic": "Estados comunes",
+      "description": "El contenedor arranca y muere repetidamente. Revisa el último estado, el código de salida y los logs previos.",
+      "examples": [
+        {
+          "description": "Último estado y razón",
+          "code": "kubectl get pod api-xyz -o jsonpath='{.status.containerStatuses[0].lastState.terminated}'"
+        },
+        {
+          "description": "Logs del intento anterior",
+          "code": "kubectl logs api-xyz --previous"
+        },
+        {
+          "description": "Pods con más reinicios del clúster",
+          "code": "kubectl get pods -A --sort-by='.status.containerStatuses[0].restartCount' | tail"
+        }
+      ],
+      "tags": [
+        "crashloopbackoff",
+        "troubleshooting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Exit 137 con reason OOMKilled indica límite de memoria; exit 1 suele ser error de la app (variables faltantes, BD inalcanzable); una liveness mal calibrada también genera bucles."
+    },
+    {
+      "title": "Diagnosticar ImagePullBackOff",
+      "command": "kubectl describe pod api-xyz | grep -A10 Events",
+      "section": "Troubleshooting",
+      "topic": "Estados comunes",
+      "description": "El nodo no puede descargar la imagen: tag inexistente, registro privado sin credenciales, límite de descargas o arquitectura incorrecta.",
+      "examples": [
+        {
+          "description": "Ver la imagen exacta solicitada",
+          "code": "kubectl get pod api-xyz -o jsonpath='{.spec.containers[*].image}'"
+        },
+        {
+          "description": "Comprobar que existe la variante de arquitectura",
+          "code": "docker buildx imagetools inspect ghcr.io/nicocano/api:1.4.2"
+        },
+        {
+          "description": "Revisar los imagePullSecrets del pod",
+          "code": "kubectl get pod api-xyz -o jsonpath='{.spec.imagePullSecrets}'"
+        }
+      ],
+      "tags": [
+        "imagepullbackoff",
+        "imagenes",
+        "troubleshooting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Diagnosticar pods en Pending",
+      "command": "kubectl get pods --field-selector=status.phase=Pending -A",
+      "section": "Troubleshooting",
+      "topic": "Estados comunes",
+      "description": "Pending significa que el scheduler no encuentra nodo o falta un volumen. Los eventos dicen el motivo (Insufficient cpu, taints, PVC sin enlazar).",
+      "examples": [
+        {
+          "description": "Motivo del scheduler",
+          "code": "kubectl describe pod api-xyz | sed -n '/Events/,$p'"
+        },
+        {
+          "description": "Recursos asignados por nodo",
+          "code": "kubectl describe nodes | grep -A8 'Allocated resources'"
+        },
+        {
+          "description": "PVC sin enlazar",
+          "code": "kubectl get pvc -A | grep -v Bound"
+        }
+      ],
+      "tags": [
+        "pending",
+        "scheduling",
+        "troubleshooting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Ver recursos y relaciones de un workload",
+      "command": "kubectl get deploy,rs,pods -l app=api",
+      "section": "Troubleshooting",
+      "topic": "Consulta",
+      "description": "Ver juntos Deployment, ReplicaSets y pods ayuda a entender rollouts atascados y versiones conviviendo.",
+      "examples": [
+        {
+          "description": "Árbol de propietarios con el plugin tree",
+          "code": "kubectl tree deploy api"
+        },
+        {
+          "description": "Quién es el dueño de un pod",
+          "code": "kubectl get pod api-xyz -o jsonpath='{.metadata.ownerReferences[0].kind}/{.metadata.ownerReferences[0].name}'"
+        }
+      ],
+      "tags": [
+        "ownerreferences",
+        "replicaset"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Namespace atascado en Terminating",
+      "command": "kubectl get ns tienda -o jsonpath='{.status.conditions}'",
+      "section": "Troubleshooting",
+      "topic": "Estados comunes",
+      "description": "Un namespace no termina de borrarse cuando quedan recursos con finalizers o un APIService caído.",
+      "examples": [
+        {
+          "description": "Listar todo lo que queda en el namespace",
+          "code": "kubectl api-resources --verbs=list --namespaced -o name | xargs -n1 kubectl get --show-kind --ignore-not-found -n tienda"
+        },
+        {
+          "description": "APIServices no disponibles",
+          "code": "kubectl get apiservice | grep False"
+        }
+      ],
+      "tags": [
+        "namespace",
+        "finalizers",
+        "troubleshooting"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "Quitar finalizers a la fuerza puede dejar recursos externos huérfanos (discos, balanceadores). Resuelve primero la causa."
+    },
+    {
+      "title": "Visor de logs multi-pod con stern",
+      "command": "stern api -n tienda",
+      "section": "Troubleshooting",
+      "topic": "Logs",
+      "description": "stern sigue en vivo los logs de todos los pods que coinciden con un patrón, con colores por pod y contenedor.",
+      "examples": [
+        {
+          "description": "Por selector y desde hace 10 minutos",
+          "code": "stern -l app=api --since 10m"
+        },
+        {
+          "description": "Filtrar por expresión",
+          "code": "stern api --include 'ERROR|Traceback'"
+        },
+        {
+          "description": "Todos los namespaces",
+          "code": "stern -A ingress"
+        }
+      ],
+      "tags": [
+        "stern",
+        "logs"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Interfaz de terminal con k9s",
+      "command": "k9s -n tienda",
+      "section": "Troubleshooting",
+      "topic": "Herramientas",
+      "description": "k9s es una TUI para navegar recursos, ver logs, hacer exec y port-forward con atajos de teclado.",
+      "examples": [
+        {
+          "description": "Abrir en un contexto concreto y solo lectura",
+          "code": "k9s --context prod --readonly"
+        },
+        {
+          "description": "Ir directo a una vista",
+          "code": "k9s -c deploy"
+        }
+      ],
+      "tags": [
+        "k9s",
+        "tui"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Atajos útiles: ':' para cambiar de recurso, 'l' logs, 's' shell, 'shift-f' port-forward, '/' filtrar."
+    }
+  ]
+}

@@ -1,0 +1,711 @@
+{
+  "category": {
+    "slug": "linux",
+    "name": "Linux",
+    "icon": "terminal",
+    "order": 1,
+    "description": "Administración de servidores Linux: Ubuntu (Debian) y AlmaLinux (RHEL), del día a día a troubleshooting SRE."
+  },
+  "commands": [
+    {
+      "title": "Carga del sistema y tiempo encendido",
+      "command": "uptime",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Muestra cuánto lleva encendido el servidor y la carga promedio de 1, 5 y 15 minutos.",
+      "examples": [
+        {
+          "description": "Carga y usuarios",
+          "code": "uptime"
+        },
+        {
+          "description": "Comparar la carga con los núcleos disponibles",
+          "code": "uptime; nproc"
+        },
+        {
+          "description": "Desde cuándo está encendido",
+          "code": "uptime -s"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "carga",
+        "sre"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "Una carga sostenida mayor que el número de núcleos (nproc) indica saturación de CPU o procesos bloqueados en I/O (estado D)."
+    },
+    {
+      "title": "Monitorear procesos con top",
+      "command": "top",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Vista en tiempo real de CPU, memoria, carga y procesos que más recursos consumen.",
+      "syntax": "top [opciones]",
+      "examples": [
+        {
+          "description": "Ordenar por memoria (tecla M) o modo por lotes para scripts",
+          "code": "top -b -n 1 -o %MEM | head -20"
+        },
+        {
+          "description": "Solo procesos de un usuario",
+          "code": "top -u postgres"
+        },
+        {
+          "description": "Hilos de un proceso",
+          "code": "top -H -p 1234"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "procesos",
+        "sre"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "En la cabecera, 'wa' alto indica espera de disco; 'st' alto en una VM indica que el hipervisor está robando CPU."
+    },
+    {
+      "title": "Monitoreo interactivo con htop",
+      "command": "htop",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Alternativa visual a top con barras por núcleo, árbol de procesos y acciones con teclas (F9 para matar, F5 para árbol).",
+      "examples": [
+        {
+          "description": "Árbol de procesos",
+          "code": "htop -t"
+        },
+        {
+          "description": "Filtrar por PID",
+          "code": "htop -p 1234,5678"
+        },
+        {
+          "description": "Solo un usuario",
+          "code": "htop -u www-data"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "procesos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "En AlmaLinux se instala desde EPEL. 'btop' es otra alternativa moderna."
+    },
+    {
+      "title": "Uso de memoria",
+      "command": "free -h",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Muestra memoria total, usada, libre, buffers/caché y swap.",
+      "examples": [
+        {
+          "description": "En unidades legibles",
+          "code": "free -h"
+        },
+        {
+          "description": "Actualizar cada 2 segundos",
+          "code": "free -h -s 2"
+        },
+        {
+          "description": "Detalle desde el kernel",
+          "code": "grep -E 'MemTotal|MemAvailable|SwapTotal|SwapFree' /proc/meminfo"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "memoria",
+        "sre"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "Fíjate en 'available', no en 'free': Linux usa la RAM libre como caché de disco y la libera cuando se necesita."
+    },
+    {
+      "title": "Estadísticas de memoria virtual",
+      "command": "vmstat",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Resume procesos en cola, memoria, swap, I/O y CPU en intervalos; excelente para detectar cuellos de botella.",
+      "syntax": "vmstat [intervalo] [conteo]",
+      "examples": [
+        {
+          "description": "Cada segundo, 10 muestras",
+          "code": "vmstat 1 10"
+        },
+        {
+          "description": "Con marcas de tiempo y en MB",
+          "code": "vmstat -t -S M 2 5"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "memoria",
+        "cpu",
+        "sre"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "Columna 'r' > núcleos: CPU saturada. 'b' > 0: procesos bloqueados por I/O. 'si/so' > 0 sostenido: falta de RAM."
+    },
+    {
+      "title": "Rendimiento de discos",
+      "command": "iostat -xz",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Muestra utilización, latencia y throughput por dispositivo de bloque.",
+      "examples": [
+        {
+          "description": "Estadísticas extendidas cada 2 segundos",
+          "code": "iostat -xz 2"
+        },
+        {
+          "description": "En MB/s y solo un disco",
+          "code": "iostat -xm 2 5 sda"
+        },
+        {
+          "description": "Qué procesos hacen más I/O",
+          "code": "sudo iotop -oPa"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "disco",
+        "sre"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "Viene en el paquete sysstat. Observa %util cercano a 100 y r_await/w_await altos (ms por operación)."
+    },
+    {
+      "title": "Historial de rendimiento con sar",
+      "command": "sar",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Recolecta y consulta métricas históricas (CPU, memoria, red, disco) para analizar qué pasó durante un incidente.",
+      "examples": [
+        {
+          "description": "CPU de hoy",
+          "code": "sar -u"
+        },
+        {
+          "description": "Memoria cada 2 segundos en vivo",
+          "code": "sar -r 2 5"
+        },
+        {
+          "description": "Tráfico de red por interfaz",
+          "code": "sar -n DEV 1 5"
+        },
+        {
+          "description": "Datos de un día anterior",
+          "code": "sar -u -f /var/log/sysstat/sa15     # Ubuntu\nsar -u -f /var/log/sa/sa15         # AlmaLinux"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "histórico",
+        "sre"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "Activa la recolección: 'sudo systemctl enable --now sysstat' (en Ubuntu además ENABLED=\"true\" en /etc/default/sysstat)."
+    },
+    {
+      "title": "Archivos abiertos con lsof",
+      "command": "lsof",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Lista archivos, sockets y dispositivos abiertos por procesos; clave para 'disco lleno pero no encuentro los archivos' o puertos ocupados.",
+      "examples": [
+        {
+          "description": "¿Quién usa el puerto 5432?",
+          "code": "sudo lsof -i :5432"
+        },
+        {
+          "description": "Archivos borrados que siguen ocupando espacio",
+          "code": "sudo lsof +L1"
+        },
+        {
+          "description": "Archivos abiertos por un proceso",
+          "code": "sudo lsof -p 1234"
+        },
+        {
+          "description": "¿Quién bloquea el desmontaje?",
+          "code": "sudo lsof +D /mnt/datos"
+        }
+      ],
+      "tags": [
+        "diagnóstico",
+        "archivos",
+        "sre"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "Para liberar espacio de un archivo borrado sin reiniciar el proceso: ': > /proc/<PID>/fd/<FD>' (trunca el descriptor)."
+    },
+    {
+      "title": "Trazar llamadas al sistema con strace",
+      "command": "strace",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Muestra las llamadas al sistema de un proceso: qué archivos abre, qué conexiones intenta y dónde se queda bloqueado.",
+      "syntax": "strace [opciones] comando | -p PID",
+      "examples": [
+        {
+          "description": "Adjuntarse a un proceso en ejecución",
+          "code": "sudo strace -p 1234 -f -tt"
+        },
+        {
+          "description": "Ver solo accesos a archivos",
+          "code": "strace -f -e trace=openat,stat ./app 2>&1 | grep -v ENOENT"
+        },
+        {
+          "description": "Resumen de tiempo por syscall",
+          "code": "sudo strace -c -p 1234"
+        },
+        {
+          "description": "Llamadas de red",
+          "code": "strace -f -e trace=network curl -s https://ejemplo.cl > /dev/null"
+        }
+      ],
+      "tags": [
+        "diagnóstico",
+        "depuración",
+        "sre"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "strace ralentiza mucho el proceso: úsalo con cuidado en producción y por poco tiempo."
+    },
+    {
+      "title": "Mensajes del kernel",
+      "command": "dmesg",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Muestra el buffer del kernel: errores de hardware, OOM killer, problemas de disco o red.",
+      "examples": [
+        {
+          "description": "Con fecha legible y en vivo",
+          "code": "sudo dmesg -T -w"
+        },
+        {
+          "description": "Solo errores y advertencias",
+          "code": "sudo dmesg -T --level=err,warn"
+        },
+        {
+          "description": "¿El OOM killer mató algo?",
+          "code": "sudo dmesg -T | grep -i -E 'out of memory|killed process'"
+        }
+      ],
+      "tags": [
+        "diagnóstico",
+        "kernel",
+        "sre"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ]
+    },
+    {
+      "title": "Información del sistema y hardware",
+      "command": "uname / lscpu",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Identifica la versión del kernel, la distribución, la CPU y la memoria del servidor.",
+      "examples": [
+        {
+          "description": "Kernel y arquitectura",
+          "code": "uname -r -m"
+        },
+        {
+          "description": "Distribución y versión",
+          "code": "cat /etc/os-release"
+        },
+        {
+          "description": "CPU y núcleos",
+          "code": "lscpu | grep -E 'Model name|^CPU\\(s\\)|Thread'"
+        },
+        {
+          "description": "Fabricante y modelo (VM o físico)",
+          "code": "sudo dmidecode -s system-product-name; systemd-detect-virt"
+        }
+      ],
+      "tags": [
+        "sistema",
+        "hardware",
+        "inventario"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Parámetros del kernel con sysctl",
+      "command": "sysctl",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Lee y ajusta parámetros del kernel en caliente (red, memoria, archivos) y los persiste en /etc/sysctl.d/.",
+      "examples": [
+        {
+          "description": "Ver un parámetro",
+          "code": "sysctl net.core.somaxconn"
+        },
+        {
+          "description": "Cambiar en caliente",
+          "code": "sudo sysctl -w vm.swappiness=10"
+        },
+        {
+          "description": "Persistir y recargar",
+          "code": "echo 'net.core.somaxconn = 4096' | sudo tee /etc/sysctl.d/90-tuning.conf\nsudo sysctl --system"
+        }
+      ],
+      "tags": [
+        "kernel",
+        "rendimiento",
+        "tuning"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE"
+      ]
+    },
+    {
+      "title": "Límites de recursos",
+      "command": "ulimit",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Consulta o cambia los límites por proceso de la shell (archivos abiertos, procesos, core dumps).",
+      "examples": [
+        {
+          "description": "Ver todos los límites",
+          "code": "ulimit -a"
+        },
+        {
+          "description": "Límite de archivos abiertos de la sesión",
+          "code": "ulimit -n 65535"
+        },
+        {
+          "description": "Límites efectivos de un proceso",
+          "code": "cat /proc/$(pgrep -o nginx)/limits"
+        }
+      ],
+      "tags": [
+        "límites",
+        "rendimiento",
+        "sre"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "Para servicios systemd, ulimit y /etc/security/limits.conf no aplican: usa LimitNOFILE= en la unidad."
+    },
+    {
+      "title": "Observar la salida de un comando",
+      "command": "watch",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Ejecuta un comando periódicamente mostrando su salida en pantalla completa; resalta cambios con -d.",
+      "examples": [
+        {
+          "description": "Conexiones establecidas cada 2 segundos",
+          "code": "watch -n 2 'ss -s'"
+        },
+        {
+          "description": "Resaltar diferencias",
+          "code": "watch -d 'df -h /'"
+        },
+        {
+          "description": "Seguir pods o contenedores",
+          "code": "watch -n 5 docker ps"
+        }
+      ],
+      "tags": [
+        "monitoreo",
+        "productividad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE"
+      ]
+    },
+    {
+      "title": "Medir tiempo de ejecución",
+      "command": "time",
+      "section": "Común",
+      "topic": "Rendimiento y troubleshooting",
+      "description": "Mide el tiempo real, de usuario y de sistema que tarda un comando.",
+      "examples": [
+        {
+          "description": "Tiempo de un respaldo",
+          "code": "time pg_dump -Fc midb > midb.dump"
+        },
+        {
+          "description": "Detalle de memoria máxima (GNU time)",
+          "code": "/usr/bin/time -v ./proceso 2>&1 | grep -E 'Maximum resident|Elapsed'"
+        }
+      ],
+      "tags": [
+        "rendimiento",
+        "medición"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE"
+      ]
+    },
+    {
+      "title": "Variables de entorno",
+      "command": "export / env",
+      "section": "Común",
+      "topic": "Variables y entorno",
+      "description": "Define variables de entorno para la sesión y los procesos hijos, y las consulta.",
+      "examples": [
+        {
+          "description": "Definir y exportar",
+          "code": "export APP_ENV=production"
+        },
+        {
+          "description": "Ver todas las variables",
+          "code": "env | sort"
+        },
+        {
+          "description": "Ejecutar un comando con variables puntuales",
+          "code": "env DEBUG=1 LOG_LEVEL=debug ./app"
+        },
+        {
+          "description": "Cargar un archivo .env en la shell",
+          "code": "set -a; source .env; set +a"
+        }
+      ],
+      "tags": [
+        "entorno",
+        "variables",
+        "shell"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Variables globales del sistema: /etc/environment (formato CLAVE=valor, sin export). Para servicios usa Environment= o EnvironmentFile= en systemd."
+    },
+    {
+      "title": "Archivos de inicio de la shell",
+      "command": "~/.bashrc",
+      "section": "Común",
+      "topic": "Variables y entorno",
+      "description": "Configura alias, funciones, PATH y prompt que se cargan al abrir una shell interactiva.",
+      "examples": [
+        {
+          "description": "Agregar al PATH de forma persistente",
+          "code": "echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.bashrc && source ~/.bashrc"
+        },
+        {
+          "description": "Alias útiles",
+          "code": "alias ll='ls -lah'\nalias k='kubectl'\nalias dps='docker ps --format \"table {{.Names}}\\t{{.Status}}\\t{{.Ports}}\"'"
+        },
+        {
+          "description": "Ver dónde está un comando o alias",
+          "code": "type -a python3"
+        }
+      ],
+      "tags": [
+        "shell",
+        "configuración",
+        "bash"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "~/.bash_profile (o ~/.profile en Ubuntu) se lee en shells de login; ~/.bashrc en las interactivas no-login."
+    },
+    {
+      "title": "Historial de comandos",
+      "command": "history",
+      "section": "Común",
+      "topic": "Variables y entorno",
+      "description": "Consulta y reutiliza comandos anteriores; Ctrl+R busca hacia atrás en el historial.",
+      "examples": [
+        {
+          "description": "Últimos 20 comandos",
+          "code": "history 20"
+        },
+        {
+          "description": "Repetir el último comando con sudo",
+          "code": "sudo !!"
+        },
+        {
+          "description": "Historial con fecha y hora",
+          "code": "echo 'export HISTTIMEFORMAT=\"%F %T \"' >> ~/.bashrc"
+        },
+        {
+          "description": "Comandos más usados",
+          "code": "history | awk '{print $2}' | sort | uniq -c | sort -rn | head"
+        }
+      ],
+      "tags": [
+        "shell",
+        "productividad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Un espacio al inicio del comando evita guardarlo en el historial si HISTCONTROL incluye ignorespace (útil con secretos)."
+    },
+    {
+      "title": "Encabezado seguro para scripts bash",
+      "command": "set -euo pipefail",
+      "section": "Común",
+      "topic": "Shell scripting",
+      "description": "Hace que un script falle ante errores, variables no definidas o fallos dentro de pipes, en vez de seguir ejecutando silenciosamente.",
+      "examples": [
+        {
+          "description": "Plantilla base",
+          "code": "#!/usr/bin/env bash\nset -euo pipefail\nIFS=$'\\n\\t'\n\ntrap 'echo \"Error en la línea $LINENO\" >&2' ERR\n\nmain() {\n  local destino=\"${1:?Uso: $0 <destino>}\"\n  echo \"Desplegando en ${destino}\"\n}\n\nmain \"$@\""
+        },
+        {
+          "description": "Limpieza garantizada al salir",
+          "code": "tmp=$(mktemp -d)\ntrap 'rm -rf \"$tmp\"' EXIT"
+        }
+      ],
+      "tags": [
+        "bash",
+        "scripting",
+        "buenas-prácticas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Analiza tus scripts con 'shellcheck' (apt/dnf install ShellCheck): detecta comillas faltantes y errores típicos."
+    },
+    {
+      "title": "Condicionales y pruebas en bash",
+      "command": "[[ ... ]]",
+      "section": "Común",
+      "topic": "Shell scripting",
+      "description": "Evalúa condiciones sobre archivos, cadenas y números para controlar el flujo de un script.",
+      "examples": [
+        {
+          "description": "¿Existe el archivo?",
+          "code": "if [[ -f /etc/app/app.env ]]; then source /etc/app/app.env; fi"
+        },
+        {
+          "description": "Comparar cadenas y números",
+          "code": "if [[ \"$APP_ENV\" == \"production\" && $(nproc) -ge 4 ]]; then echo 'ok'; fi"
+        },
+        {
+          "description": "Validar que un comando existe",
+          "code": "command -v docker >/dev/null || { echo 'Falta docker' >&2; exit 1; }"
+        }
+      ],
+      "tags": [
+        "bash",
+        "scripting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Bucles en bash",
+      "command": "for / while",
+      "section": "Común",
+      "topic": "Shell scripting",
+      "description": "Recorre listas, archivos o líneas de un archivo para automatizar tareas repetitivas.",
+      "examples": [
+        {
+          "description": "Recorrer servidores",
+          "code": "for h in web01 web02 web03; do ssh \"$h\" 'uptime'; done"
+        },
+        {
+          "description": "Leer un archivo línea a línea",
+          "code": "while IFS= read -r linea; do echo \"Procesando: $linea\"; done < hosts.txt"
+        },
+        {
+          "description": "Reintentar hasta que un servicio responda",
+          "code": "until curl -sf http://localhost:8000/health; do echo 'esperando...'; sleep 2; done"
+        }
+      ],
+      "tags": [
+        "bash",
+        "scripting",
+        "automatización"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ]
+    },
+    {
+      "title": "Redirecciones y descriptores",
+      "command": "> 2>&1",
+      "section": "Común",
+      "topic": "Shell scripting",
+      "description": "Redirige la salida estándar y de error a archivos o a otros comandos.",
+      "examples": [
+        {
+          "description": "Salida y errores al mismo archivo",
+          "code": "./script.sh > salida.log 2>&1"
+        },
+        {
+          "description": "Descartar errores",
+          "code": "find / -name '*.conf' 2>/dev/null"
+        },
+        {
+          "description": "Agregar sin sobrescribir",
+          "code": "date >> /var/log/ejecuciones.log"
+        },
+        {
+          "description": "Here-doc para crear un archivo",
+          "code": "cat > /tmp/config.ini <<'EOF'\n[app]\nport = 8000\nEOF"
+        }
+      ],
+      "tags": [
+        "bash",
+        "redirección"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    }
+  ]
+}

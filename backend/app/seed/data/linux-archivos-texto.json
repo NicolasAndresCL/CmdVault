@@ -1,0 +1,1368 @@
+{
+  "category": {
+    "slug": "linux",
+    "name": "Linux",
+    "icon": "terminal",
+    "order": 1,
+    "description": "Administración de servidores Linux: Ubuntu (Debian) y AlmaLinux (RHEL), del día a día a troubleshooting SRE."
+  },
+  "commands": [
+    {
+      "title": "Listar archivos con detalle",
+      "command": "ls -lah",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Lista el contenido de un directorio en formato largo (permisos, dueño, tamaño, fecha), incluyendo ocultos y con tamaños legibles.",
+      "syntax": "ls [opciones] [ruta...]",
+      "examples": [
+        {
+          "description": "Ordenar por fecha de modificación, lo más reciente al final",
+          "code": "ls -lahtr /var/log"
+        },
+        {
+          "description": "Ordenar por tamaño, los más grandes primero",
+          "code": "ls -lhS /var/log | head -20"
+        },
+        {
+          "description": "Mostrar el contexto SELinux de cada archivo",
+          "code": "ls -lZ /var/www/html"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "listado"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux 'll' es alias de 'ls -l'; en Ubuntu es 'ls -alF'. No parsees la salida de ls en scripts: usa find o globbing."
+    },
+    {
+      "title": "Navegar entre directorios",
+      "command": "cd",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Cambia el directorio de trabajo actual. Admite rutas absolutas, relativas y atajos como ~ (home) y - (directorio anterior).",
+      "syntax": "cd [ruta]",
+      "examples": [
+        {
+          "description": "Volver al directorio anterior",
+          "code": "cd -"
+        },
+        {
+          "description": "Ir al home del usuario",
+          "code": "cd ~"
+        },
+        {
+          "description": "Apilar directorios para volver luego",
+          "code": "pushd /etc/nginx && vim nginx.conf && popd"
+        }
+      ],
+      "tags": [
+        "navegación",
+        "shell"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ver árbol de directorios",
+      "command": "tree -L 2",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Muestra la estructura de directorios en forma de árbol, limitando la profundidad.",
+      "syntax": "tree [opciones] [ruta]",
+      "examples": [
+        {
+          "description": "Solo directorios, dos niveles",
+          "code": "tree -d -L 2 /etc"
+        },
+        {
+          "description": "Ignorar carpetas típicas de proyecto",
+          "code": "tree -L 3 -I 'node_modules|.git|__pycache__|env'"
+        },
+        {
+          "description": "Con tamaños acumulados legibles",
+          "code": "tree -h --du -L 1 /var"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "estructura"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "No viene instalado por defecto: 'apt install tree' en Ubuntu, 'dnf install tree' en AlmaLinux."
+    },
+    {
+      "title": "Crear directorios anidados",
+      "command": "mkdir -p",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Crea directorios, incluyendo los padres que falten, sin fallar si ya existen.",
+      "syntax": "mkdir [-p] [-m modo] directorio...",
+      "examples": [
+        {
+          "description": "Crear estructura de despliegue",
+          "code": "mkdir -p /opt/app/{releases,shared/{logs,config}}"
+        },
+        {
+          "description": "Crear con permisos específicos",
+          "code": "mkdir -m 750 -p /srv/backups"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "directorios"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Copiar archivos y directorios",
+      "command": "cp -a",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Copia archivos o directorios. Con -a preserva permisos, dueños, fechas y enlaces (modo archivo), ideal para respaldos.",
+      "syntax": "cp [opciones] origen... destino",
+      "examples": [
+        {
+          "description": "Respaldar un archivo de configuración antes de editarlo",
+          "code": "cp -a /etc/nginx/nginx.conf{,.bak.$(date +%F)}"
+        },
+        {
+          "description": "Copiar un directorio completo preservando atributos",
+          "code": "sudo cp -a /var/www/app /var/www/app.old"
+        },
+        {
+          "description": "Copiar sin sobrescribir lo existente",
+          "code": "cp -rn plantillas/* destino/"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "copiar",
+        "respaldo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "'cp -r' no preserva dueños ni fechas; para copias de servidor usa '-a' o rsync."
+    },
+    {
+      "title": "Mover o renombrar archivos",
+      "command": "mv",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Mueve o renombra archivos y directorios. Dentro del mismo sistema de archivos es instantáneo.",
+      "syntax": "mv [opciones] origen... destino",
+      "examples": [
+        {
+          "description": "Renombrar con confirmación si existe el destino",
+          "code": "mv -i config.yml config.yml.old"
+        },
+        {
+          "description": "Mover varios archivos a un directorio",
+          "code": "mv -v *.log /var/log/archivo/"
+        },
+        {
+          "description": "Renombrar en lote cambiando extensión",
+          "code": "for f in *.jpeg; do mv -- \"$f\" \"${f%.jpeg}.jpg\"; done"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "mover"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Eliminar archivos y directorios",
+      "command": "rm -rf",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Elimina archivos y directorios recursivamente. No hay papelera: lo borrado no se recupera.",
+      "syntax": "rm [opciones] archivo...",
+      "examples": [
+        {
+          "description": "Borrar con confirmación interactiva",
+          "code": "rm -ri ./build"
+        },
+        {
+          "description": "Borrar logs rotados de más de 30 días",
+          "code": "find /var/log/app -name '*.gz' -mtime +30 -delete"
+        },
+        {
+          "description": "Eliminar un archivo cuyo nombre empieza con guion",
+          "code": "rm -- -archivo-raro.txt"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "borrar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Nunca uses 'rm -rf $VAR/' sin validar que VAR no esté vacía: usa ${VAR:?} para abortar si lo está."
+    },
+    {
+      "title": "Crear enlaces simbólicos",
+      "command": "ln -s",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Crea un enlace simbólico que apunta a otro archivo o directorio. Útil para releases, configuraciones activas y binarios.",
+      "syntax": "ln -s destino nombre_enlace",
+      "examples": [
+        {
+          "description": "Activar un sitio en Nginx (Ubuntu)",
+          "code": "sudo ln -s /etc/nginx/sites-available/app /etc/nginx/sites-enabled/app"
+        },
+        {
+          "description": "Cambiar el release activo",
+          "code": "ln -sfn /opt/app/releases/2026-10-16 /opt/app/current"
+        },
+        {
+          "description": "Ver hacia dónde apunta un enlace",
+          "code": "readlink -f /opt/app/current"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "enlaces",
+        "despliegue"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Usa -n junto a -f al reemplazar un enlace a directorio; si no, se crea el enlace dentro del directorio apuntado."
+    },
+    {
+      "title": "Buscar archivos con find",
+      "command": "find",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Busca archivos por nombre, tipo, tamaño, fecha, dueño o permisos y opcionalmente ejecuta acciones sobre ellos.",
+      "syntax": "find [ruta] [expresión]",
+      "examples": [
+        {
+          "description": "Archivos de más de 500 MB",
+          "code": "sudo find / -xdev -type f -size +500M -exec ls -lh {} + 2>/dev/null"
+        },
+        {
+          "description": "Modificados en las últimas 24 horas",
+          "code": "find /etc -type f -mtime -1"
+        },
+        {
+          "description": "Cambiar permisos solo a directorios",
+          "code": "find /var/www/app -type d -exec chmod 755 {} +"
+        },
+        {
+          "description": "Buscar archivos sin dueño válido",
+          "code": "sudo find / -xdev \\( -nouser -o -nogroup \\) -print"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "búsqueda"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "-xdev evita cruzar a otros sistemas de archivos (/proc, montajes NFS). '{} +' agrupa argumentos y es mucho más rápido que '{} \\;'."
+    },
+    {
+      "title": "Localizar archivos por índice",
+      "command": "locate",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Busca archivos por nombre usando una base de datos indexada; es muy rápido pero puede estar desactualizada.",
+      "syntax": "locate [opciones] patrón",
+      "examples": [
+        {
+          "description": "Actualizar el índice y buscar",
+          "code": "sudo updatedb && locate nginx.conf"
+        },
+        {
+          "description": "Búsqueda sin distinguir mayúsculas",
+          "code": "locate -i readme.md | head"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "búsqueda"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Lo provee el paquete 'plocate' tanto en Ubuntu como en AlmaLinux."
+    },
+    {
+      "title": "Ver contenido de archivos",
+      "command": "cat / less",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "cat imprime el archivo completo; less permite paginar, buscar con / y seguir el archivo con F.",
+      "syntax": "less [opciones] archivo",
+      "examples": [
+        {
+          "description": "Ver con números de línea",
+          "code": "cat -n /etc/fstab"
+        },
+        {
+          "description": "Paginar un log y saltar al final",
+          "code": "less +G /var/log/syslog"
+        },
+        {
+          "description": "Seguir un archivo dentro de less (Shift+F)",
+          "code": "less +F /var/log/nginx/access.log"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "lectura"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En AlmaLinux el log general es /var/log/messages; en Ubuntu, /var/log/syslog."
+    },
+    {
+      "title": "Ver inicio o final de un archivo",
+      "command": "tail -f",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "head muestra las primeras líneas y tail las últimas; tail -f sigue el archivo en tiempo real.",
+      "syntax": "tail [-n N] [-f|-F] archivo",
+      "examples": [
+        {
+          "description": "Seguir un log incluso si se rota",
+          "code": "tail -F /var/log/nginx/error.log"
+        },
+        {
+          "description": "Últimas 200 líneas filtrando errores",
+          "code": "tail -n 200 app.log | grep -i error"
+        },
+        {
+          "description": "Primeras 5 líneas de un CSV",
+          "code": "head -n 5 datos.csv"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "logs"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "-F (mayúscula) reabre el archivo tras la rotación de logrotate; -f se queda pegado al descriptor viejo."
+    },
+    {
+      "title": "Identificar tipo y metadatos de archivo",
+      "command": "stat / file",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "file detecta el tipo real de un archivo por su contenido; stat muestra inodo, permisos en octal y marcas de tiempo.",
+      "examples": [
+        {
+          "description": "Permisos en octal y dueño",
+          "code": "stat -c '%a %U:%G %n' /etc/shadow"
+        },
+        {
+          "description": "Detectar tipo y codificación",
+          "code": "file -i datos.csv"
+        },
+        {
+          "description": "Ver fechas de acceso, modificación y cambio",
+          "code": "stat /var/log/syslog"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "metadatos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Comparar archivos",
+      "command": "diff -u",
+      "section": "Común",
+      "topic": "Archivos y directorios",
+      "description": "Compara dos archivos o directorios línea a línea; el formato unificado es el estándar para parches y revisiones.",
+      "syntax": "diff [opciones] archivo1 archivo2",
+      "examples": [
+        {
+          "description": "Comparar una configuración con su respaldo",
+          "code": "diff -u /etc/ssh/sshd_config.bak /etc/ssh/sshd_config"
+        },
+        {
+          "description": "Comparar directorios recursivamente",
+          "code": "diff -rq config_prod/ config_staging/"
+        },
+        {
+          "description": "Comparar la salida de dos comandos",
+          "code": "diff <(sort lista1.txt) <(sort lista2.txt)"
+        }
+      ],
+      "tags": [
+        "archivos",
+        "comparar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Cambiar permisos",
+      "command": "chmod",
+      "section": "Común",
+      "topic": "Permisos y ACL",
+      "description": "Modifica los permisos de lectura, escritura y ejecución de archivos, en notación octal o simbólica.",
+      "syntax": "chmod [-R] modo archivo...",
+      "examples": [
+        {
+          "description": "Hacer ejecutable un script",
+          "code": "chmod +x deploy.sh"
+        },
+        {
+          "description": "Llave privada SSH solo para el dueño",
+          "code": "chmod 600 ~/.ssh/id_ed25519"
+        },
+        {
+          "description": "Quitar permisos a 'otros' recursivamente",
+          "code": "chmod -R o-rwx /srv/datos"
+        },
+        {
+          "description": "Directorio compartido con setgid",
+          "code": "chmod 2775 /srv/compartido"
+        }
+      ],
+      "tags": [
+        "permisos",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "644 archivos, 755 directorios y 600 secretos son buenos valores por defecto. Evita 777: casi siempre oculta un problema de dueño."
+    },
+    {
+      "title": "Cambiar dueño y grupo",
+      "command": "chown",
+      "section": "Común",
+      "topic": "Permisos y ACL",
+      "description": "Cambia el usuario y/o grupo propietario de archivos y directorios.",
+      "syntax": "chown [-R] usuario[:grupo] archivo...",
+      "examples": [
+        {
+          "description": "Asignar el código a www-data (Ubuntu)",
+          "code": "sudo chown -R www-data:www-data /var/www/app"
+        },
+        {
+          "description": "Asignar a nginx (AlmaLinux)",
+          "code": "sudo chown -R nginx:nginx /usr/share/nginx/html"
+        },
+        {
+          "description": "Cambiar solo el grupo",
+          "code": "sudo chgrp -R devs /srv/proyecto"
+        }
+      ],
+      "tags": [
+        "permisos",
+        "dueños"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El usuario del servidor web es 'www-data' en Ubuntu y 'nginx' o 'apache' en AlmaLinux."
+    },
+    {
+      "title": "Máscara de permisos por defecto",
+      "command": "umask",
+      "section": "Común",
+      "topic": "Permisos y ACL",
+      "description": "Define qué permisos se restan al crear archivos y directorios nuevos en la sesión actual.",
+      "syntax": "umask [modo]",
+      "examples": [
+        {
+          "description": "Ver la máscara actual en simbólico",
+          "code": "umask -S"
+        },
+        {
+          "description": "Archivos nuevos solo para dueño y grupo",
+          "code": "umask 027"
+        }
+      ],
+      "tags": [
+        "permisos",
+        "shell"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para hacerlo persistente añádelo a ~/.bashrc o a /etc/profile.d/*.sh; en servicios systemd usa la directiva UMask=."
+    },
+    {
+      "title": "Gestionar ACL de archivos",
+      "command": "setfacl / getfacl",
+      "section": "Común",
+      "topic": "Permisos y ACL",
+      "description": "Las ACL permiten dar permisos a usuarios o grupos adicionales sin cambiar el dueño ni el grupo principal.",
+      "syntax": "setfacl -m u:usuario:perms archivo",
+      "examples": [
+        {
+          "description": "Dar lectura y escritura a un usuario",
+          "code": "sudo setfacl -m u:deploy:rwX /srv/app"
+        },
+        {
+          "description": "ACL por defecto para archivos nuevos del directorio",
+          "code": "sudo setfacl -d -m g:devs:rwX /srv/proyecto"
+        },
+        {
+          "description": "Ver las ACL",
+          "code": "getfacl /srv/app"
+        },
+        {
+          "description": "Eliminar todas las ACL recursivamente",
+          "code": "sudo setfacl -R -b /srv/app"
+        }
+      ],
+      "tags": [
+        "permisos",
+        "acl",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Un '+' al final de los permisos en 'ls -l' indica que hay ACL. La X mayúscula da ejecución solo a directorios (o a archivos que ya eran ejecutables)."
+    },
+    {
+      "title": "Atributos inmutables",
+      "command": "chattr / lsattr",
+      "section": "Común",
+      "topic": "Permisos y ACL",
+      "description": "Permite marcar archivos como inmutables o de solo anexar, protegiéndolos incluso de root hasta quitar el atributo.",
+      "syntax": "chattr [+-=]atributo archivo",
+      "examples": [
+        {
+          "description": "Proteger un archivo contra cambios",
+          "code": "sudo chattr +i /etc/resolv.conf"
+        },
+        {
+          "description": "Ver atributos",
+          "code": "lsattr /etc/resolv.conf"
+        },
+        {
+          "description": "Permitir solo agregar líneas a un log",
+          "code": "sudo chattr +a /var/log/auditoria.log"
+        }
+      ],
+      "tags": [
+        "permisos",
+        "seguridad",
+        "atributos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si 'rm' falla como root con 'Operation not permitted', revisa lsattr: probablemente tiene +i."
+    },
+    {
+      "title": "Crear usuarios",
+      "command": "useradd",
+      "section": "Común",
+      "topic": "Usuarios y grupos",
+      "description": "Crea una cuenta de usuario con su home, shell y grupos secundarios.",
+      "syntax": "useradd [opciones] usuario",
+      "examples": [
+        {
+          "description": "Usuario con home, bash y grupo sudo (Ubuntu)",
+          "code": "sudo useradd -m -s /bin/bash -G sudo nicolas"
+        },
+        {
+          "description": "Usuario con grupo wheel (AlmaLinux)",
+          "code": "sudo useradd -m -s /bin/bash -G wheel nicolas"
+        },
+        {
+          "description": "Usuario de sistema para un servicio, sin login",
+          "code": "sudo useradd --system --no-create-home --shell /usr/sbin/nologin appsvc"
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "administración"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En Ubuntu existe además 'adduser', interactivo y más amigable. El grupo administrador es 'sudo' en Ubuntu y 'wheel' en AlmaLinux."
+    },
+    {
+      "title": "Modificar usuarios",
+      "command": "usermod",
+      "section": "Común",
+      "topic": "Usuarios y grupos",
+      "description": "Modifica una cuenta existente: grupos, shell, home o bloqueo.",
+      "syntax": "usermod [opciones] usuario",
+      "examples": [
+        {
+          "description": "Agregar a un grupo sin quitar los demás",
+          "code": "sudo usermod -aG docker $USER"
+        },
+        {
+          "description": "Bloquear una cuenta",
+          "code": "sudo usermod -L exempleado"
+        },
+        {
+          "description": "Cambiar la shell",
+          "code": "sudo usermod -s /bin/zsh nicolas"
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "grupos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Sin -a, '-G' REEMPLAZA todos los grupos secundarios. El cambio de grupos aplica en la próxima sesión (o con 'newgrp')."
+    },
+    {
+      "title": "Eliminar usuarios",
+      "command": "userdel",
+      "section": "Común",
+      "topic": "Usuarios y grupos",
+      "description": "Elimina una cuenta de usuario y opcionalmente su home y su spool de correo.",
+      "syntax": "userdel [-r] usuario",
+      "examples": [
+        {
+          "description": "Eliminar usuario y su home",
+          "code": "sudo userdel -r usuario_temporal"
+        },
+        {
+          "description": "Ver procesos del usuario antes de borrarlo",
+          "code": "pgrep -u usuario_temporal -l"
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "administración"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Cambiar contraseñas",
+      "command": "passwd",
+      "section": "Común",
+      "topic": "Usuarios y grupos",
+      "description": "Cambia la contraseña de un usuario, la bloquea o fuerza su cambio en el próximo login.",
+      "syntax": "passwd [opciones] [usuario]",
+      "examples": [
+        {
+          "description": "Cambiar la contraseña de otro usuario",
+          "code": "sudo passwd nicolas"
+        },
+        {
+          "description": "Forzar cambio en el próximo inicio",
+          "code": "sudo passwd -e nicolas"
+        },
+        {
+          "description": "Ver el estado de la contraseña",
+          "code": "sudo passwd -S nicolas"
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "contraseñas",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Gestionar grupos",
+      "command": "groupadd / gpasswd",
+      "section": "Común",
+      "topic": "Usuarios y grupos",
+      "description": "Crea grupos y administra sus miembros.",
+      "examples": [
+        {
+          "description": "Crear un grupo",
+          "code": "sudo groupadd devs"
+        },
+        {
+          "description": "Agregar un usuario al grupo",
+          "code": "sudo gpasswd -a nicolas devs"
+        },
+        {
+          "description": "Quitar un usuario del grupo",
+          "code": "sudo gpasswd -d nicolas devs"
+        },
+        {
+          "description": "Listar miembros",
+          "code": "getent group devs"
+        }
+      ],
+      "tags": [
+        "grupos",
+        "usuarios"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Consultar identidad y grupos",
+      "command": "id",
+      "section": "Común",
+      "topic": "Usuarios y grupos",
+      "description": "Muestra el UID, GID y grupos de un usuario. Útil para depurar problemas de permisos.",
+      "syntax": "id [usuario]",
+      "examples": [
+        {
+          "description": "Identidad del usuario actual",
+          "code": "id"
+        },
+        {
+          "description": "Grupos de otro usuario",
+          "code": "id -nG www-data"
+        },
+        {
+          "description": "Buscar el usuario en NSS (incluye LDAP/SSSD)",
+          "code": "getent passwd nicolas"
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ejecutar como root con sudo",
+      "command": "sudo",
+      "section": "Común",
+      "topic": "Usuarios y grupos",
+      "description": "Ejecuta comandos con privilegios de otro usuario (root por defecto) según las reglas de /etc/sudoers.",
+      "syntax": "sudo [-u usuario] comando",
+      "examples": [
+        {
+          "description": "Abrir una shell de root con su entorno",
+          "code": "sudo -i"
+        },
+        {
+          "description": "Ejecutar como otro usuario",
+          "code": "sudo -u postgres psql"
+        },
+        {
+          "description": "Ver qué puedes ejecutar",
+          "code": "sudo -l"
+        },
+        {
+          "description": "Editar un archivo de sudoers con validación",
+          "code": "sudo visudo -f /etc/sudoers.d/deploy"
+        }
+      ],
+      "tags": [
+        "sudo",
+        "seguridad",
+        "privilegios"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Nunca edites /etc/sudoers directamente: un error de sintaxis te deja sin sudo. Usa visudo y archivos en /etc/sudoers.d/."
+    },
+    {
+      "title": "Regla sudo sin contraseña para un comando",
+      "command": "echo 'deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart app' | sudo tee /etc/sudoers.d/deploy",
+      "section": "Común",
+      "topic": "Usuarios y grupos",
+      "description": "Permite a un usuario de despliegue ejecutar solo un comando concreto como root sin pedir contraseña, siguiendo el principio de mínimo privilegio.",
+      "examples": [
+        {
+          "description": "Crear la regla y validarla",
+          "code": "echo 'deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart app' | sudo tee /etc/sudoers.d/deploy\nsudo chmod 440 /etc/sudoers.d/deploy\nsudo visudo -cf /etc/sudoers.d/deploy"
+        },
+        {
+          "description": "Probar como el usuario sin pedir contraseña",
+          "code": "sudo -u deploy sudo -n systemctl restart app"
+        }
+      ],
+      "tags": [
+        "sudo",
+        "seguridad",
+        "despliegue"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Usa rutas absolutas en las reglas. Los archivos de /etc/sudoers.d/ cuyo nombre contiene un punto o termina en ~ se ignoran."
+    },
+    {
+      "title": "Ver sesiones y últimos accesos",
+      "command": "who / last",
+      "section": "Común",
+      "topic": "Usuarios y grupos",
+      "description": "who y w muestran quién está conectado; last y lastb muestran el historial de inicios de sesión exitosos y fallidos.",
+      "examples": [
+        {
+          "description": "Usuarios conectados y qué hacen",
+          "code": "w"
+        },
+        {
+          "description": "Últimos 20 inicios de sesión",
+          "code": "last -n 20"
+        },
+        {
+          "description": "Intentos fallidos (requiere root)",
+          "code": "sudo lastb | head"
+        }
+      ],
+      "tags": [
+        "usuarios",
+        "auditoría",
+        "seguridad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En distribuciones recientes 'last' puede venir de 'wtmpdb' en lugar del clásico /var/log/wtmp; la salida es equivalente."
+    },
+    {
+      "title": "Buscar texto con grep",
+      "command": "grep",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "Busca líneas que coinciden con un patrón en archivos o en la salida de otros comandos.",
+      "syntax": "grep [opciones] patrón [archivo...]",
+      "examples": [
+        {
+          "description": "Buscar recursivamente con número de línea",
+          "code": "grep -rn 'DATABASE_URL' /etc/app/"
+        },
+        {
+          "description": "Sin distinguir mayúsculas y con contexto",
+          "code": "grep -i -C 3 'timeout' /var/log/nginx/error.log"
+        },
+        {
+          "description": "Expresión regular extendida",
+          "code": "grep -E 'error|warn|crit' app.log"
+        },
+        {
+          "description": "Contar líneas que no son comentarios",
+          "code": "grep -vc '^#' /etc/ssh/sshd_config"
+        }
+      ],
+      "tags": [
+        "texto",
+        "búsqueda",
+        "logs"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "-F trata el patrón como texto literal (más rápido y sin sorpresas con puntos). Para repos grandes, 'rg' (ripgrep) es mucho más veloz."
+    },
+    {
+      "title": "Editar texto en flujo con sed",
+      "command": "sed",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "Editor de flujo para sustituir, borrar o insertar líneas sin abrir el archivo; ideal para automatizar cambios de configuración.",
+      "syntax": "sed [opciones] 'script' archivo",
+      "examples": [
+        {
+          "description": "Reemplazar en el archivo con respaldo",
+          "code": "sudo sed -i.bak 's/^#\\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config"
+        },
+        {
+          "description": "Borrar líneas vacías y comentarios",
+          "code": "sed -e '/^\\s*#/d' -e '/^\\s*$/d' nginx.conf"
+        },
+        {
+          "description": "Imprimir un rango de líneas",
+          "code": "sed -n '100,150p' app.log"
+        },
+        {
+          "description": "Usar otro delimitador para rutas",
+          "code": "sed -i 's|/var/www/old|/var/www/new|g' sitio.conf"
+        }
+      ],
+      "tags": [
+        "texto",
+        "edición",
+        "automatización"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "-i sin sufijo no deja respaldo. En macOS/BSD la sintaxis de -i difiere; en Linux (GNU sed) es la indicada."
+    },
+    {
+      "title": "Procesar columnas con awk",
+      "command": "awk",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "Lenguaje para procesar texto por campos; perfecto para extraer columnas, sumar y agrupar datos de logs.",
+      "syntax": "awk [-F sep] 'programa' archivo",
+      "examples": [
+        {
+          "description": "Top 10 IPs en un access log",
+          "code": "awk '{print $1}' /var/log/nginx/access.log | sort | uniq -c | sort -rn | head"
+        },
+        {
+          "description": "Sumar los bytes enviados (columna 10)",
+          "code": "awk '{s+=$10} END {print s/1024/1024 \" MB\"}' access.log"
+        },
+        {
+          "description": "Separador personalizado y filtro",
+          "code": "awk -F: '$3 >= 1000 {print $1}' /etc/passwd"
+        },
+        {
+          "description": "Contar respuestas HTTP 5xx",
+          "code": "awk '$9 ~ /^5/ {c++} END {print c+0}' access.log"
+        }
+      ],
+      "tags": [
+        "texto",
+        "logs",
+        "análisis"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Cortar columnas con cut",
+      "command": "cut",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "Extrae campos o rangos de caracteres de cada línea según un delimitador.",
+      "syntax": "cut -d delim -f campos archivo",
+      "examples": [
+        {
+          "description": "Usuarios del sistema",
+          "code": "cut -d: -f1 /etc/passwd"
+        },
+        {
+          "description": "Columnas 1 y 3 de un CSV",
+          "code": "cut -d, -f1,3 datos.csv"
+        },
+        {
+          "description": "Primeros 19 caracteres (timestamp)",
+          "code": "cut -c1-19 app.log"
+        }
+      ],
+      "tags": [
+        "texto",
+        "columnas"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "cut no maneja delimitadores repetidos (varios espacios); para eso usa awk."
+    },
+    {
+      "title": "Ordenar y deduplicar",
+      "command": "sort / uniq",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "sort ordena líneas (numérica, por campo, inversa); uniq colapsa líneas repetidas consecutivas y puede contarlas.",
+      "examples": [
+        {
+          "description": "Frecuencia de valores",
+          "code": "sort errores.txt | uniq -c | sort -rn"
+        },
+        {
+          "description": "Ordenar por la 5.ª columna numérica",
+          "code": "sort -t' ' -k5,5n datos.txt"
+        },
+        {
+          "description": "Ordenar tamaños legibles",
+          "code": "du -sh /var/* 2>/dev/null | sort -h"
+        },
+        {
+          "description": "Ordenar y eliminar duplicados en un paso",
+          "code": "sort -u ips.txt"
+        }
+      ],
+      "tags": [
+        "texto",
+        "ordenar"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "uniq solo detecta duplicados adyacentes: siempre ordena antes."
+    },
+    {
+      "title": "Contar líneas, palabras y bytes",
+      "command": "wc -l",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "Cuenta líneas, palabras o bytes de archivos o de la salida de un comando.",
+      "examples": [
+        {
+          "description": "Contar líneas de un log",
+          "code": "wc -l /var/log/nginx/access.log"
+        },
+        {
+          "description": "Contar archivos en un directorio",
+          "code": "find /srv/uploads -type f | wc -l"
+        }
+      ],
+      "tags": [
+        "texto",
+        "conteo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Construir comandos con xargs",
+      "command": "xargs",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "Toma elementos de la entrada estándar y los pasa como argumentos a otro comando, opcionalmente en paralelo.",
+      "syntax": "xargs [opciones] comando",
+      "examples": [
+        {
+          "description": "Borrar archivos encontrados con nombres seguros",
+          "code": "find . -name '*.tmp' -print0 | xargs -0 rm -f"
+        },
+        {
+          "description": "Descargar en paralelo (4 a la vez)",
+          "code": "xargs -P 4 -n 1 curl -sO < urls.txt"
+        },
+        {
+          "description": "Usar un marcador de posición",
+          "code": "ls *.conf | xargs -I{} cp {} /backup/{}.bak"
+        }
+      ],
+      "tags": [
+        "texto",
+        "automatización",
+        "paralelismo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Usa -print0 con -0 para soportar espacios en nombres de archivo."
+    },
+    {
+      "title": "Procesar JSON con jq",
+      "command": "jq",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "Filtra, transforma y formatea JSON desde la terminal; indispensable para APIs y salidas de herramientas cloud.",
+      "syntax": "jq [opciones] 'filtro' [archivo]",
+      "examples": [
+        {
+          "description": "Formatear una respuesta de API",
+          "code": "curl -s https://api.github.com/repos/jenkinsci/jenkins | jq ."
+        },
+        {
+          "description": "Extraer un campo sin comillas",
+          "code": "jq -r '.tag_name' release.json"
+        },
+        {
+          "description": "Filtrar un arreglo por condición",
+          "code": "jq '.items[] | select(.status == \"failed\") | .name' resultados.json"
+        },
+        {
+          "description": "Convertir a CSV",
+          "code": "jq -r '.[] | [.id, .name, .email] | @csv' usuarios.json"
+        }
+      ],
+      "tags": [
+        "json",
+        "texto",
+        "api"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Instalar con 'apt install jq' o 'dnf install jq'. -r entrega texto plano, clave para usar el valor en variables de shell."
+    },
+    {
+      "title": "Traducir o borrar caracteres",
+      "command": "tr",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "Reemplaza, comprime o elimina caracteres de la entrada estándar.",
+      "examples": [
+        {
+          "description": "Pasar a minúsculas",
+          "code": "echo 'PRODUCCION' | tr '[:upper:]' '[:lower:]'"
+        },
+        {
+          "description": "Convertir finales de línea de Windows",
+          "code": "tr -d '\\r' < script_win.sh > script.sh"
+        },
+        {
+          "description": "Generar una contraseña aleatoria",
+          "code": "tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 24; echo"
+        }
+      ],
+      "tags": [
+        "texto",
+        "conversión"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Duplicar salida con tee",
+      "command": "tee",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "Escribe la entrada estándar a la vez en pantalla y en uno o más archivos. Con sudo permite escribir en archivos protegidos.",
+      "examples": [
+        {
+          "description": "Escribir un archivo protegido",
+          "code": "echo 'vm.swappiness=10' | sudo tee /etc/sysctl.d/99-swap.conf"
+        },
+        {
+          "description": "Agregar en vez de sobrescribir",
+          "code": "echo '10.0.0.5 db01' | sudo tee -a /etc/hosts"
+        },
+        {
+          "description": "Guardar y ver la salida de un build",
+          "code": "make 2>&1 | tee build.log"
+        }
+      ],
+      "tags": [
+        "texto",
+        "redirección",
+        "sudo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "'sudo echo x > /etc/archivo' falla porque la redirección la hace tu shell sin privilegios; por eso se usa tee."
+    },
+    {
+      "title": "Crear y extraer archivos tar",
+      "command": "tar",
+      "section": "Común",
+      "topic": "Compresión y archivado",
+      "description": "Empaqueta directorios en un único archivo y opcionalmente los comprime con gzip, xz o zstd.",
+      "syntax": "tar -c|-x|-t [-z|-J|--zstd] -f archivo [rutas]",
+      "examples": [
+        {
+          "description": "Crear un .tar.gz",
+          "code": "tar -czf respaldo-$(date +%F).tar.gz /etc/nginx"
+        },
+        {
+          "description": "Extraer en un directorio específico",
+          "code": "tar -xzf app.tar.gz -C /opt/app"
+        },
+        {
+          "description": "Listar el contenido sin extraer",
+          "code": "tar -tzf app.tar.gz | head"
+        },
+        {
+          "description": "Excluir directorios",
+          "code": "tar --exclude='node_modules' --exclude='.git' -czf proyecto.tar.gz proyecto/"
+        }
+      ],
+      "tags": [
+        "compresión",
+        "respaldo",
+        "archivos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "GNU tar detecta la compresión al extraer: 'tar -xf archivo' sirve para .gz, .xz y .zst."
+    },
+    {
+      "title": "Comprimir con gzip",
+      "command": "gzip",
+      "section": "Común",
+      "topic": "Compresión y archivado",
+      "description": "Comprime o descomprime archivos individuales; zcat y zgrep permiten leer archivos .gz sin descomprimirlos.",
+      "examples": [
+        {
+          "description": "Comprimir conservando el original",
+          "code": "gzip -k dump.sql"
+        },
+        {
+          "description": "Buscar en logs rotados comprimidos",
+          "code": "zgrep 'ERROR' /var/log/app/app.log.*.gz"
+        },
+        {
+          "description": "Descomprimir",
+          "code": "gunzip dump.sql.gz"
+        }
+      ],
+      "tags": [
+        "compresión",
+        "logs"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Comprimir con zstd",
+      "command": "zstd",
+      "section": "Común",
+      "topic": "Compresión y archivado",
+      "description": "Compresor moderno, mucho más rápido que gzip con mejor ratio; ideal para respaldos y artefactos grandes.",
+      "syntax": "zstd [-nivel] [-T hilos] archivo",
+      "examples": [
+        {
+          "description": "Comprimir usando todos los núcleos",
+          "code": "zstd -T0 -19 dump.sql -o dump.sql.zst"
+        },
+        {
+          "description": "tar con zstd",
+          "code": "tar --zstd -cf respaldo.tar.zst /srv/datos"
+        },
+        {
+          "description": "Descomprimir",
+          "code": "unzstd dump.sql.zst"
+        }
+      ],
+      "tags": [
+        "compresión",
+        "rendimiento",
+        "respaldo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Instalar con 'apt install zstd' o 'dnf install zstd'. Niveles 1–19 (hasta 22 con --ultra)."
+    },
+    {
+      "title": "Comprimir y extraer zip",
+      "command": "zip / unzip",
+      "section": "Común",
+      "topic": "Compresión y archivado",
+      "description": "Maneja archivos .zip, el formato más compatible con Windows.",
+      "examples": [
+        {
+          "description": "Comprimir un directorio",
+          "code": "zip -r informe.zip informe/"
+        },
+        {
+          "description": "Extraer en un directorio",
+          "code": "unzip paquete.zip -d /tmp/paquete"
+        },
+        {
+          "description": "Listar el contenido",
+          "code": "unzip -l paquete.zip"
+        }
+      ],
+      "tags": [
+        "compresión",
+        "windows"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    }
+  ]
+}

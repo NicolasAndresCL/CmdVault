@@ -1,0 +1,569 @@
+{
+  "category": {
+    "slug": "kubernetes",
+    "name": "Kubernetes",
+    "icon": "hub",
+    "order": 6,
+    "description": "Orquestación con Kubernetes: kubectl, workloads, redes, configuración, troubleshooting y Helm."
+  },
+  "commands": [
+    {
+      "title": "Listar recursos con kubectl get",
+      "command": "kubectl get pods",
+      "section": "kubectl básico",
+      "topic": "Consulta",
+      "description": "Lista recursos del namespace actual. Acepta tipos en singular, plural o abreviado (po, deploy, svc, cm, ns) y varios tipos a la vez.",
+      "syntax": "kubectl get TIPO[/NOMBRE] [-n NS | -A] [-l SELECTOR] [-o FORMATO]",
+      "examples": [
+        {
+          "description": "Todos los namespaces con más columnas",
+          "code": "kubectl get pods -A -o wide"
+        },
+        {
+          "description": "Varios tipos a la vez",
+          "code": "kubectl get deploy,svc,ingress -n tienda"
+        },
+        {
+          "description": "Filtrar por etiqueta y mostrarlas",
+          "code": "kubectl get pods -l app=api,tier!=cache --show-labels"
+        },
+        {
+          "description": "Seguir cambios en vivo",
+          "code": "kubectl get pods -w"
+        }
+      ],
+      "tags": [
+        "get",
+        "consulta"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "'kubectl get all' no incluye todo: omite ConfigMaps, Secrets, Ingress, PVC y CRDs."
+    },
+    {
+      "title": "Filtrar por campos con field-selector",
+      "command": "kubectl get pods --field-selector status.phase!=Running -A",
+      "section": "kubectl básico",
+      "topic": "Consulta",
+      "description": "Filtra por campos del objeto en el servidor (nombre, namespace, fase, nodo), complementario a los selectores de etiquetas.",
+      "examples": [
+        {
+          "description": "Pods de un nodo concreto",
+          "code": "kubectl get pods -A --field-selector spec.nodeName=worker-2"
+        },
+        {
+          "description": "Eventos de tipo Warning",
+          "code": "kubectl get events -A --field-selector type=Warning"
+        }
+      ],
+      "tags": [
+        "get",
+        "field-selector"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Solo algunos campos admiten field-selector; si no está soportado el servidor devuelve un error explícito."
+    },
+    {
+      "title": "Salida en YAML y JSON",
+      "command": "kubectl get deploy api -o yaml",
+      "section": "kubectl básico",
+      "topic": "Formatos de salida",
+      "description": "Muestra el objeto completo tal como lo guarda el API server, incluido status. Base para exportar o comparar.",
+      "examples": [
+        {
+          "description": "JSON procesado con jq",
+          "code": "kubectl get deploy api -o json | jq '.spec.template.spec.containers[].image'"
+        },
+        {
+          "description": "Solo los nombres",
+          "code": "kubectl get pods -o name"
+        },
+        {
+          "description": "Ordenar por fecha de creación",
+          "code": "kubectl get pods --sort-by=.metadata.creationTimestamp"
+        }
+      ],
+      "tags": [
+        "output",
+        "yaml",
+        "json"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Extraer campos con JSONPath",
+      "command": "kubectl get pods -o jsonpath='{.items[*].metadata.name}'",
+      "section": "kubectl básico",
+      "topic": "Formatos de salida",
+      "description": "JSONPath extrae valores concretos sin depender de jq. Admite rangos y filtros.",
+      "examples": [
+        {
+          "description": "Pod e imagen, una línea por pod",
+          "code": "kubectl get pods -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.spec.containers[*].image}{\"\\n\"}{end}'"
+        },
+        {
+          "description": "IP interna de los nodos",
+          "code": "kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type==\"InternalIP\")].address}'"
+        },
+        {
+          "description": "Puerto NodePort de un servicio",
+          "code": "kubectl get svc web -o jsonpath='{.spec.ports[0].nodePort}'"
+        }
+      ],
+      "tags": [
+        "jsonpath",
+        "output"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Columnas personalizadas",
+      "command": "kubectl get pods -o custom-columns=NOMBRE:.metadata.name,NODO:.spec.nodeName,FASE:.status.phase",
+      "section": "kubectl básico",
+      "topic": "Formatos de salida",
+      "description": "Arma una tabla con las columnas que necesitas usando rutas del objeto.",
+      "examples": [
+        {
+          "description": "Requests de CPU y memoria por pod",
+          "code": "kubectl get pods -o custom-columns='POD:.metadata.name,CPU:.spec.containers[*].resources.requests.cpu,MEM:.spec.containers[*].resources.requests.memory'"
+        },
+        {
+          "description": "Reinicios por pod",
+          "code": "kubectl get pods -o custom-columns='POD:.metadata.name,REINICIOS:.status.containerStatuses[*].restartCount'"
+        }
+      ],
+      "tags": [
+        "custom-columns",
+        "output"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Describir un recurso",
+      "command": "kubectl describe pod api-7d9c6b5f4-x2k8p",
+      "section": "kubectl básico",
+      "topic": "Consulta",
+      "description": "Muestra detalle legible del objeto con sus eventos recientes. Es lo primero a revisar cuando un pod no arranca.",
+      "examples": [
+        {
+          "description": "Describir por etiqueta",
+          "code": "kubectl describe pods -l app=api"
+        },
+        {
+          "description": "Ver capacidad y pods asignados a un nodo",
+          "code": "kubectl describe node worker-1"
+        }
+      ],
+      "tags": [
+        "describe",
+        "eventos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Aplicar manifiestos declarativamente",
+      "command": "kubectl apply -f deploy.yaml",
+      "section": "kubectl básico",
+      "topic": "Gestión declarativa",
+      "description": "Crea o actualiza recursos a partir de archivos, directorios o URLs, guardando la configuración aplicada para calcular diferencias.",
+      "syntax": "kubectl apply (-f ARCHIVO|DIR|URL | -k DIR) [--server-side] [--dry-run=client|server]",
+      "examples": [
+        {
+          "description": "Un directorio completo de forma recursiva",
+          "code": "kubectl apply -R -f k8s/"
+        },
+        {
+          "description": "Overlay de Kustomize",
+          "code": "kubectl apply -k overlays/prod"
+        },
+        {
+          "description": "Server-side apply con gestor de campos propio",
+          "code": "kubectl apply --server-side --field-manager=ci -f k8s/"
+        },
+        {
+          "description": "Simular en el servidor sin persistir",
+          "code": "kubectl apply --dry-run=server -f deploy.yaml"
+        }
+      ],
+      "tags": [
+        "apply",
+        "declarativo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ]
+    },
+    {
+      "title": "Ver diferencias antes de aplicar",
+      "command": "kubectl diff -f k8s/",
+      "section": "kubectl básico",
+      "topic": "Gestión declarativa",
+      "description": "Compara lo que cambiaría en el clúster si aplicaras los manifiestos. Sale con código 1 si hay diferencias, útil en CI.",
+      "examples": [
+        {
+          "description": "Diff de un overlay de Kustomize",
+          "code": "kubectl diff -k overlays/prod"
+        },
+        {
+          "description": "Usar otro programa de diff",
+          "code": "KUBECTL_EXTERNAL_DIFF='diff -u --color' kubectl diff -f deploy.yaml"
+        }
+      ],
+      "tags": [
+        "diff",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Eliminar recursos",
+      "command": "kubectl delete -f deploy.yaml",
+      "section": "kubectl básico",
+      "topic": "Gestión declarativa",
+      "description": "Borra recursos por archivo, nombre o selector. Por defecto espera a que terminen los finalizers.",
+      "examples": [
+        {
+          "description": "Por nombre",
+          "code": "kubectl delete deploy api -n tienda"
+        },
+        {
+          "description": "Por etiqueta",
+          "code": "kubectl delete pods -l app=api"
+        },
+        {
+          "description": "Pod atascado en Terminating (último recurso)",
+          "code": "kubectl delete pod api-xyz --grace-period=0 --force"
+        }
+      ],
+      "tags": [
+        "delete"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Borrar un namespace elimina todo lo que contiene. --force no detiene el contenedor en el nodo; solo lo quita del API."
+    },
+    {
+      "title": "Documentación de campos con explain",
+      "command": "kubectl explain deployment.spec.strategy",
+      "section": "kubectl básico",
+      "topic": "Descubrimiento",
+      "description": "Muestra la documentación de cada campo de un recurso según la versión de API del propio clúster, incluidos CRDs.",
+      "examples": [
+        {
+          "description": "Árbol completo de campos",
+          "code": "kubectl explain pod.spec --recursive | less"
+        },
+        {
+          "description": "Una versión de API concreta",
+          "code": "kubectl explain hpa --api-version=autoscaling/v2"
+        }
+      ],
+      "tags": [
+        "explain",
+        "documentacion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ]
+    },
+    {
+      "title": "Listar tipos de recursos del API",
+      "command": "kubectl api-resources",
+      "section": "kubectl básico",
+      "topic": "Descubrimiento",
+      "description": "Lista todos los tipos disponibles con su abreviatura, grupo de API y si son namespaced. Incluye CRDs instalados.",
+      "examples": [
+        {
+          "description": "Solo recursos con namespace",
+          "code": "kubectl api-resources --namespaced=true"
+        },
+        {
+          "description": "Recursos de un grupo",
+          "code": "kubectl api-resources --api-group=networking.k8s.io"
+        },
+        {
+          "description": "Versiones de API disponibles",
+          "code": "kubectl api-versions"
+        }
+      ],
+      "tags": [
+        "api-resources",
+        "crd"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Generar YAML con dry-run",
+      "command": "kubectl create deployment api --image=ghcr.io/nicocano/api:1.0 --replicas=2 --dry-run=client -o yaml > deploy.yaml",
+      "section": "kubectl básico",
+      "topic": "Generación de manifiestos",
+      "description": "Usa los generadores imperativos para producir manifiestos base sin crear nada. Rápido y sin errores de indentación.",
+      "examples": [
+        {
+          "description": "Service para un deployment",
+          "code": "kubectl create service clusterip api --tcp=80:8000 --dry-run=client -o yaml"
+        },
+        {
+          "description": "Job y CronJob",
+          "code": "kubectl create cronjob limpieza --image=busybox --schedule='0 3 * * *' --dry-run=client -o yaml -- sh -c 'echo ok'"
+        },
+        {
+          "description": "Namespace",
+          "code": "kubectl create namespace tienda --dry-run=client -o yaml"
+        }
+      ],
+      "tags": [
+        "create",
+        "dry-run",
+        "yaml"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Editar un recurso en vivo",
+      "command": "kubectl edit deploy api",
+      "section": "kubectl básico",
+      "topic": "Gestión imperativa",
+      "description": "Abre el objeto en el editor configurado y aplica los cambios al guardar.",
+      "examples": [
+        {
+          "description": "Con un editor concreto",
+          "code": "KUBE_EDITOR='code --wait' kubectl edit deploy api"
+        },
+        {
+          "description": "Editar un subrecurso de estado",
+          "code": "kubectl edit deploy api --subresource=status"
+        }
+      ],
+      "tags": [
+        "edit"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Lo editado en vivo se pierde en el próximo apply desde Git. Úsalo solo para emergencias y replica el cambio en el repositorio."
+    },
+    {
+      "title": "Parchear recursos",
+      "command": "kubectl patch deploy api -p '{\"spec\":{\"replicas\":3}}'",
+      "section": "kubectl básico",
+      "topic": "Gestión imperativa",
+      "description": "Modifica campos puntuales con un parche estratégico (por defecto), merge o JSON Patch.",
+      "examples": [
+        {
+          "description": "JSON Patch para cambiar la imagen del primer contenedor",
+          "code": "kubectl patch deploy api --type=json -p '[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/image\",\"value\":\"ghcr.io/nicocano/api:1.1\"}]'"
+        },
+        {
+          "description": "Quitar un finalizer que bloquea un borrado",
+          "code": "kubectl patch pvc datos -p '{\"metadata\":{\"finalizers\":null}}' --type=merge"
+        },
+        {
+          "description": "Parche desde archivo",
+          "code": "kubectl patch deploy api --patch-file parche.yaml"
+        }
+      ],
+      "tags": [
+        "patch"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Etiquetas y anotaciones",
+      "command": "kubectl label pod api-xyz env=prod",
+      "section": "kubectl básico",
+      "topic": "Gestión imperativa",
+      "description": "Agrega, cambia o quita etiquetas y anotaciones. Las etiquetas sirven para seleccionar; las anotaciones, para metadatos.",
+      "examples": [
+        {
+          "description": "Sobrescribir un valor existente",
+          "code": "kubectl label deploy api version=1.1 --overwrite"
+        },
+        {
+          "description": "Quitar una etiqueta",
+          "code": "kubectl label pod api-xyz env-"
+        },
+        {
+          "description": "Anotar la causa de un cambio",
+          "code": "kubectl annotate deploy api kubernetes.io/change-cause='Actualiza a 1.1' --overwrite"
+        },
+        {
+          "description": "Etiquetar todos los pods de un namespace",
+          "code": "kubectl label pods --all equipo=liveops -n tienda"
+        }
+      ],
+      "tags": [
+        "label",
+        "annotate"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Cambiar etiquetas de un pod gestionado por un ReplicaSet lo saca del selector y el controlador crea uno nuevo; sirve para aislar un pod y depurarlo."
+    },
+    {
+      "title": "Reemplazar un recurso",
+      "command": "kubectl replace -f deploy.yaml",
+      "section": "kubectl básico",
+      "topic": "Gestión imperativa",
+      "description": "Sustituye el objeto completo por el del archivo. Con --force lo borra y lo recrea, útil para campos inmutables.",
+      "examples": [
+        {
+          "description": "Recrear un Job con cambios en campos inmutables",
+          "code": "kubectl replace --force -f job.yaml"
+        }
+      ],
+      "tags": [
+        "replace"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Esperar una condición",
+      "command": "kubectl wait --for=condition=available deploy/api --timeout=180s",
+      "section": "kubectl básico",
+      "topic": "Automatización",
+      "description": "Bloquea hasta que uno o varios recursos cumplan una condición, se borren o un campo tome un valor. Esencial en scripts de CI/CD.",
+      "examples": [
+        {
+          "description": "Pods listos por etiqueta",
+          "code": "kubectl wait --for=condition=ready pod -l app=api --timeout=120s"
+        },
+        {
+          "description": "Hasta que se borre",
+          "code": "kubectl wait --for=delete pod/api-xyz --timeout=60s"
+        },
+        {
+          "description": "Por valor de un campo",
+          "code": "kubectl wait --for=jsonpath='{.status.phase}'=Bound pvc/datos"
+        },
+        {
+          "description": "Job terminado",
+          "code": "kubectl wait --for=condition=complete job/migracion --timeout=10m"
+        }
+      ],
+      "tags": [
+        "wait",
+        "ci",
+        "automatizacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Proxy al API server",
+      "command": "kubectl proxy --port=8001",
+      "section": "kubectl básico",
+      "topic": "Acceso",
+      "description": "Abre un proxy local autenticado hacia el API de Kubernetes para explorar endpoints con curl.",
+      "examples": [
+        {
+          "description": "Listar namespaces vía REST",
+          "code": "curl -s http://localhost:8001/api/v1/namespaces | jq -r '.items[].metadata.name'"
+        },
+        {
+          "description": "Consultas crudas sin proxy",
+          "code": "kubectl get --raw '/readyz?verbose'"
+        }
+      ],
+      "tags": [
+        "proxy",
+        "api"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ]
+    },
+    {
+      "title": "Desplegar con Kustomize",
+      "command": "kubectl apply -k overlays/prod",
+      "section": "kubectl básico",
+      "topic": "Kustomize",
+      "description": "Kustomize compone manifiestos base con overlays por entorno (imágenes, réplicas, parches) sin plantillas. Viene integrado en kubectl.",
+      "examples": [
+        {
+          "description": "Ver el resultado renderizado",
+          "code": "kubectl kustomize overlays/prod"
+        },
+        {
+          "description": "kustomization.yaml de un overlay",
+          "code": "apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nnamespace: tienda-prod\nresources:\n  - ../../base\nimages:\n  - name: ghcr.io/nicocano/api\n    newTag: \"1.4.2\"\nreplicas:\n  - name: api\n    count: 4\npatches:\n  - path: recursos.yaml\nconfigMapGenerator:\n  - name: api-config\n    envs: [api.env]"
+        },
+        {
+          "description": "Cambiar la imagen desde CI con la CLI kustomize",
+          "code": "cd overlays/prod && kustomize edit set image ghcr.io/nicocano/api=ghcr.io/nicocano/api:1.4.3"
+        }
+      ],
+      "tags": [
+        "kustomize",
+        "overlays"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "configMapGenerator añade un hash al nombre; al cambiar el contenido cambia el nombre y fuerza un rollout de los pods que lo usan."
+    }
+  ]
+}

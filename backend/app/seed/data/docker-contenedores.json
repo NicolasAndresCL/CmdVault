@@ -1,0 +1,997 @@
+{
+  "category": {
+    "slug": "docker",
+    "name": "Docker",
+    "icon": "directions_boat",
+    "order": 5,
+    "description": "Contenedores con Docker Engine y Compose actualizados: imágenes, buildx, redes, volúmenes, seguridad y diagnóstico."
+  },
+  "commands": [
+    {
+      "title": "Ejecutar contenedor en segundo plano",
+      "command": "docker run -d --name web -p 8080:80 nginx:1.29-alpine",
+      "section": "Contenedores",
+      "topic": "Ciclo de vida",
+      "description": "Crea y arranca un contenedor desacoplado de la terminal, con nombre fijo y un puerto publicado del host al contenedor. Es la forma base de levantar un servicio.",
+      "syntax": "docker run [opciones] IMAGEN[:TAG] [COMANDO] [ARG...]",
+      "examples": [
+        {
+          "description": "Publicar solo en localhost (no expuesto a la red)",
+          "code": "docker run -d --name web -p 127.0.0.1:8080:80 nginx:1.29-alpine"
+        },
+        {
+          "description": "Puerto aleatorio del host y consultarlo después",
+          "code": "docker run -d -P --name web nginx:1.29-alpine && docker port web"
+        },
+        {
+          "description": "Publicar puerto UDP",
+          "code": "docker run -d --name dns -p 5353:53/udp coredns/coredns"
+        }
+      ],
+      "tags": [
+        "run",
+        "puertos",
+        "detach"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "-p 8080:80 sin IP publica en 0.0.0.0 y Docker inserta reglas de iptables/nftables que se saltan UFW/firewalld. En servidores, publica en 127.0.0.1 y expón con un proxy reverso."
+    },
+    {
+      "title": "Contenedor efímero interactivo",
+      "command": "docker run --rm -it ubuntu:24.04 bash",
+      "section": "Contenedores",
+      "topic": "Ciclo de vida",
+      "description": "Abre una shell interactiva en un contenedor que se borra solo al salir. Ideal para pruebas rápidas sin dejar basura.",
+      "examples": [
+        {
+          "description": "Probar un comando en otra distro",
+          "code": "docker run --rm -it almalinux:10 cat /etc/os-release"
+        },
+        {
+          "description": "Montar el directorio actual y trabajar dentro",
+          "code": "docker run --rm -it -v \"$PWD\":/work -w /work python:3.14-slim bash"
+        },
+        {
+          "description": "Ejecutar una herramienta CLI sin instalarla",
+          "code": "docker run --rm -v \"$PWD\":/data mikefarah/yq '.services' /data/compose.yaml"
+        }
+      ],
+      "tags": [
+        "run",
+        "rm",
+        "interactivo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "-i mantiene STDIN abierto y -t asigna una TTY; para scripts no interactivos (CI) quita -t o fallará con 'the input device is not a TTY'."
+    },
+    {
+      "title": "Variables de entorno en contenedor",
+      "command": "docker run -d -e TZ=America/Santiago --env-file .env app:1.0",
+      "section": "Contenedores",
+      "topic": "Configuración",
+      "description": "Inyecta variables de entorno individualmente con -e o en bloque desde un archivo KEY=VALOR con --env-file.",
+      "examples": [
+        {
+          "description": "Pasar una variable tomando su valor del host",
+          "code": "export DB_PASSWORD=secreto && docker run --rm -e DB_PASSWORD app:1.0"
+        },
+        {
+          "description": "Varios archivos de entorno (el último gana)",
+          "code": "docker run -d --env-file base.env --env-file prod.env app:1.0"
+        },
+        {
+          "description": "Verificar qué variables recibió",
+          "code": "docker exec app env | sort"
+        }
+      ],
+      "tags": [
+        "run",
+        "env",
+        "configuracion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "El --env-file de docker run no interpreta comillas ni expansión ${VAR} como lo hace Compose: el valor se toma literal. Los secretos en variables quedan visibles en docker inspect."
+    },
+    {
+      "title": "Política de reinicio",
+      "command": "docker run -d --restart unless-stopped --name api app:1.0",
+      "section": "Contenedores",
+      "topic": "Ciclo de vida",
+      "description": "Define si Docker reinicia el contenedor al fallar o al reiniciar el daemon: no, on-failure[:N], always o unless-stopped.",
+      "examples": [
+        {
+          "description": "Reintentar como máximo 5 veces si sale con error",
+          "code": "docker run -d --restart on-failure:5 worker:1.0"
+        },
+        {
+          "description": "Cambiar la política de un contenedor existente",
+          "code": "docker update --restart always api"
+        },
+        {
+          "description": "Ver la política y el contador de reinicios",
+          "code": "docker inspect -f '{{.HostConfig.RestartPolicy.Name}} {{.RestartCount}}' api"
+        }
+      ],
+      "tags": [
+        "run",
+        "restart",
+        "resiliencia"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "unless-stopped respeta un docker stop manual tras reiniciar el host; always lo vuelve a levantar igual."
+    },
+    {
+      "title": "Limitar memoria y CPU",
+      "command": "docker run -d --memory 512m --cpus 1.5 --name api app:1.0",
+      "section": "Contenedores",
+      "topic": "Recursos",
+      "description": "Restringe los recursos del contenedor vía cgroups para que un proceso desbocado no tumbe el host.",
+      "examples": [
+        {
+          "description": "Memoria con reserva blanda y sin swap extra",
+          "code": "docker run -d --memory 1g --memory-reservation 768m --memory-swap 1g app:1.0"
+        },
+        {
+          "description": "Limitar número de procesos (evita fork bombs)",
+          "code": "docker run -d --pids-limit 200 app:1.0"
+        },
+        {
+          "description": "Ajustar límites en caliente",
+          "code": "docker update --memory 1g --memory-swap 1g --cpus 2 api"
+        }
+      ],
+      "tags": [
+        "recursos",
+        "cgroups",
+        "limites"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Si el proceso supera --memory el kernel lo mata (OOMKilled=true en docker inspect). Java y Node anteriores a versiones 'container-aware' pueden ignorar el límite: configura -Xmx o --max-old-space-size."
+    },
+    {
+      "title": "Ejecutar con usuario no root",
+      "command": "docker run --rm --user 1000:1000 app:1.0",
+      "section": "Contenedores",
+      "topic": "Seguridad",
+      "description": "Sobrescribe el usuario con el que corre el proceso principal. Reduce el impacto si alguien compromete la aplicación.",
+      "examples": [
+        {
+          "description": "Usar el UID/GID del usuario actual (archivos montados con tu dueño)",
+          "code": "docker run --rm --user \"$(id -u):$(id -g)\" -v \"$PWD\":/w -w /w node:24-alpine npm ci"
+        },
+        {
+          "description": "Comprobar con qué usuario corre",
+          "code": "docker exec api id"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "usuario",
+        "non-root"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Lo ideal es fijar USER en el Dockerfile; --user es un parche útil para imágenes de terceros."
+    },
+    {
+      "title": "Contenedor endurecido",
+      "command": "docker run -d --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges app:1.0",
+      "section": "Contenedores",
+      "topic": "Seguridad",
+      "description": "Sistema de archivos raíz de solo lectura, sin capabilities de Linux y sin escalar privilegios con setuid. Es la base de un contenedor de producción mínimo.",
+      "examples": [
+        {
+          "description": "Quitar todas las capabilities y añadir solo la necesaria",
+          "code": "docker run -d --cap-drop ALL --cap-add NET_BIND_SERVICE -p 80:80 app:1.0"
+        },
+        {
+          "description": "Solo lectura con directorios de escritura explícitos",
+          "code": "docker run -d --read-only --tmpfs /tmp:rw,size=64m --tmpfs /run -v app-data:/data app:1.0"
+        },
+        {
+          "description": "Revisar las capabilities efectivas",
+          "code": "docker inspect -f '{{.HostConfig.CapDrop}} {{.HostConfig.CapAdd}} {{.HostConfig.ReadonlyRootfs}}' app"
+        }
+      ],
+      "tags": [
+        "seguridad",
+        "hardening",
+        "capabilities"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Cloud"
+      ],
+      "notes": "Nunca uses --privileged salvo casos muy puntuales (Docker-in-Docker de laboratorio): equivale a dar root sobre el host."
+    },
+    {
+      "title": "Healthcheck al ejecutar",
+      "command": "docker run -d --name api --health-cmd 'curl -fsS http://localhost:8000/health || exit 1' --health-interval 30s --health-timeout 5s --health-retries 3 --health-start-period 20s app:1.0",
+      "section": "Contenedores",
+      "topic": "Salud",
+      "description": "Define o sobrescribe el healthcheck del contenedor sin tocar el Dockerfile. Docker marca el estado como starting, healthy o unhealthy.",
+      "examples": [
+        {
+          "description": "Desactivar el healthcheck heredado de la imagen",
+          "code": "docker run -d --no-healthcheck app:1.0"
+        },
+        {
+          "description": "Ver el historial de chequeos",
+          "code": "docker inspect --format '{{json .State.Health}}' api | jq"
+        },
+        {
+          "description": "Listar solo contenedores no saludables",
+          "code": "docker ps --filter health=unhealthy"
+        }
+      ],
+      "tags": [
+        "healthcheck",
+        "salud",
+        "run"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Docker no reinicia un contenedor unhealthy por sí solo (Swarm y Kubernetes sí actúan). Usa --health-start-period para apps lentas al arrancar."
+    },
+    {
+      "title": "Conectar contenedor a una red al crearlo",
+      "command": "docker run -d --name api --network backend app:1.0",
+      "section": "Contenedores",
+      "topic": "Redes",
+      "description": "Arranca el contenedor dentro de una red definida por el usuario, donde los demás contenedores lo resuelven por nombre vía el DNS embebido.",
+      "examples": [
+        {
+          "description": "Alias DNS adicional dentro de la red",
+          "code": "docker run -d --name pg --network backend --network-alias db postgres:18"
+        },
+        {
+          "description": "Sin red (aislado por completo)",
+          "code": "docker run --rm --network none alpine ip addr"
+        },
+        {
+          "description": "Red del host (sin aislamiento de red, solo Linux)",
+          "code": "docker run -d --network host prom/node-exporter"
+        }
+      ],
+      "tags": [
+        "red",
+        "dns",
+        "run"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Acceder al host desde un contenedor",
+      "command": "docker run --rm --add-host host.docker.internal:host-gateway alpine ping -c1 host.docker.internal",
+      "section": "Contenedores",
+      "topic": "Redes",
+      "description": "En Docker Desktop host.docker.internal existe por defecto; en Linux se mapea con el valor especial host-gateway para llegar a servicios del host.",
+      "examples": [
+        {
+          "description": "Conectar a un Postgres local del host",
+          "code": "docker run --rm --add-host host.docker.internal:host-gateway postgres:18 psql -h host.docker.internal -U postgres"
+        },
+        {
+          "description": "Entrada personalizada en /etc/hosts",
+          "code": "docker run --rm --add-host api.local:10.0.0.15 alpine cat /etc/hosts"
+        }
+      ],
+      "tags": [
+        "red",
+        "host",
+        "desarrollo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "El servicio del host debe escuchar en una IP alcanzable desde el bridge (no solo 127.0.0.1)."
+    },
+    {
+      "title": "Usar GPU en contenedor",
+      "command": "docker run --rm --gpus all nvidia/cuda:12.9.1-base-ubuntu24.04 nvidia-smi",
+      "section": "Contenedores",
+      "topic": "Recursos",
+      "description": "Expone GPUs NVIDIA al contenedor. Requiere drivers en el host y NVIDIA Container Toolkit instalado y configurado en el daemon.",
+      "examples": [
+        {
+          "description": "Solo una GPU concreta",
+          "code": "docker run --rm --gpus '\"device=0\"' nvidia/cuda:12.9.1-base-ubuntu24.04 nvidia-smi"
+        },
+        {
+          "description": "Servir un modelo con vLLM",
+          "code": "docker run -d --gpus all -p 8000:8000 --ipc=host vllm/vllm-openai --model Qwen/Qwen3-0.6B"
+        }
+      ],
+      "tags": [
+        "gpu",
+        "ia",
+        "nvidia"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "IA"
+      ],
+      "notes": "Configura el runtime con 'sudo nvidia-ctk runtime configure --runtime=docker' y reinicia Docker. En WSL2 basta el driver de Windows."
+    },
+    {
+      "title": "Proceso init en el contenedor",
+      "command": "docker run -d --init app:1.0",
+      "section": "Contenedores",
+      "topic": "Ciclo de vida",
+      "description": "Inserta tini como PID 1 para reenviar señales y recoger procesos zombi. Útil cuando la app no maneja SIGTERM o lanza subprocesos.",
+      "examples": [
+        {
+          "description": "Comparar el PID 1 con y sin --init",
+          "code": "docker run --rm --init alpine ps -o pid,comm"
+        }
+      ],
+      "tags": [
+        "init",
+        "señales",
+        "pid1"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si el contenedor tarda 10 s en detenerse, probablemente el PID 1 ignora SIGTERM y Docker termina mandando SIGKILL."
+    },
+    {
+      "title": "Forzar plataforma o descarga de imagen",
+      "command": "docker run --rm --platform linux/amd64 --pull always alpine uname -m",
+      "section": "Contenedores",
+      "topic": "Ciclo de vida",
+      "description": "Elige la variante de arquitectura de una imagen multi-arch y controla si se descarga siempre, si falta o nunca.",
+      "examples": [
+        {
+          "description": "Probar la variante arm64 en un host amd64 (emulación QEMU)",
+          "code": "docker run --rm --platform linux/arm64 alpine uname -m"
+        },
+        {
+          "description": "No descargar nunca (falla si no está local)",
+          "code": "docker run --rm --pull never app:dev"
+        }
+      ],
+      "tags": [
+        "plataforma",
+        "multi-arch",
+        "pull"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "En Macs Apple Silicon muchas imágenes antiguas solo existen en amd64 y corren emuladas, mucho más lento."
+    },
+    {
+      "title": "Listar contenedores",
+      "command": "docker ps -a",
+      "section": "Contenedores",
+      "topic": "Inspección",
+      "description": "Muestra contenedores en ejecución; con -a incluye los detenidos. Admite filtros y formato personalizado.",
+      "syntax": "docker ps [-a] [-q] [--filter K=V] [--format PLANTILLA]",
+      "examples": [
+        {
+          "description": "Tabla compacta con formato propio",
+          "code": "docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'"
+        },
+        {
+          "description": "Solo los detenidos con error",
+          "code": "docker ps -a --filter status=exited --filter 'exited=1'"
+        },
+        {
+          "description": "IDs de contenedores de una imagen",
+          "code": "docker ps -q --filter ancestor=nginx:1.29-alpine"
+        },
+        {
+          "description": "Salida JSON por línea para procesar",
+          "code": "docker ps --format json | jq -r '.Names'"
+        }
+      ],
+      "tags": [
+        "ps",
+        "listar",
+        "format"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ejecutar comando en contenedor en marcha",
+      "command": "docker exec -it api sh",
+      "section": "Contenedores",
+      "topic": "Acceso",
+      "description": "Lanza un proceso adicional dentro de un contenedor ya corriendo. Lo típico es abrir una shell para inspeccionar.",
+      "examples": [
+        {
+          "description": "Como root aunque la imagen use otro usuario",
+          "code": "docker exec -it -u root api sh"
+        },
+        {
+          "description": "Con variable y directorio de trabajo",
+          "code": "docker exec -e DEBUG=1 -w /app api python manage.py check"
+        },
+        {
+          "description": "Consulta rápida a Postgres",
+          "code": "docker exec -it pg psql -U postgres -c 'select version();'"
+        }
+      ],
+      "tags": [
+        "exec",
+        "shell",
+        "acceso"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Si la imagen es distroless o scratch no hay shell: usa 'docker debug' o un contenedor efímero que comparta el namespace (--pid container:api)."
+    },
+    {
+      "title": "Ver logs de un contenedor",
+      "command": "docker logs -f --since 10m api",
+      "section": "Contenedores",
+      "topic": "Logs",
+      "description": "Muestra stdout/stderr del contenedor. -f sigue en vivo y --since/--until acotan por tiempo relativo o absoluto.",
+      "syntax": "docker logs [-f] [--since T] [--until T] [--tail N] [-t] CONTENEDOR",
+      "examples": [
+        {
+          "description": "Últimas 100 líneas con marca de tiempo",
+          "code": "docker logs --tail 100 -t api"
+        },
+        {
+          "description": "Ventana temporal absoluta",
+          "code": "docker logs --since 2026-10-16T08:00:00 --until 2026-10-16T09:00:00 api"
+        },
+        {
+          "description": "Filtrar errores (stderr incluido)",
+          "code": "docker logs api 2>&1 | grep -i error"
+        }
+      ],
+      "tags": [
+        "logs",
+        "observabilidad"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El driver json-file por defecto no rota: configura max-size/max-file en /etc/docker/daemon.json o usa el driver local para evitar llenar el disco."
+    },
+    {
+      "title": "Detener, iniciar y reiniciar",
+      "command": "docker stop api && docker start api",
+      "section": "Contenedores",
+      "topic": "Ciclo de vida",
+      "description": "stop envía SIGTERM y tras el plazo SIGKILL; start reanuda un contenedor existente con su configuración original; restart combina ambos.",
+      "examples": [
+        {
+          "description": "Dar 30 segundos de apagado limpio",
+          "code": "docker stop -t 30 api"
+        },
+        {
+          "description": "Reiniciar varios contenedores",
+          "code": "docker restart api worker"
+        },
+        {
+          "description": "Arrancar y adjuntarse a la salida",
+          "code": "docker start -a job"
+        }
+      ],
+      "tags": [
+        "stop",
+        "start",
+        "restart"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Enviar señal a un contenedor",
+      "command": "docker kill -s HUP nginx",
+      "section": "Contenedores",
+      "topic": "Ciclo de vida",
+      "description": "Manda una señal arbitraria al PID 1. Sin -s envía SIGKILL. Sirve para recargar configuración sin reiniciar.",
+      "examples": [
+        {
+          "description": "Recargar configuración de nginx",
+          "code": "docker kill -s HUP web"
+        },
+        {
+          "description": "Matar todos los contenedores en ejecución",
+          "code": "docker kill $(docker ps -q)"
+        }
+      ],
+      "tags": [
+        "kill",
+        "señales"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Eliminar contenedores",
+      "command": "docker rm api",
+      "section": "Contenedores",
+      "topic": "Limpieza",
+      "description": "Borra contenedores detenidos. -f fuerza la detención; -v elimina además sus volúmenes anónimos.",
+      "examples": [
+        {
+          "description": "Forzar borrado de uno en ejecución",
+          "code": "docker rm -f api"
+        },
+        {
+          "description": "Borrar todos los detenidos",
+          "code": "docker container prune -f"
+        },
+        {
+          "description": "Borrar detenidos de más de 24 h",
+          "code": "docker container prune -f --filter 'until=24h'"
+        }
+      ],
+      "tags": [
+        "rm",
+        "limpieza",
+        "prune"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Copiar archivos entre host y contenedor",
+      "command": "docker cp api:/app/logs/error.log ./error.log",
+      "section": "Contenedores",
+      "topic": "Archivos",
+      "description": "Copia archivos o directorios en ambos sentidos, incluso con el contenedor detenido.",
+      "examples": [
+        {
+          "description": "Subir un archivo de configuración",
+          "code": "docker cp ./nginx.conf web:/etc/nginx/nginx.conf"
+        },
+        {
+          "description": "Extraer un directorio completo",
+          "code": "docker cp api:/app/static ./static-backup"
+        },
+        {
+          "description": "Volcar a tar por stdout",
+          "code": "docker cp api:/etc - > etc.tar"
+        }
+      ],
+      "tags": [
+        "cp",
+        "archivos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Procesos dentro del contenedor",
+      "command": "docker top api",
+      "section": "Contenedores",
+      "topic": "Inspección",
+      "description": "Lista los procesos del contenedor vistos desde el host, con opciones de ps.",
+      "examples": [
+        {
+          "description": "Columnas personalizadas",
+          "code": "docker top api -o pid,user,%cpu,%mem,cmd"
+        }
+      ],
+      "tags": [
+        "top",
+        "procesos"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Uso de recursos en vivo",
+      "command": "docker stats",
+      "section": "Contenedores",
+      "topic": "Inspección",
+      "description": "Muestra CPU, memoria, red y E/S de bloque de los contenedores en tiempo real.",
+      "examples": [
+        {
+          "description": "Una sola captura en formato propio",
+          "code": "docker stats --no-stream --format 'table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}\\t{{.MemPerc}}'"
+        },
+        {
+          "description": "Solo algunos contenedores",
+          "code": "docker stats api worker"
+        },
+        {
+          "description": "Incluir detenidos",
+          "code": "docker stats -a --no-stream"
+        }
+      ],
+      "tags": [
+        "stats",
+        "recursos",
+        "monitoreo"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Cambios en el sistema de archivos",
+      "command": "docker diff api",
+      "section": "Contenedores",
+      "topic": "Inspección",
+      "description": "Lista archivos añadidos (A), cambiados (C) o borrados (D) respecto de la imagen. Revela qué escribe la app fuera de volúmenes.",
+      "examples": [
+        {
+          "description": "Ver solo los añadidos",
+          "code": "docker diff api | grep '^A'"
+        }
+      ],
+      "tags": [
+        "diff",
+        "filesystem"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Si aparecen muchas escrituras, ese contenido se pierde al recrear el contenedor: muévelo a un volumen."
+    },
+    {
+      "title": "Crear imagen desde un contenedor",
+      "command": "docker commit -m 'debug tools' api debug/api:snapshot",
+      "section": "Contenedores",
+      "topic": "Archivos",
+      "description": "Congela el estado actual de un contenedor como una imagen nueva. Útil para análisis forense, no para producción.",
+      "examples": [
+        {
+          "description": "Aplicar una instrucción Dockerfile al commitear",
+          "code": "docker commit -c 'ENV DEBUG=1' api debug/api:env"
+        }
+      ],
+      "tags": [
+        "commit",
+        "imagen"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Las imágenes creadas con commit no son reproducibles; para producción usa siempre un Dockerfile."
+    },
+    {
+      "title": "Adjuntarse a un contenedor",
+      "command": "docker attach api",
+      "section": "Contenedores",
+      "topic": "Acceso",
+      "description": "Conecta la terminal al STDIN/STDOUT del proceso principal. Se sale sin detenerlo con Ctrl+P, Ctrl+Q.",
+      "examples": [
+        {
+          "description": "Adjuntar sin enviar STDIN",
+          "code": "docker attach --no-stdin api"
+        },
+        {
+          "description": "Cambiar la secuencia de desacople",
+          "code": "docker attach --detach-keys='ctrl-x' api"
+        }
+      ],
+      "tags": [
+        "attach"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Ctrl+C dentro de attach envía SIGINT al proceso principal y puede detener el contenedor; para inspeccionar usa exec."
+    },
+    {
+      "title": "Esperar a que termine un contenedor",
+      "command": "docker wait job",
+      "section": "Contenedores",
+      "topic": "Ciclo de vida",
+      "description": "Bloquea hasta que el contenedor se detenga e imprime su código de salida. Útil en scripts de CI.",
+      "examples": [
+        {
+          "description": "Lanzar un job y propagar su código de salida",
+          "code": "id=$(docker run -d migrador:1.0) && exit $(docker wait $id)"
+        }
+      ],
+      "tags": [
+        "wait",
+        "ci",
+        "scripts"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ]
+    },
+    {
+      "title": "Pausar y reanudar",
+      "command": "docker pause api && docker unpause api",
+      "section": "Contenedores",
+      "topic": "Ciclo de vida",
+      "description": "Congela todos los procesos del contenedor con el freezer de cgroups, sin matarlos.",
+      "examples": [
+        {
+          "description": "Congelar durante un snapshot de disco",
+          "code": "docker pause pg && sleep 5 && docker unpause pg"
+        }
+      ],
+      "tags": [
+        "pause",
+        "cgroups"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE"
+      ]
+    },
+    {
+      "title": "Renombrar y actualizar contenedor",
+      "command": "docker rename api api-old",
+      "section": "Contenedores",
+      "topic": "Ciclo de vida",
+      "description": "Cambia el nombre de un contenedor existente. Junto a docker update permite ajustar restart y recursos sin recrearlo.",
+      "examples": [
+        {
+          "description": "Renombrar antes de levantar la versión nueva",
+          "code": "docker rename api api-old && docker run -d --name api app:2.0"
+        },
+        {
+          "description": "Actualizar varios a la vez",
+          "code": "docker update --cpus 1 --memory 512m --memory-swap 512m api worker"
+        }
+      ],
+      "tags": [
+        "rename",
+        "update"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Ver mapeo de puertos",
+      "command": "docker port web",
+      "section": "Contenedores",
+      "topic": "Inspección",
+      "description": "Lista los puertos publicados de un contenedor y la dirección del host asociada.",
+      "examples": [
+        {
+          "description": "Consultar un puerto concreto",
+          "code": "docker port web 80/tcp"
+        }
+      ],
+      "tags": [
+        "puertos",
+        "red"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ]
+    },
+    {
+      "title": "Inspeccionar contenedor con plantillas Go",
+      "command": "docker inspect -f '{{.State.Status}}' api",
+      "section": "Contenedores",
+      "topic": "Inspección",
+      "description": "Devuelve la configuración y el estado en JSON; --format extrae campos concretos con plantillas Go.",
+      "syntax": "docker inspect [-f PLANTILLA] [--type container|image|network|volume] OBJETO...",
+      "examples": [
+        {
+          "description": "IP en cada red",
+          "code": "docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}' api"
+        },
+        {
+          "description": "Montajes en JSON legible",
+          "code": "docker inspect -f '{{json .Mounts}}' api | jq"
+        },
+        {
+          "description": "Variables de entorno, una por línea",
+          "code": "docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' api"
+        },
+        {
+          "description": "¿Lo mató el OOM killer?",
+          "code": "docker inspect -f '{{.State.OOMKilled}} exit={{.State.ExitCode}}' api"
+        }
+      ],
+      "tags": [
+        "inspect",
+        "format",
+        "go-template"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con jq suele ser más legible: docker inspect api | jq '.[0].State'."
+    },
+    {
+      "title": "Montar volumen o bind mount",
+      "command": "docker run -d --mount type=volume,src=pgdata,dst=/var/lib/postgresql postgres:18",
+      "section": "Contenedores",
+      "topic": "Almacenamiento",
+      "description": "Persiste datos fuera del contenedor. --mount es explícito y legible; -v es la forma corta equivalente.",
+      "examples": [
+        {
+          "description": "Bind mount de solo lectura",
+          "code": "docker run -d --mount type=bind,src=\"$PWD\"/conf,dst=/etc/app,readonly app:1.0"
+        },
+        {
+          "description": "Forma corta con -v",
+          "code": "docker run -d -v pgdata:/var/lib/postgresql -v ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro postgres:18"
+        },
+        {
+          "description": "tmpfs en memoria para datos temporales",
+          "code": "docker run -d --mount type=tmpfs,dst=/cache,tmpfs-size=128m app:1.0"
+        }
+      ],
+      "tags": [
+        "volumenes",
+        "bind",
+        "mount"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Fullstack"
+      ],
+      "notes": "Postgres 18 cambió la ruta de datos recomendada a /var/lib/postgresql (PGDATA en subdirectorio versionado). Si la ruta del bind no existe, -v la crea como directorio y --mount falla: --mount evita sorpresas."
+    },
+    {
+      "title": "Límites de ulimit y tamaño de /dev/shm",
+      "command": "docker run -d --ulimit nofile=65536:65536 --shm-size 1g app:1.0",
+      "section": "Contenedores",
+      "topic": "Recursos",
+      "description": "Ajusta límites del kernel por proceso y el tamaño de memoria compartida, típico para bases de datos y navegadores headless.",
+      "examples": [
+        {
+          "description": "Chrome headless sin crashes por /dev/shm",
+          "code": "docker run --rm --shm-size 2g selenium/standalone-chrome"
+        },
+        {
+          "description": "Compartir IPC con el host para PyTorch DataLoader",
+          "code": "docker run --rm --gpus all --ipc=host pytorch/pytorch python train.py"
+        }
+      ],
+      "tags": [
+        "ulimit",
+        "shm",
+        "recursos"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "IA"
+      ]
+    },
+    {
+      "title": "Borrar todos los contenedores",
+      "command": "docker rm -f $(docker ps -aq)",
+      "section": "Contenedores",
+      "topic": "Limpieza",
+      "description": "Detiene y elimina todos los contenedores del host. Útil en máquinas de desarrollo para partir de cero.",
+      "examples": [
+        {
+          "description": "Versión PowerShell",
+          "code": "docker ps -aq | ForEach-Object { docker rm -f $_ }"
+        },
+        {
+          "description": "Solo los de un proyecto Compose",
+          "code": "docker rm -f $(docker ps -aq --filter label=com.docker.compose.project=miapp)"
+        }
+      ],
+      "tags": [
+        "limpieza",
+        "rm"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Destructivo: no toca volúmenes nombrados, pero sí borra la capa escribible de cada contenedor."
+    },
+    {
+      "title": "Contenedor que comparte namespaces",
+      "command": "docker run --rm -it --pid container:api --network container:api nicolaka/netshoot",
+      "section": "Contenedores",
+      "topic": "Acceso",
+      "description": "Lanza un contenedor de herramientas que ve los procesos y la red de otro. Permite depurar imágenes mínimas sin shell.",
+      "examples": [
+        {
+          "description": "Capturar tráfico del contenedor api",
+          "code": "docker run --rm -it --network container:api nicolaka/netshoot tcpdump -i eth0 port 8000"
+        },
+        {
+          "description": "Ver puertos abiertos del contenedor",
+          "code": "docker run --rm --network container:api nicolaka/netshoot ss -lntp"
+        }
+      ],
+      "tags": [
+        "debug",
+        "namespaces",
+        "red"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ]
+    }
+  ]
+}
