@@ -1,0 +1,65 @@
+# CmdVault — stack completo en local: Postgres + API FastAPI + UI NiceGUI.
+#   cp .env.example .env   (y cambiar los secretos)
+#   docker compose up -d --build --wait
+#   UI: http://localhost:8090 · API/Swagger: http://localhost:8000/docs
+# Es la única forma de probar contra Postgres real (los tests usan SQLite en memoria).
+name: cmdvault
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cmdvault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD en tu .env}
+      POSTGRES_DB: ${POSTGRES_DB:-cmdvault}
+    volumes:
+      # Postgres 18+ guarda los datos en /var/lib/postgresql/<versión>/: se monta el padre.
+      - pg_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    image: cmdvault-backend:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-cmdvault}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cmdvault}
+      API_KEY: ${API_KEY:?define API_KEY en tu .env}
+      ENVIRONMENT: production
+      SEED_ON_STARTUP: "true"
+      CORS_ORIGINS: '["http://localhost:8090"]'
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+
+  frontend:
+    build: ./frontend
+    image: cmdvault-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_URL: http://backend:8000
+      API_KEY: ${API_KEY}
+      STORAGE_SECRET: ${STORAGE_SECRET:?define STORAGE_SECRET en tu .env}
+      DEFAULT_THEME: ${DEFAULT_THEME:-eren}
+    volumes:
+      # Preferencias por usuario (tema) que NiceGUI guarda en .nicegui/
+      - ui_storage:/app/.nicegui
+    ports:
+      - "${FRONTEND_PORT:-8090}:8080"
+    security_opt: ["no-new-privileges:true"]
+
+volumes:
+  pg_data:
+  ui_storage:
