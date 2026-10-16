@@ -33,8 +33,17 @@ until docker exec cmdvault-pgtest pg_isready -U app -d app_test >/dev/null 2>&1;
 sleep 1
 (cd backend && TEST_DATABASE_URL=postgresql+psycopg://app:app@localhost:5433/app_test "$PYTEST" -rs -q)
 
-paso "build: hadolint + compose up --wait + smoke"
+paso "build: hadolint + compose up --wait + smoke (proyecto aparte, se baja al terminar)"
 for f in backend frontend; do docker run --rm -i hadolint/hadolint < "$f/Dockerfile"; done
+# Proyecto y puertos propios: no toca el stack de uso diario ni sus datos.
+# Secretos efímeros solo para esta prueba; nunca se escriben a disco.
+export COMPOSE_PROJECT_NAME=cmdvault-verificar BACKEND_PORT=18000 FRONTEND_PORT=18090
+export POSTGRES_PASSWORD API_KEY STORAGE_SECRET
+POSTGRES_PASSWORD=$("$PY" -c "import secrets; print(secrets.token_hex(16))")
+API_KEY=$("$PY" -c "import secrets; print(secrets.token_hex(24))")
+STORAGE_SECRET=$("$PY" -c "import secrets; print(secrets.token_hex(24))")
+trap 'docker stop cmdvault-pgtest >/dev/null 2>&1 || true; docker compose down -v --remove-orphans >/dev/null 2>&1 || true' EXIT
 docker compose up -d --build --wait --wait-timeout 180
-./scripts/smoke.sh
-printf '\n\033[1;32mTodo el pipeline en verde.\033[0m\n'
+./scripts/smoke.sh "http://localhost:$FRONTEND_PORT" "http://localhost:$BACKEND_PORT"
+docker compose down -v --remove-orphans
+printf '\n\033[1;32mTodo el pipeline en verde (stack de prueba bajado).\033[0m\n'

@@ -214,7 +214,9 @@ mismo ejecutable `pytest` que el CI, y sale con código ≠ 0 si algo falla:
 2. **test-backend**: 30 tests sobre SQLite en memoria, cobertura ≥ 90 % (actual 97 %).
 3. **test-postgres**: la misma suite contra un Postgres 18 desechable.
 4. **test-frontend**: 23 tests, cobertura ≥ 80 % (actual 89 %).
-5. **build**: `docker compose up --build --wait` y `smoke.sh` (23 rutas, incluida la de cada entorno).
+5. **build**: `docker compose up --build --wait` en un proyecto aparte (`cmdvault-verificar`, puertos
+   18000/18090, secretos efímeros), `smoke.sh` (23 rutas, incluida la de cada entorno) y `down -v`, también
+   si algo falla. No toca tu stack ni tus datos.
 
 Los tests del backend usan SQLite en memoria salvo que el entorno traiga `TEST_DATABASE_URL` (así corre
 el job `test-postgres`).
