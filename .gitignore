@@ -1,0 +1,32 @@
+# Secretos y entornos
+.env
+.env.*
+!.env.example
+env/
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Datos locales
+*.db
+*.sqlite3
+.nicegui/
+
+# Herramientas
+.playwright-mcp/
+.vscode/
+.idea/
+
+# Documentos personales (no versionados)
+CLAUDE.md
+memory.md
+aprendizaje.md
+pendientes.md
