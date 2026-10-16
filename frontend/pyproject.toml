@@ -5,6 +5,8 @@ requires-python = ">=3.13"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# El ejecutable `pytest` (CI) no añade el cwd al sys.path como `python -m pytest`.
+pythonpath = ["."]
 addopts = "-q"
 
 [tool.coverage.run]

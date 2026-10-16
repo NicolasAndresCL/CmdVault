@@ -5,6 +5,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 PY=env/Scripts/python.exe; [[ -x $PY ]] || PY=env/bin/python
 PY="$(pwd)/$PY"
+# Mismo entrypoint que el CI: `pytest`, no `python -m pytest` (este último añade el cwd
+# al sys.path y oculta un `ModuleNotFoundError: app` que en el runner sí revienta).
+PYTEST="$(dirname "$PY")/pytest"
 export PYTHONIOENCODING=utf-8
 paso() { printf '\n\033[1;34m== %s\033[0m\n' "$1"; }
 
@@ -14,10 +17,10 @@ paso "lint: ruff + formato + contrato del seed"
 (cd backend && "$PY" -m app.seed.validate)
 
 paso "test-backend (SQLite, cobertura >= 90)"
-(cd backend && "$PY" -m pytest -rs --cov --cov-fail-under=90 -q)
+(cd backend && "$PYTEST" -rs --cov --cov-fail-under=90 -q)
 
 paso "test-frontend (cobertura >= 80)"
-(cd frontend && "$PY" -m pytest -rs --cov --cov-fail-under=80 -q)
+(cd frontend && "$PYTEST" -rs --cov --cov-fail-under=80 -q)
 
 [[ "${1:-}" == "--sin-docker" ]] && { echo "Saltando jobs con Docker"; exit 0; }
 
@@ -28,7 +31,7 @@ docker run -d --rm --name cmdvault-pgtest -e POSTGRES_USER=app -e POSTGRES_PASSW
 trap 'docker stop cmdvault-pgtest >/dev/null 2>&1 || true' EXIT
 until docker exec cmdvault-pgtest pg_isready -U app -d app_test >/dev/null 2>&1; do sleep 1; done
 sleep 1
-(cd backend && TEST_DATABASE_URL=postgresql+psycopg://app:app@localhost:5433/app_test "$PY" -m pytest -rs -q)
+(cd backend && TEST_DATABASE_URL=postgresql+psycopg://app:app@localhost:5433/app_test "$PYTEST" -rs -q)
 
 paso "build: hadolint + compose up --wait + smoke"
 for f in backend frontend; do docker run --rm -i hadolint/hadolint < "$f/Dockerfile"; done
