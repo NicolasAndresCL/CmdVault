@@ -2,6 +2,26 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versionado semántico.
 
+## [1.0.2] — 19 de octubre de 2026
+
+### Agregado
+- **Primera importación de la bandeja** (`~/.claude/cmdvault/bandeja.md`, origen: hardening del VPS
+  AlmaLinux con n8n): 12 comandos nuevos — total 1.510 comandos y 4.121 ejemplos.
+  - VPS (+5): `firewall-offline-cmd` con el servicio apagado, *dead-man switch* con `systemd-run`, prueba
+    externa de que SSH rechaza contraseñas, usuario administrador con `wheel` y medición de capacidad.
+  - Linux (+3): `nc -zv` para distinguir abierto/cerrado/filtrado, probar `/etc/fstab` sin reiniciar y
+    `vm.swappiness` con `tuned` activo.
+  - Git (+2): `git ls-remote` antes del primer push y `gh label create`.
+  - Docker (+1): probar workflows de n8n en un contenedor desechable.
+  - Terminal (+1): `MSYS_NO_PATHCONV` para que Git Bash no reescriba rutas al llamar a Docker.
+- Ejemplos y notas nuevas en 7 comandos existentes: `ss -tulnp` (lectura de Local Address), zonas de
+  firewalld con Docker, ShellCheck `-f gcc` (SC2164, SC2015), bit de ejecución en git como paso de CI y
+  `sshd -T` (en sshd gana el primer valor leído: drop-in `00-`).
+
+### Corregido
+- «Crear y activar swap» y «Crear memoria swap en un VPS pequeño» se contradecían sobre `fallocate` en XFS:
+  ambos usan ahora `dd` como camino principal, como recomienda `man swapon` para XFS y ext4.
+
 ## [1.0.1] — 16 de octubre de 2026
 
 ### Agregado

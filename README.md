@@ -1,17 +1,17 @@
 # CmdVault — biblioteca personal para dominar la terminal: DevOps · SRE · Fullstack
 
 [![CI](https://github.com/NicolasAndresCL/CmdVault/actions/workflows/ci.yml/badge.svg)](https://github.com/NicolasAndresCL/CmdVault/actions/workflows/ci.yml)
-![Versión](https://img.shields.io/badge/versi%C3%B3n-1.0.1-blue)
+![Versión](https://img.shields.io/badge/versi%C3%B3n-1.0.2-blue)
 ![Python](https://img.shields.io/badge/python-3.14-3776AB)
 
 | | |
 |---|---|
-| **Versión** | 1.0.1 |
-| **Fecha** | 16 de octubre de 2026 |
+| **Versión** | 1.0.2 |
+| **Fecha** | 19 de octubre de 2026 |
 | **Autor** | [Nicolás Andrés Cano Leal](#autor) |
 
 Biblioteca de consulta para un roadmap **DevOps → SRE → Arquitecto Fullstack (IA, Cloud, Software)**:
-**1.498 comandos y 4.078 ejemplos** sobre **18 entornos**, pensados para usar la terminal en todo, en
+**1.510 comandos y 4.121 ejemplos** sobre **18 entornos**, pensados para usar la terminal en todo, en
 desarrollo y en producción (sitios web, servidores y VPS). Cada comando trae descripción, sintaxis, ejemplos
 de uso común, notas con trampas reales (Ubuntu vs AlmaLinux, PowerShell 5.1 vs 7, Helm 4, `use_lockfile` de
 Terraform, el volumen de Postgres 18…), nivel, tags y la ruta del roadmap a la que pertenece. Incluye además
@@ -22,11 +22,11 @@ con Ansible** y se **verifica con Jenkins** y GitHub Actions.
 
 | Entorno | Secciones | Comandos |
 |---|---|---|
-| Linux | Común · Ubuntu · AlmaLinux | 143 |
+| Linux | Común · Ubuntu · AlmaLinux | 146 |
 | Python | Python · Django · DRF · FastAPI | 115 |
 | Windows | CMD · PowerShell | 108 |
 | Jenkins | Pipeline · CLI · Docker · Administración | 66 |
-| Docker | Imágenes · Contenedores · Compose · Redes y volúmenes · Build y registro · Sistema y diagnóstico | 121 |
+| Docker | Imágenes · Contenedores · Compose · Redes y volúmenes · Build y registro · Sistema y diagnóstico | 122 |
 | Kubernetes | kubectl básico · Workloads · Redes y servicios · Configuración y secretos · Troubleshooting · Helm · Clúster y contexto | 116 |
 | Terraform | Flujo básico · Estado · Módulos y workspaces · HCL · Calidad y CI | 79 |
 | Ansible | Ad-hoc · Playbooks · Inventario · Roles y Galaxy · Vault y secretos · Calidad y depuración | 78 |
@@ -36,11 +36,11 @@ con Ansible** y se **verifica con Jenkins** y GitHub Actions.
 | AWS | Configuración e identidad · Cómputo (EC2) · Almacenamiento (S3) · Redes y DNS · Bases de datos y contenedores · Serverless y mensajería · Monitoreo y costos | 90 |
 | Cloud | Google Cloud (gcloud) · Azure (az) · DigitalOcean (doctl) · Cloudflare (wrangler) · Hetzner (hcloud) | 73 |
 | Servidores web | Nginx · Apache · Caddy · TLS y certificados · Pruebas HTTP y diagnóstico | 75 |
-| VPS y producción | Primer acceso y hardening · Usuarios y SSH · Despliegue · Servicios y procesos · Backups · Monitoreo y logs · Mantenimiento | 71 |
+| VPS y producción | Primer acceso y hardening · Usuarios y SSH · Despliegue · Servicios y procesos · Backups · Monitoreo y logs · Mantenimiento | 76 |
 | Claude | Claude Code (sesiones, automatización, permisos, MCP/plugins/agentes, dentro de la sesión) · API con curl · CLI ant · SDK Python | 63 |
-| Git y GitHub | Configuración · Día a día · Ramas y merge · Rebase e historial · Remotos · Deshacer y recuperar · Inspección y búsqueda · Avanzado · GitHub CLI (gh) | 57 |
-| Terminal | Atajos y shell · Búsqueda moderna · JSON y YAML · tmux · Vim y nano · Scripting robusto · Productividad | 40 |
-| **Total** | | **1.498** |
+| Git y GitHub | Configuración · Día a día · Ramas y merge · Rebase e historial · Remotos · Deshacer y recuperar · Inspección y búsqueda · Avanzado · GitHub CLI (gh) | 59 |
+| Terminal | Atajos y shell · Búsqueda moderna · JSON y YAML · tmux · Vim y nano · Scripting robusto · Productividad | 41 |
+| **Total** | | **1.510** |
 
 - **Frontend**: NiceGUI 3 (puerto 8090) con tres temas: **Dark**, **Luffy · Quinta Marcha** y
   **Eren · Titán Fundador**.
@@ -92,7 +92,7 @@ CmdVault/
 │   │       ├── loader.py     #   lectura y fusión de JSON + skills (puro, sin BD)
 │   │       ├── sync.py       #   sincronización idempotente con la BD
 │   │       ├── validate.py   #   validador para CI: contrato + títulos duplicados
-│   │       ├── data/         #   69 JSON con los 1.498 comandos
+│   │       ├── data/         #   69 JSON con los 1.510 comandos
 │   │       └── skills/       #   12 SKILL.md de ingeniería
 │   └── tests/                # pytest: lógica pura, seed, API (TestClient); SQLite o Postgres
 └── frontend/
@@ -276,6 +276,11 @@ Si la API no responde, la interfaz muestra «Sin conexión con la API» y sigue 
 2. Validar: `cd backend && python -m app.seed.validate` (rechaza campos extra y títulos duplicados).
 3. `docker compose up -d --build backend`: el arranque sincroniza.
 
+Los comandos que aparecen trabajando en otros proyectos se anotan primero en una **bandeja** fuera del repo
+(`~/.claude/cmdvault/bandeja.md`, skill `cmdvault-registro`) con los mismos campos de `CommandIn`, y se
+importan por lotes a estos JSON. Al importar: IP, puertos y nombres reales se generalizan (`203.0.113.10`,
+`2222`, `<usuario>`) porque el repo es público, y los títulos existentes no se renombran (perderían el favorito).
+
 Las skills se copian desde `~/.claude/skills/*/SKILL.md` a `backend/app/seed/skills/`.
 
 ## Verificación
@@ -354,4 +359,4 @@ Backend Engineer → SRE | Python · Django · Kubernetes · Terraform · CI/CD
 - Portafolio: [nicolasandrescl.github.io](https://nicolasandrescl.github.io/)
 - Correo: [nicolas.cano.leal@gmail.com](mailto:nicolas.cano.leal@gmail.com)
 
-CmdVault v1.0.1 · 16 de octubre de 2026
+CmdVault v1.0.2 · 19 de octubre de 2026
