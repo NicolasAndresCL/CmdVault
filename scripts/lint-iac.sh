@@ -47,7 +47,13 @@ docker run --rm "${M_ANS[@]}" "$PY_IMG" sh -c "
   cp -r $ANS_W /tmp/a && cd /tmp/a
   apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq git >/dev/null 2>&1
   pip install -q --root-user-action=ignore $ANSIBLE_PKGS >/dev/null 2>&1
-  ansible-galaxy collection install -r requirements.yml -p ./collections >/dev/null
+  # Galaxy corta conexiones de vez en cuando (SSL: UNEXPECTED_EOF_WHILE_READING en Jenkins el
+  # 2026-10-20, y el mismo commit pasó al relanzar): hasta 3 intentos antes de dar el build por roto.
+  for i in 1 2 3; do
+    ansible-galaxy collection install -r requirements.yml -p ./collections >/dev/null && break
+    [ \$i -eq 3 ] && { echo 'Galaxy falló 3 veces seguidas'; exit 1; }
+    echo \"Galaxy falló (intento \$i/3); reintento en 10 s\"; sleep 10
+  done
   ansible-playbook -i localhost, playbooks/site.yml --syntax-check
   ansible-lint --offline --profile production playbooks/site.yml roles"
 

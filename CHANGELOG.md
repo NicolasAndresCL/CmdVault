@@ -2,6 +2,12 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versionado semántico.
 
+## [Sin publicar]
+
+### Corregido
+- `lint-iac.sh` reintenta hasta 3 veces la descarga de colecciones de Ansible Galaxy: un corte TLS de Galaxy
+  dejó en rojo un build de Jenkins sin cambios en el código.
+
 ## [1.1.0] — 19 de octubre de 2026
 
 ### Agregado
