@@ -17,7 +17,7 @@ jobs:
     name: Lint + contrato del seed
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
@@ -37,7 +37,7 @@ jobs:
     name: IaC (Terraform + Ansible)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # Terraform fmt/validate, tflint, Trivy y ansible-lint en contenedores fijados: el mismo
       # script que usan el Jenkinsfile y scripts/verificar.sh.
       - run: ./scripts/lint-iac.sh
@@ -50,7 +50,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
@@ -83,7 +83,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
@@ -100,7 +100,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
@@ -114,7 +114,7 @@ jobs:
     needs: [iac, test-backend, test-postgres, test-frontend]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: .env efímero para CI
         run: |
           {
