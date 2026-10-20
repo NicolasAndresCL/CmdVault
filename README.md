@@ -189,7 +189,7 @@ cp group_vars/cmdvault/vault.yml.example group_vars/cmdvault/vault.yml   # poner
 ansible-vault encrypt group_vars/cmdvault/vault.yml
 ansible-galaxy collection install -r requirements.yml -p ./collections
 ansible-playbook playbooks/site.yml --ask-vault-pass                        # todo
-ansible-playbook playbooks/site.yml --tags deploy --ask-vault-pass -e cmdvault_version=v1.0.1  # solo redeploy
+ansible-playbook playbooks/site.yml --tags deploy --ask-vault-pass -e cmdvault_version=v1.0.2  # solo redeploy
 ```
 
 | Rol | Qué hace (Ubuntu y AlmaLinux) |
