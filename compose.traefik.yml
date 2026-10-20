@@ -3,6 +3,11 @@
 #
 #   docker compose -f docker-compose.yml -f compose.traefik.yml up -d --build --wait
 #
+# En el servidor, mejor fijarlo en el .env para que un `docker compose up` a secas NUNCA
+# levante el stack base (que publica 8000/8090 saltándose el firewall):
+#   COMPOSE_PATH_SEPARATOR=:
+#   COMPOSE_FILE=docker-compose.yml:compose.traefik.yml
+#
 # Qué cambia respecto del stack local:
 #   - No publica NINGÚN puerto en el host: los puertos que publica Docker se saltan
 #     firewalld/ufw. Solo Traefik llega a la UI, por la red compartida; la API queda interna.

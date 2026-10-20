@@ -230,11 +230,14 @@ sudo git checkout v1.1.0
 docker network ls                                  # red donde vive Traefik → TRAEFIK_NETWORK
 openssl passwd -apr1                               # hash para CMDVAULT_BASIC_AUTH
 sudo cp .env.example .env && sudo chmod 600 .env   # secretos + las variables del override (ver tabla)
-sudo docker compose -f docker-compose.yml -f compose.traefik.yml up -d --build --wait
+# en el .env, para que un `docker compose` a secas siempre incluya el override (y nunca publique puertos):
+#   COMPOSE_PATH_SEPARATOR=:
+#   COMPOSE_FILE=docker-compose.yml:compose.traefik.yml
+sudo docker compose up -d --build --wait
 curl -sS -o /dev/null -w '%{http_code}\n' https://$CMDVAULT_HOST/          # 401 sin credenciales
 ```
 
-Actualizar: `sudo git fetch --tags && sudo git checkout <tag>` y el mismo `up -d --build --wait`. El
+Actualizar: `sudo git fetch --tags && sudo git checkout <tag>` y el mismo `sudo docker compose up -d --build --wait`. El
 override lo valida el job de lint del CI (`docker compose config`) para que no se rompa en silencio.
 
 ## Endpoints
