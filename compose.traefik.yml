@@ -1,0 +1,46 @@
+# CmdVault detrás de un Traefik que YA existe en el servidor (p. ej. el VPS con n8n, que
+# ocupa 80/443 con Let's Encrypt). Se aplica ENCIMA de docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f compose.traefik.yml up -d --build --wait
+#
+# Qué cambia respecto del stack local:
+#   - No publica NINGÚN puerto en el host: los puertos que publica Docker se saltan
+#     firewalld/ufw. Solo Traefik llega a la UI, por la red compartida; la API queda interna.
+#   - Basic auth en Traefik: CmdVault no tiene usuarios y la UI permite escribir.
+#   - mem_limit por servicio: el VPS es compartido (medido en local con `docker stats`).
+#
+# Variables extra del .env (además de las de .env.example):
+#   CMDVAULT_HOST         nombre público, p. ej. cmdvault.<ip-con-guiones>.sslip.io
+#   TRAEFIK_NETWORK       red de Docker donde vive Traefik (`docker network ls`)
+#   CMDVAULT_BASIC_AUTH   usuario:hash ($apr1$ o bcrypt) ENTRE COMILLAS SIMPLES en el .env,
+#                         para que Compose no interprete los `$` del hash
+#   TRAEFIK_CERTRESOLVER  resolver ACME de ese Traefik (por defecto `le`)
+#   TRAEFIK_ENTRYPOINT    entrypoint HTTPS de ese Traefik (por defecto `websecure`)
+
+services:
+  db:
+    mem_limit: 256m
+
+  backend:
+    ports: !reset []
+    mem_limit: 384m
+
+  frontend:
+    ports: !reset []
+    mem_limit: 384m
+    networks: [default, traefik]
+    labels:
+      traefik.enable: "true"
+      # Con dos redes, Traefik debe saber por cuál llegar al contenedor.
+      traefik.docker.network: ${TRAEFIK_NETWORK:?define TRAEFIK_NETWORK en tu .env}
+      traefik.http.routers.cmdvault.rule: Host(`${CMDVAULT_HOST:?define CMDVAULT_HOST en tu .env}`)
+      traefik.http.routers.cmdvault.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.cmdvault.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-le}
+      traefik.http.routers.cmdvault.middlewares: cmdvault-auth
+      traefik.http.middlewares.cmdvault-auth.basicauth.users: ${CMDVAULT_BASIC_AUTH:?define CMDVAULT_BASIC_AUTH en tu .env}
+      traefik.http.services.cmdvault.loadbalancer.server.port: "8080"
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK}

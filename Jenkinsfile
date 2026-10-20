@@ -66,6 +66,12 @@ pipeline {
                             echo "Scripts sin bit de ejecución en git"; exit 1
                         fi
                     ''')
+                    // Override de producción detrás de Traefik (compose.traefik.yml): YAML y `!reset` válidos.
+                    sh '''
+                        POSTGRES_PASSWORD=ci API_KEY=ci STORAGE_SECRET=ci CMDVAULT_HOST=cmdvault.ci.example \
+                          TRAEFIK_NETWORK=ci CMDVAULT_BASIC_AUTH=ci:x \
+                          docker compose -f docker-compose.yml -f compose.traefik.yml config --quiet
+                    '''
                 }
             }
         }

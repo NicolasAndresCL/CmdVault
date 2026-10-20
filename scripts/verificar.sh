@@ -20,6 +20,10 @@ paso "lint: ruff + formato + contrato del seed"
 if git ls-files -s -- '*.sh' | grep -v '^100755'; then
   echo "Scripts sin bit de ejecución en git: git update-index --chmod=+x <archivo>"; exit 1
 fi
+# Override de producción detrás de Traefik: YAML válido y `!reset` soportado (no necesita daemon).
+POSTGRES_PASSWORD=ci API_KEY=ci STORAGE_SECRET=ci CMDVAULT_HOST=cmdvault.ci.example \
+  TRAEFIK_NETWORK=ci CMDVAULT_BASIC_AUTH=ci:x \
+  docker compose -f docker-compose.yml -f compose.traefik.yml config --quiet
 
 [[ "${1:-}" == "--sin-docker" ]] || { paso "iac: Terraform + Ansible"; ./scripts/lint-iac.sh; }
 

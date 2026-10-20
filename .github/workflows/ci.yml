@@ -32,6 +32,15 @@ jobs:
       - name: hadolint
         run: |
           for f in backend frontend; do docker run --rm -i hadolint/hadolint < "$f/Dockerfile"; done
+      - name: Override de producción detrás de Traefik (compose.traefik.yml)
+        env:
+          POSTGRES_PASSWORD: ci
+          API_KEY: ci
+          STORAGE_SECRET: ci
+          CMDVAULT_HOST: cmdvault.ci.example
+          TRAEFIK_NETWORK: ci
+          CMDVAULT_BASIC_AUTH: ci:x
+        run: docker compose -f docker-compose.yml -f compose.traefik.yml config --quiet
 
   iac:
     name: IaC (Terraform + Ansible)
