@@ -909,6 +909,40 @@
         "DevOps"
       ],
       "notes": "Automatiza lo que pueda: un script que ejecute esto y mande un resumen semanal a n8n o a un canal de chat. Lo que no se revisa periódicamente falla cuando menos conviene."
+    },
+    {
+      "title": "Medir la capacidad real de un VPS antes de sumar servicios",
+      "command": "free -h && swapon --show",
+      "section": "Monitoreo y logs",
+      "topic": "Capacidad",
+      "description": "Tres lecturas que responden \"¿cuánto más le cabe a este servidor?\": memoria disponible y swap, consumo por contenedor, y disco y carga.",
+      "examples": [
+        {
+          "description": "Consumo por contenedor en un instante",
+          "code": "docker stats --no-stream --format 'table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}'"
+        },
+        {
+          "description": "Disco y carga",
+          "code": "df -h / && uptime"
+        },
+        {
+          "description": "¿Quiénes son los \"N users\" de uptime?",
+          "code": "who"
+        }
+      ],
+      "tags": [
+        "free",
+        "swap",
+        "docker-stats",
+        "capacidad",
+        "oom"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Mirar 'available', no 'free': buff/cache es caché que el kernel libera cuando hace falta. Si swapon --show no imprime nada no hay swap y un pico activa el OOM killer. En docker stats, si LIMIT es igual a la RAM total del host, el contenedor NO tiene mem_limit. Un plan de \"4 GB\" muestra ~3,6 GiB (GB decimales vs GiB binarios, más lo que reserva el kernel). Load average por debajo del número de vCPU = holgado."
     }
   ]
 }

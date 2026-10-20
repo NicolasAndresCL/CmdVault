@@ -511,7 +511,7 @@
         "DevOps",
         "Software"
       ],
-      "notes": "chmod +x en NTFS no hace nada y Git Bash ejecuta el script igual: el fallo solo aparece en el runner Linux."
+      "notes": "chmod +x en NTFS no hace nada y Git Bash ejecuta el script igual: el fallo (Permission denied) solo aparece en el runner Linux. Como paso de CI: si 'git ls-files -s -- '*.sh' | grep -v ^100755' imprime algo, fallar."
     },
     {
       "title": "Crear y cambiar de rama",
@@ -1665,6 +1665,66 @@
         "DevOps",
         "Software"
       ]
+    },
+    {
+      "title": "Comprobar que un repo remoto existe y está vacío antes del primer push",
+      "command": "git ls-remote https://github.com/<usuario>/<repo>.git",
+      "section": "Remotos",
+      "topic": "Remotos",
+      "description": "Lista las referencias (ramas y tags) de un remoto sin clonarlo. Si no imprime nada y sale con 0, el repo existe, tienes acceso y está vacío: el primer push entrará sin conflicto de historias.",
+      "examples": [
+        {
+          "description": "Solo ramas",
+          "code": "git ls-remote --heads origin"
+        },
+        {
+          "description": "¿Existe la rama main en el remoto? (sale con 2 si no)",
+          "code": "git ls-remote --exit-code --heads origin main"
+        }
+      ],
+      "tags": [
+        "git",
+        "remoto",
+        "ls-remote",
+        "push"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Crear el repo en GitHub SIN README, .gitignore ni licencia: si GitHub hace un commit inicial y tú otro en local, quedan dos historias sin ancestro común y el push falla con 'rejected (fetch first)' (habría que usar --allow-unrelated-histories). Con un repo privado, si no imprime nada pero sale con error 128, es un problema de credenciales, no un repo vacío."
+    },
+    {
+      "title": "Crear etiquetas de un repo con GitHub CLI",
+      "command": "gh label create incidente --color d73a4a --description \"Algo del servidor dejó de funcionar\"",
+      "section": "GitHub CLI (gh)",
+      "topic": "Issues y etiquetas",
+      "description": "Crea una etiqueta en el repo actual con color y descripción. Las plantillas de issue que declaran labels: con una etiqueta inexistente no fallan: GitHub simplemente no la aplica.",
+      "examples": [
+        {
+          "description": "Listar las etiquetas",
+          "code": "gh label list"
+        },
+        {
+          "description": "Modificar una existente",
+          "code": "gh label edit tarea --color 0e8a16"
+        },
+        {
+          "description": "Copiar las etiquetas de otro repo",
+          "code": "gh label clone NicolasAndresCL/CmdVault"
+        }
+      ],
+      "tags": [
+        "gh",
+        "github",
+        "labels",
+        "issues"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "El color va en hex sin '#'. Si ya existe, falla; usar --force para actualizarla."
     }
   ]
 }

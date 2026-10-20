@@ -998,19 +998,30 @@
         {
           "description": "Con Docker, sin instalar nada",
           "code": "docker run --rm -v \"$PWD:/mnt\" koalaman/shellcheck:stable scripts/*.sh"
+        },
+        {
+          "description": "Una línea por hallazgo (ideal para logs de CI)",
+          "code": "shellcheck -f gcc scripts/*.sh"
+        },
+        {
+          "description": "En GitHub Actions viene preinstalado en ubuntu-latest",
+          "code": "run: shellcheck scripts/*.sh"
         }
       ],
       "tags": [
-        "shellcheck",
+        "bash",
         "calidad",
-        "ci"
+        "ci",
+        "lint",
+        "shellcheck"
       ],
       "level": "intermedio",
       "roadmap": [
         "DevOps",
         "SRE",
         "Software"
-      ]
+      ],
+      "notes": "-f gcc da una línea por hallazgo (archivo:línea:col: nivel: mensaje [SCxxxx]), ideal cuando el log se corta. Hallazgos reales: SC2164 (cd sin '|| exit': si falla, el script sigue en otra carpeta) y SC2015 ('A && B || C' no es if/else: C corre también si B falla). En Git Bash, la versión Docker necesita MSYS_NO_PATHCONV=1 y -w /mnt."
     },
     {
       "title": "Alias y funciones persistentes",
@@ -1216,6 +1227,39 @@
         "SRE",
         "DevOps"
       ]
+    },
+    {
+      "title": "Evitar que Git Bash reescriba rutas Linux al llamar a Docker",
+      "command": "MSYS_NO_PATHCONV=1 docker run --rm -v \"$(pwd -W):/mnt\" -w /mnt koalaman/shellcheck:stable scripts/*.sh",
+      "section": "Scripting robusto",
+      "topic": "Git Bash en Windows",
+      "description": "Git Bash (MSYS) convierte los argumentos que parecen rutas Unix (/wf, /mnt) en rutas de Windows (C:/Program Files/Git/wf), lo que rompe docker run -v y -w. Esta variable desactiva la conversión; en Linux no hace nada.",
+      "examples": [
+        {
+          "description": "Dentro de un script",
+          "code": "export MSYS_NO_PATHCONV=1"
+        },
+        {
+          "description": "Ruta del host en formato Windows (C:/…)",
+          "code": "pwd -W"
+        },
+        {
+          "description": "Portable Linux/Windows",
+          "code": "host_dir=\"$(pwd -W 2>/dev/null || pwd)\""
+        }
+      ],
+      "tags": [
+        "git-bash",
+        "msys",
+        "windows",
+        "docker",
+        "rutas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "Síntoma típico sin la variable: el contenedor no encuentra archivos o aparece una ruta C:/Program Files/Git/... en el error."
     }
   ]
 }

@@ -1334,24 +1334,29 @@
       "examples": [
         {
           "description": "Archivo swap de 2 GB",
-          "code": "sudo fallocate -l 2G /swapfile\nsudo chmod 600 /swapfile\nsudo mkswap /swapfile\nsudo swapon /swapfile\necho '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab"
+          "code": "sudo dd if=/dev/zero of=/swapfile bs=1M count=2048 status=progress\nsudo chmod 600 /swapfile\nsudo mkswap /swapfile\nsudo swapon /swapfile\necho '/swapfile none swap defaults 0 0' | sudo tee -a /etc/fstab"
         },
         {
           "description": "Ver swap activa",
           "code": "swapon --show"
+        },
+        {
+          "description": "Ver el sistema de archivos antes de elegir",
+          "code": "df -Th /"
         }
       ],
       "tags": [
+        "dd",
+        "disco",
         "memoria",
-        "swap",
-        "disco"
+        "swap"
       ],
       "level": "intermedio",
       "roadmap": [
         "DevOps",
         "SRE"
       ],
-      "notes": "En XFS fallocate funciona para swap; si da problemas usa 'dd if=/dev/zero of=/swapfile bs=1M count=2048'."
+      "notes": "man swapon (NOTES) recomienda dd desde /dev/zero en XFS y ext4: los archivos preasignados con fallocate pueden tener huecos y el kernel los rechaza ('swapfile has holes'). No suponer el sistema de archivos por la distro (df -Th /): la imagen de AlmaLinux de HostGator usa ext4, no xfs. El MB/s que muestra dd sin conv=fdatasync mide la caché, no el disco. mkswap reporta 4096 bytes menos: es la página de la cabecera."
     },
     {
       "title": "Programar tareas con cron",
@@ -1516,6 +1521,76 @@
         "DevOps",
         "SRE"
       ]
+    },
+    {
+      "title": "Probar una línea nueva de /etc/fstab sin reiniciar",
+      "command": "sudo systemctl daemon-reload && sudo findmnt --verify",
+      "section": "Común",
+      "topic": "Arranque y montajes",
+      "description": "Tras editar /etc/fstab, verificar la sintaxis y reproducir en caliente lo que hará el arranque, en vez de reiniciar y esperar que el servidor levante.",
+      "examples": [
+        {
+          "description": "Respaldo antes de tocar",
+          "code": "sudo cp /etc/fstab /etc/fstab.bak-$(date +%F)"
+        },
+        {
+          "description": "Agregar una línea (append, nunca sobrescribir)",
+          "code": "echo '/swapfile none swap defaults 0 0' | sudo tee -a /etc/fstab"
+        },
+        {
+          "description": "Prueba real de una swap",
+          "code": "sudo swapoff /swapfile && sudo swapon -a && swapon --show"
+        },
+        {
+          "description": "Prueba real de un montaje",
+          "code": "sudo mount -a && findmnt <punto>"
+        }
+      ],
+      "tags": [
+        "fstab",
+        "findmnt",
+        "swapon",
+        "systemd",
+        "arranque"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "SRE",
+        "DevOps"
+      ],
+      "notes": "Un error en fstab deja el servidor en modo emergencia (solo consola). '>' en vez de '>>' (o tee sin -a) borra / y /boot del archivo. daemon-reload porque systemd genera unidades .mount/.swap desde fstab. findmnt --verify advierte '[W] non-bind mount source /swapfile is a directory or regular file' en las swaps en archivo: es esperable, solo importan los [E]."
+    },
+    {
+      "title": "Ajustar swappiness cuando tuned está activo",
+      "command": "echo 'vm.swappiness = 10' | sudo tee /etc/sysctl.d/99-swappiness.conf && sudo sysctl -p /etc/sysctl.d/99-swappiness.conf",
+      "section": "AlmaLinux",
+      "topic": "Memoria",
+      "description": "Fija vm.swappiness de forma persistente y comprueba que le gana al perfil de tuned, que en VMs (virtual-guest) lo deja en 30.",
+      "examples": [
+        {
+          "description": "Ver valor y quién lo fija",
+          "code": "sysctl vm.swappiness; tuned-adm active"
+        },
+        {
+          "description": "Simular el arranque",
+          "code": "sudo systemctl restart tuned && sysctl vm.swappiness"
+        },
+        {
+          "description": "¿tuned reaplica sysctl.d?",
+          "code": "grep reapply_sysctl /etc/tuned/tuned-main.conf"
+        }
+      ],
+      "tags": [
+        "sysctl",
+        "swappiness",
+        "tuned",
+        "kernel"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "SRE"
+      ],
+      "notes": "Con reapply_sysctl = 1 (default) tuned vuelve a aplicar /etc/sysctl.d/ después de su perfil, así que el archivo gana; si estuviera en 0, crear un perfil propio que herede de virtual-guest. 10 = servidor con BD (soltar caché antes que mandar procesos al swap); 0 no desactiva el swap y aumenta las intervenciones del OOM killer."
     }
   ]
 }

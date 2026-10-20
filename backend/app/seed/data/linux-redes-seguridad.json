@@ -96,18 +96,24 @@
         {
           "description": "Resumen de sockets por estado",
           "code": "ss -s"
+        },
+        {
+          "description": "Solo lo expuesto a internet (excluye loopback)",
+          "code": "sudo ss -tulnp | grep -v -E '127\\.0\\.0\\.1|\\[::1\\]'"
         }
       ],
       "tags": [
-        "redes",
+        "diagnóstico",
+        "firewall",
         "puertos",
-        "diagnóstico"
+        "redes"
       ],
       "level": "básico",
       "roadmap": [
         "DevOps",
         "SRE"
-      ]
+      ],
+      "notes": "Leer la columna Local Address: 0.0.0.0:P / [::]:P = todas las interfaces (alcanzable desde fuera); 127.0.0.1:P = solo local, el firewall no le afecta. Si un puerto publicado por Docker aparece solo en 0.0.0.0 y no en [::], no se publica por IPv6. Correrlo antes de encender un firewall: confirma el puerto real de sshd (p. ej. 2222, no 22) y que no haya servicios inesperados. docker-proxy en 80/443 = puertos publicados por contenedores, que se saltan firewalld."
     },
     {
       "title": "Peticiones HTTP con curl",
@@ -500,18 +506,24 @@
         {
           "description": "Servicios predefinidos",
           "code": "sudo firewall-cmd --get-services"
+        },
+        {
+          "description": "Después de reiniciar Docker con firewalld encendido (aparece la zona docker con docker0 y br-…)",
+          "code": "sudo systemctl restart docker && sudo firewall-cmd --get-active-zones"
         }
       ],
       "tags": [
+        "almalinux",
+        "docker",
         "firewall",
-        "zonas",
-        "almalinux"
+        "zonas"
       ],
       "level": "avanzado",
       "roadmap": [
         "DevOps",
         "SRE"
-      ]
+      ],
+      "notes": "Si Docker arrancó antes que firewalld, la zona docker no existe hasta reiniciar Docker. En VPS KVM la interfaz suele llamarse ens3, no eth0."
     },
     {
       "title": "Estado de SELinux",
@@ -1090,6 +1102,41 @@
         "DevOps",
         "SRE"
       ]
+    },
+    {
+      "title": "Comprobar desde fuera si un puerto está abierto, cerrado o filtrado",
+      "command": "nc -zv -w 3 <ip> <puerto>",
+      "section": "Común",
+      "topic": "Redes",
+      "description": "Intenta una conexión TCP a un puerto sin enviar datos y reporta el resultado. Ejecutado desde fuera del servidor, distingue si el firewall rechaza, si no hay servicio escuchando o si el paquete se descarta.",
+      "syntax": "nc -zv [-w SEGUNDOS] host puerto",
+      "examples": [
+        {
+          "description": "Puerto cerrado por firewalld (responde 'No route to host')",
+          "code": "nc -zv -w 3 203.0.113.10 22"
+        },
+        {
+          "description": "Contraprueba del puerto permitido (responde 'succeeded!')",
+          "code": "nc -zv -w 3 203.0.113.10 2222"
+        },
+        {
+          "description": "Sin netcat instalado (bash puro)",
+          "code": "timeout 3 bash -c '</dev/tcp/203.0.113.10/2222' && echo abierto"
+        }
+      ],
+      "tags": [
+        "nc",
+        "netcat",
+        "puertos",
+        "firewall",
+        "diagnóstico"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Lectura del resultado: succeeded/open = abierto; 'No route to host' = firewall con REJECT (firewalld 'target: default' responde ICMP host-prohibited); 'Connection refused' = pasó el firewall pero nada escucha; 'timed out' = DROP silencioso o filtro intermedio. Probar SIEMPRE desde fuera: desde el propio servidor el tráfico no entra por la interfaz pública y el firewall no se evalúa igual."
     }
   ]
 }

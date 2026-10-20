@@ -434,7 +434,7 @@
     },
     {
       "title": "Crear memoria swap en un VPS pequeño",
-      "command": "sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile",
+      "command": "sudo dd if=/dev/zero of=/swapfile bs=1M count=2048 status=progress && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile",
       "section": "Primer acceso y hardening",
       "topic": "Sistema",
       "description": "Un archivo de intercambio evita que el OOM killer mate procesos cuando la RAM se agota en VPS de 1-2 GB, algo frecuente al ejecutar n8n, Docker y una base de datos.",
@@ -452,23 +452,23 @@
           "code": "swapon --show && free -h"
         },
         {
-          "description": "Si fallocate falla (XFS/otros), usar dd",
-          "code": "sudo dd if=/dev/zero of=/swapfile bs=1M count=2048 status=progress"
+          "description": "Ver el sistema de archivos antes de elegir",
+          "code": "df -Th /"
         }
       ],
       "tags": [
-        "vps",
-        "swap",
-        "fallocate",
+        "dd",
         "memoria",
-        "oom"
+        "oom",
+        "swap",
+        "vps"
       ],
       "level": "básico",
       "roadmap": [
         "DevOps",
         "SRE"
       ],
-      "notes": "En AlmaLinux (XFS) fallocate puede producir un archivo con huecos que swapon rechaza: usa dd. El swap en disco es lento: es un colchón, no sustituto de RAM. Algunos VPS (OpenVZ) no permiten swap."
+      "notes": "man swapon (NOTES) recomienda dd desde /dev/zero en XFS y ext4: los archivos preasignados con fallocate pueden tener huecos y el kernel los rechaza ('swapfile has holes'). No suponer el sistema de archivos por la distro (df -Th /): la imagen de AlmaLinux de HostGator usa ext4, no xfs. El MB/s que muestra dd sin conv=fdatasync mide la caché, no el disco. mkswap reporta 4096 bytes menos: es la página de la cabecera. El swap en disco es lento: es un colchón, no sustituto de RAM. Algunos VPS (OpenVZ) no permiten swap."
     },
     {
       "title": "Verificar SELinux y AppArmor",
@@ -655,6 +655,18 @@
       "description": "sshd -T muestra los valores realmente aplicados tras combinar todos los archivos, evitando la duda de qué directiva gana.",
       "examples": [
         {
+          "description": "Validar y ver solo las directivas de hardening",
+          "code": "sudo sshd -t && sudo sshd -T | grep -E '^(permitrootlogin|passwordauthentication|kbdinteractiveauthentication|maxauthtries) '"
+        },
+        {
+          "description": "Escribir el drop-in como root sin el error de la redirección",
+          "code": "sudo tee /etc/ssh/sshd_config.d/00-hardening.conf > /dev/null <<'EOF'\nPermitRootLogin no\nPasswordAuthentication no\nEOF"
+        },
+        {
+          "description": "Aplicar sin cortar sesiones",
+          "code": "sudo systemctl reload sshd"
+        },
+        {
           "description": "Probar la configuración con otro archivo",
           "code": "sudo sshd -t -f /etc/ssh/sshd_config"
         },
@@ -668,16 +680,18 @@
         }
       ],
       "tags": [
-        "vps",
-        "sshd",
+        "auditoria",
         "configuracion",
-        "auditoria"
+        "hardening",
+        "sshd",
+        "vps"
       ],
       "level": "intermedio",
       "roadmap": [
         "SRE",
         "DevOps"
-      ]
+      ],
+      "notes": "En sshd gana el PRIMER valor leído (al revés que sysctl): como sshd_config incluye sshd_config.d/*.conf al inicio, el hardening va en un archivo 00-. sshd -T lee los archivos de disco, no el demonio en marcha: sirve para validar antes de reload. Muestra without-password, que es el nombre antiguo de prohibit-password."
     },
     {
       "title": "Cambiar el puerto de SSH (y SELinux)",
@@ -967,6 +981,141 @@
         "SRE"
       ],
       "notes": "Usa una clave dedicada por persona y por CI (no compartidas) para poder revocar con precisión. Añade un comentario descriptivo a cada clave."
+    },
+    {
+      "title": "Ver la zona de firewalld con el servicio apagado",
+      "command": "sudo firewall-offline-cmd --list-all",
+      "section": "Primer acceso y hardening",
+      "topic": "Firewall",
+      "description": "Lista la configuración permanente de la zona por defecto (servicios, puertos, interfaces) leyendo los XML de disco, sin que el demonio firewalld esté corriendo. Sirve para preparar el firewall antes de encenderlo y no quedar fuera del servidor.",
+      "examples": [
+        {
+          "description": "Ver cuál es la zona por defecto",
+          "code": "sudo firewall-offline-cmd --get-default-zone"
+        },
+        {
+          "description": "Abrir el puerto SSH no estándar antes de encender",
+          "code": "sudo firewall-offline-cmd --add-port=2222/tcp"
+        },
+        {
+          "description": "Quitar servicios que vienen abiertos de fábrica",
+          "code": "sudo firewall-offline-cmd --remove-service=cockpit"
+        }
+      ],
+      "tags": [
+        "firewalld",
+        "almalinux",
+        "firewall",
+        "seguridad",
+        "hardening"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "firewall-cmd falla con 'FirewallD is not running' si el servicio está inactivo; firewall-offline-cmd escribe directo en /etc/firewalld/ (configuración permanente) y se aplica al arrancar. La zona public de AlmaLinux trae ssh (22) y cockpit (9090) abiertos: si SSH escucha en otro puerto y no se agrega antes de encender, se pierde el acceso."
+    },
+    {
+      "title": "Red de seguridad antes de un cambio remoto riesgoso (dead-man switch)",
+      "command": "sudo systemd-run --on-active=10min --unit=fw-rescate /usr/bin/systemctl stop firewalld",
+      "section": "Primer acceso y hardening",
+      "topic": "Firewall",
+      "description": "Programa con un timer transitorio de systemd la reversión automática de un cambio (aquí, apagar el firewall) dentro de N minutos. Si el cambio te deja fuera del servidor, el sistema se revierte solo; si todo funciona, cancelas el timer.",
+      "syntax": "systemd-run --on-active=<tiempo> --unit=<nombre> <ruta absoluta> [args]",
+      "examples": [
+        {
+          "description": "Ver cuánto falta para que se dispare",
+          "code": "systemctl list-timers fw-rescate.timer"
+        },
+        {
+          "description": "Cancelarlo cuando todo funcionó",
+          "code": "sudo systemctl stop fw-rescate.timer"
+        },
+        {
+          "description": "Revertir un cambio de sshd",
+          "code": "sudo systemd-run --on-active=5min --unit=ssh-rescate /bin/cp /root/sshd_config.bak /etc/ssh/sshd_config"
+        }
+      ],
+      "tags": [
+        "systemd-run",
+        "systemd",
+        "timer",
+        "firewalld",
+        "ssh",
+        "rollback",
+        "seguridad"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Crea dos unidades transitorias (fw-rescate.timer y fw-rescate.service) que desaparecen al reiniciar o al terminar. Usar la ruta absoluta del ejecutable. El plazo debe cubrir el cambio Y la prueba desde una segunda sesión SSH; si el timer se dispara antes de probar, el cambio se revierte y hay que repetirlo. Funciona aunque la sesión SSH se corte, porque lo ejecuta systemd y no tu shell. Alternativa clásica: 'sleep 600 && comando &' dentro de tmux (más frágil)."
+    },
+    {
+      "title": "Comprobar desde fuera que SSH rechaza contraseñas",
+      "command": "ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 2222 root@203.0.113.10",
+      "section": "Usuarios y SSH",
+      "topic": "Hardening SSH",
+      "description": "Simula a un atacante que solo tiene contraseñas: el cliente no ofrece llaves y pide autenticar por contraseña. Si el servidor quedó bien cerrado, responde 'Permission denied (publickey,...)' sin llegar a pedir contraseña.",
+      "examples": [
+        {
+          "description": "Mismo chequeo para el usuario normal",
+          "code": "ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password -p 2222 nicolas@203.0.113.10"
+        },
+        {
+          "description": "Ver qué métodos ofrece el servidor y por qué falla",
+          "code": "ssh -v vps 2>&1 | grep -i 'authentications that can continue'"
+        }
+      ],
+      "tags": [
+        "ssh",
+        "sshd",
+        "password",
+        "hardening",
+        "prueba"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "La lista entre paréntesis son los métodos que el servidor acepta: si 'password' ya no figura, quedó cerrado. gssapi-keyex,gssapi-with-mic = Kerberos (lo deja activo 50-redhat.conf en RHEL/AlmaLinux). Hacer la prueba positiva (ssh vps entra con la llave) ANTES, desde una sesión nueva, y con un rescate systemd-run armado."
+    },
+    {
+      "title": "Crear usuario administrador con sudo en AlmaLinux / RHEL",
+      "command": "sudo useradd -m -G wheel -c \"Nombre Apellido\" nicolas && sudo passwd nicolas",
+      "section": "Usuarios y SSH",
+      "topic": "Usuarios",
+      "description": "Crea el usuario con su home, lo agrega al grupo wheel (que en la familia Red Hat ya tiene sudo en /etc/sudoers) y le asigna la contraseña que pedirá sudo.",
+      "examples": [
+        {
+          "description": "Confirmar el grupo (debe incluir 10(wheel))",
+          "code": "id nicolas"
+        },
+        {
+          "description": "Contraseña aleatoria alfanumérica (sirve en consolas con teclado US)",
+          "code": "openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 24; echo"
+        },
+        {
+          "description": "Probar sudo (debe responder root)",
+          "code": "sudo whoami"
+        }
+      ],
+      "tags": [
+        "useradd",
+        "wheel",
+        "sudo",
+        "almalinux",
+        "rhel"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En Ubuntu el grupo equivalente es sudo, no wheel. En RHEL adduser es un enlace a useradd; en Debian es otro programa, interactivo. -m es necesario: sin home no hay ~/.ssh/authorized_keys."
     }
   ]
 }

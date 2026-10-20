@@ -992,6 +992,40 @@
         "SRE",
         "DevOps"
       ]
+    },
+    {
+      "title": "Probar workflows de n8n en un contenedor desechable",
+      "command": "docker run --rm -v \"$PWD/n8n/workflows:/wf:ro\" --entrypoint sh docker.n8n.io/n8nio/n8n:2.41.6 -c 'n8n import:workflow --separate --input=/wf && n8n list:workflow'",
+      "section": "Contenedores",
+      "topic": "Pruebas desechables",
+      "description": "Levanta n8n en un contenedor que se borra al terminar, importa una carpeta de workflows exportados y los lista, todo en la misma ejecución (la BD SQLite vive y muere con el contenedor). Sirve como prueba de CI de que los JSON importan en la versión de producción.",
+      "examples": [
+        {
+          "description": "Comprobar la versión candidata antes de actualizar el servidor",
+          "code": "docker run --rm --entrypoint n8n docker.n8n.io/n8nio/n8n:2.42.0 --version"
+        },
+        {
+          "description": "Exportar todos los workflows de un n8n en marcha",
+          "code": "docker exec n8n-main n8n export:workflow --all --separate --output=/tmp/wf"
+        },
+        {
+          "description": "Desde Git Bash en Windows",
+          "code": "MSYS_NO_PATHCONV=1 docker run --rm -v \"$(pwd -W)/n8n/workflows:/wf:ro\" --entrypoint sh docker.n8n.io/n8nio/n8n:2.41.6 -c 'n8n import:workflow --separate --input=/wf && n8n list:workflow'"
+        }
+      ],
+      "tags": [
+        "n8n",
+        "docker",
+        "ci",
+        "entrypoint",
+        "import"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "import:workflow SE SALTA EN SILENCIO los archivos que no puede importar y reporta éxito igual: comparar cuántos archivos hay contra cuántos lista list:workflow (formato id|nombre). --entrypoint sh -c '...' permite encadenar dos comandos en el mismo contenedor. En Git Bash, anteponer MSYS_NO_PATHCONV=1 para que no reescriba /wf."
     }
   ]
 }
