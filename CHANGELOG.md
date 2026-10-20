@@ -2,6 +2,18 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); versionado semántico.
 
+## [1.1.0] — 19 de octubre de 2026
+
+### Agregado
+- **`compose.traefik.yml`**: override para desplegar en un servidor que ya tiene Traefik en 80/443 (el VPS con
+  n8n). Quita todos los puertos publicados (`!reset`), conecta solo el frontend a la red de Traefik con router
+  HTTPS y certificado del resolver existente, exige basic auth y fija `mem_limit` (256/384/384 MiB, medidos
+  en reposo: 53/218/93 MiB). Probado en local con Traefik v3.6: 401 sin credenciales, 200 con ellas, HTTP→HTTPS,
+  404 para otros hosts, websocket de NiceGUI por `wss://` y puertos 8000/8090 cerrados en el host.
+- Validación del override (`docker compose config`) en el job de lint del CI, en `verificar.sh` y en el
+  Jenkinsfile.
+- Job multibranch `cmdvault` en el Jenkins local, creado por un `init.groovy.d` idempotente.
+
 ## [1.0.2] — 19 de octubre de 2026
 
 ### Agregado

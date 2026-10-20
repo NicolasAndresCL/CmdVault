@@ -1,12 +1,12 @@
 # CmdVault — biblioteca personal para dominar la terminal: DevOps · SRE · Fullstack
 
 [![CI](https://github.com/NicolasAndresCL/CmdVault/actions/workflows/ci.yml/badge.svg)](https://github.com/NicolasAndresCL/CmdVault/actions/workflows/ci.yml)
-![Versión](https://img.shields.io/badge/versi%C3%B3n-1.0.2-blue)
+![Versión](https://img.shields.io/badge/versi%C3%B3n-1.1.0-blue)
 ![Python](https://img.shields.io/badge/python-3.14-3776AB)
 
 | | |
 |---|---|
-| **Versión** | 1.0.2 |
+| **Versión** | 1.1.0 |
 | **Fecha** | 19 de octubre de 2026 |
 | **Autor** | [Nicolás Andrés Cano Leal](#autor) |
 
@@ -61,6 +61,7 @@ CmdVault/
 ├── .github/                  # CI (workflows/ci.yml), Dependabot, plantillas de issue/PR
 ├── Jenkinsfile               # mismo pipeline para el Jenkins local + deploy con Ansible (con aprobación)
 ├── docker-compose.yml        # db (postgres:18-alpine) + backend + frontend, encadenados por healthcheck
+├── compose.traefik.yml       # override: detrás de un Traefik existente (sin puertos, basic auth, mem_limit)
 ├── .env.example              # plantilla de variables (copiar a .env)
 ├── scripts/
 │   ├── verificar.sh          # los mismos jobs que el CI, en el mismo orden
@@ -189,7 +190,7 @@ cp group_vars/cmdvault/vault.yml.example group_vars/cmdvault/vault.yml   # poner
 ansible-vault encrypt group_vars/cmdvault/vault.yml
 ansible-galaxy collection install -r requirements.yml -p ./collections
 ansible-playbook playbooks/site.yml --ask-vault-pass                        # todo
-ansible-playbook playbooks/site.yml --tags deploy --ask-vault-pass -e cmdvault_version=v1.0.2  # solo redeploy
+ansible-playbook playbooks/site.yml --tags deploy --ask-vault-pass -e cmdvault_version=v1.1.0  # solo redeploy
 ```
 
 | Rol | Qué hace (Ubuntu y AlmaLinux) |
@@ -206,6 +207,35 @@ Para el Jenkins local tal como está (sin el plugin Docker Pipeline): cada paso 
 efímero con `docker run --rm --volumes-from` y reproduce el CI de GitHub. Con `DEPLOY=true` en `main`, pide
 aprobación (`input`) y ejecuta el playbook con las credenciales del credential store (`cmdvault-vps-ssh`,
 `cmdvault-vault-pass`, `cmdvault-inventory`, `cmdvault-vault-vars`, `cmdvault-known-hosts`).
+
+En el controller, el job **multibranch `cmdvault`** lo crea un script idempotente de `init.groovy.d`
+(`80-cmdvault-job.groovy`, fuera de este repo): fuente git del repo público, sin credencial, y escaneo cada
+hora mientras Jenkins esté encendido (GitHub no puede llamar a un Jenkins en `localhost`, así que no hay webhook).
+
+### Servidor que ya tiene Traefik (p. ej. junto a n8n)
+
+Si los puertos 80/443 ya son de un Traefik con Let's Encrypt, no se usa el rol `cmdvault` (publica la UI en
+el 80): se aplica `compose.traefik.yml` encima del compose base.
+
+| Qué hace el override | Por qué |
+|---|---|
+| Quita **todos** los puertos publicados (`ports: !reset []`) | Los puertos que publica Docker se saltan firewalld/ufw; la API queda solo en la red interna |
+| Conecta solo el frontend a la red de Traefik, con sus etiquetas | Router HTTPS por `CMDVAULT_HOST`, certificado del resolver existente |
+| Basic auth en Traefik | CmdVault no tiene usuarios y la UI permite escribir (comandos propios, favoritos) |
+| `mem_limit`: db 256 MiB · backend 384 MiB · frontend 384 MiB | Servidor compartido. En reposo, medido: 53 · 218 · 93 MiB (~365 MiB en total) |
+
+```bash
+sudo git clone https://github.com/NicolasAndresCL/CmdVault.git /opt/cmdvault && cd /opt/cmdvault
+sudo git checkout v1.1.0
+docker network ls                                  # red donde vive Traefik → TRAEFIK_NETWORK
+openssl passwd -apr1                               # hash para CMDVAULT_BASIC_AUTH
+sudo cp .env.example .env && sudo chmod 600 .env   # secretos + las variables del override (ver tabla)
+sudo docker compose -f docker-compose.yml -f compose.traefik.yml up -d --build --wait
+curl -sS -o /dev/null -w '%{http_code}\n' https://$CMDVAULT_HOST/          # 401 sin credenciales
+```
+
+Actualizar: `sudo git fetch --tags && sudo git checkout <tag>` y el mismo `up -d --build --wait`. El
+override lo valida el job de lint del CI (`docker compose config`) para que no se rompa en silencio.
 
 ## Endpoints
 
@@ -267,7 +297,11 @@ Si la API no responde, la interfaz muestra «Sin conexión con la API» y sigue 
 | `STORAGE_SECRET` | frontend | **obligatoria** (≥ 16 caracteres) | Firma la sesión donde se guarda el tema |
 | `DEFAULT_THEME` | frontend | `eren` | `dark`, `luffy` o `eren` |
 | `PAGE_SIZE` | frontend | `30` | Comandos por página |
-| `BACKEND_PORT` / `FRONTEND_PORT` | compose | `8000` / `8090` | Puertos publicados |
+| `BACKEND_PORT` / `FRONTEND_PORT` | compose | `8000` / `8090` | Puertos publicados (el override de Traefik los quita) |
+| `CMDVAULT_HOST` | override Traefik | **obligatoria** | Nombre público, p. ej. `cmdvault.<ip-con-guiones>.sslip.io` |
+| `TRAEFIK_NETWORK` | override Traefik | **obligatoria** | Red de Docker donde vive Traefik |
+| `CMDVAULT_BASIC_AUTH` | override Traefik | **obligatoria** | `usuario:hash` (`openssl passwd -apr1`), **entre comillas simples** en el `.env` para que Compose no interprete los `$` |
+| `TRAEFIK_CERTRESOLVER` / `TRAEFIK_ENTRYPOINT` | override Traefik | `le` / `websecure` | Resolver ACME y entrypoint HTTPS del Traefik existente |
 
 ## Agregar contenido
 
@@ -359,4 +393,4 @@ Backend Engineer → SRE | Python · Django · Kubernetes · Terraform · CI/CD
 - Portafolio: [nicolasandrescl.github.io](https://nicolasandrescl.github.io/)
 - Correo: [nicolas.cano.leal@gmail.com](mailto:nicolas.cano.leal@gmail.com)
 
-CmdVault v1.0.2 · 19 de octubre de 2026
+CmdVault v1.1.0 · 19 de octubre de 2026
