@@ -58,7 +58,7 @@ agregues desde la interfaz.
 
 ```
 CmdVault/
-├── .github/                  # CI (workflows/ci.yml), Dependabot, plantillas de issue/PR
+├── .github/                  # CI (workflows/ci.yml), release por tag (release.yml), Dependabot, plantillas
 ├── Jenkinsfile               # mismo pipeline para el Jenkins local + deploy con Ansible (con aprobación)
 ├── docker-compose.yml        # db (postgres:18-alpine) + backend + frontend, encadenados por healthcheck
 ├── compose.traefik.yml       # override: detrás de un Traefik existente (sin puertos, basic auth, mem_limit)
@@ -343,6 +343,9 @@ mismo ejecutable `pytest` que el CI, y sale con código ≠ 0 si algo falla:
 
 El `Jenkinsfile` corre los mismos pasos (lint, IaC, tests en paralelo con Postgres como sidecar, build y
 smoke en un proyecto `cmdvault-ci-<build>` que siempre se baja en `post`).
+
+Al pushear un tag `vX.Y.Z`, [`release.yml`](.github/workflows/release.yml) comprueba que coincide con la
+versión de `backend/pyproject.toml` y publica la GitHub Release con la sección de esa versión del CHANGELOG.
 
 Los tests del backend usan SQLite en memoria salvo que el entorno traiga `TEST_DATABASE_URL` (así corre
 el job `test-postgres`).

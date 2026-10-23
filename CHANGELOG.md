@@ -20,6 +20,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
     contraseñas, USB/pantalla/Windows Update, filtrado de seguridad, informes y `gpresult`) y Comprobación y
     diagnóstico (+4: cliente al dominio, `dcdiag`, roles y checklist final).
 
+- **`.github/workflows/release.yml`**: al pushear un tag `vX.Y.Z` verifica que coincide con
+  `backend/pyproject.toml` y con una sección del CHANGELOG, y publica la GitHub Release con esas notas.
+
 ### Corregido
 - `lint-iac.sh` reintenta hasta 3 veces la descarga de colecciones de Ansible Galaxy: un corte TLS de Galaxy
   dejó en rojo un build de Jenkins sin cambios en el código.
