@@ -16,7 +16,11 @@
       "examples": [
         {
           "description": "Bloque A2 completo (PowerShell como administrador, red NAT Eva3)",
-          "code": "$srv = \"G3Nicolas\"\n$ip  = \"172.168.100.10\"          # en casa; en la prueba se cambia por la X del docente\n$gw  = \"172.168.100.1\"\n\nGet-NetAdapter                    # anotar el nombre (normalmente \"Ethernet\")\nRename-NetAdapter -Name \"Ethernet\" -NewName \"LAN\"\n\nSet-NetIPInterface -InterfaceAlias \"LAN\" -Dhcp Disabled\nNew-NetIPAddress -InterfaceAlias \"LAN\" -IPAddress $ip -PrefixLength 24 -DefaultGateway $gw\nSet-DnsClientServerAddress -InterfaceAlias \"LAN\" -ServerAddresses $ip\n\nInstall-WindowsFeature DNS -IncludeManagementTools\n\n# Reenviadores: el DNS local responde lo suyo y pregunta afuera lo demás (internet)\nAdd-DnsServerForwarder -IPAddress 8.8.8.8, 1.1.1.1\n\nRename-Computer -NewName $srv -Restart"
+          "code": "$srv = \"G3Nicolas\"\n$ip  = \"172.168.100.10\"          # en casa; en la prueba se cambia por la X del docente\n$gw  = \"172.168.100.1\"\n\nGet-NetAdapter                    # anotar el nombre (normalmente \"Ethernet\")\nRename-NetAdapter -Name \"Ethernet\" -NewName \"LAN\"\n\n# Paso de la clase (y de la Eva1): quitar IPv6 del adaptador, para que el dominio resuelva solo por IPv4\nDisable-NetAdapterBinding -Name \"LAN\" -ComponentID ms_tcpip6\nGet-NetAdapterBinding -Name \"LAN\" -ComponentID ms_tcpip6      # Enabled : False\n\nSet-NetIPInterface -InterfaceAlias \"LAN\" -Dhcp Disabled\nNew-NetIPAddress -InterfaceAlias \"LAN\" -IPAddress $ip -PrefixLength 24 -DefaultGateway $gw\nSet-DnsClientServerAddress -InterfaceAlias \"LAN\" -ServerAddresses $ip\n\nInstall-WindowsFeature DNS -IncludeManagementTools\n\n# Reenviadores: el DNS local responde lo suyo y pregunta afuera lo demás (internet)\nAdd-DnsServerForwarder -IPAddress 8.8.8.8, 1.1.1.1\n\nRename-Computer -NewName $srv -Restart"
+        },
+        {
+          "description": "Variante /16 (máscara 255.255.0.0, como en la Eva1): cambia solo estas líneas",
+          "code": "# En el host: la Red NAT con /16 (gateway 172.168.0.1)\n& $vbox natnetwork add --netname Eva3 --network \"172.168.0.0/16\" --enable --dhcp off\n\n# En la VM\n$gw = \"172.168.0.1\"\nNew-NetIPAddress -InterfaceAlias \"LAN\" -IPAddress $ip -PrefixLength 16 -DefaultGateway $gw\n# Zona inversa de B2.1 con /16 (zona 168.172.in-addr.arpa; el PTR pasa a llamarse X.100)\nAdd-DnsServerPrimaryZone -NetworkId \"172.168.0.0/16\" -ReplicationScope Domain"
         },
         {
           "description": "Plan B (dos adaptadores NAT + intnet): renombrar y fijar el DNS",
@@ -31,14 +35,16 @@
         "ip",
         "dns",
         "g3nicolas",
-        "hostname"
+        "hostname",
+        "ipv6",
+        "mascara-16"
       ],
       "level": "intermedio",
       "roadmap": [
         "DevOps",
         "SRE"
       ],
-      "notes": "La IP .X la asigna el docente al inicio de la prueba; X no puede ser 1, 2 ni 3 en una Red NAT de VirtualBox (.1 es la puerta de enlace, .2 reenvía al host y .3 está reservada para su DHCP). 172.168.x.x no es rango privado real (el privado de clase B es 172.16.0.0–172.31.255.255), pero en la prueba se usa el valor del docente. Tras Rename-Computer -Restart se pierden las variables de la sesión."
+      "notes": "La IP .X la asigna el docente al inicio de la prueba; X no puede ser 1, 2 ni 3 en una Red NAT de VirtualBox (.1 es la puerta de enlace, .2 reenvía al host y .3 está reservada para su DHCP). 172.168.x.x no es rango privado real (el privado de clase B es 172.16.0.0–172.31.255.255), pero en la prueba se usa el valor del docente. Con la variante /16 (255.255.0.0, la máscara que se respondió en la Eva1) la puerta de enlace pasa a 172.168.0.1 y la zona inversa es 168.172.in-addr.arpa. Tras Rename-Computer -Restart se pierden las variables de la sesión."
     },
     {
       "title": "Reenviadores DNS con Add-DnsServerForwarder",
@@ -354,7 +360,7 @@
         "DevOps",
         "SRE"
       ],
-      "notes": "Al exportar a .ova se pierden las instantáneas. Para conservarlas, copiar la carpeta completa de la VM (%USERPROFILE%\\VirtualBox VMs\\G3Nicolas) y en el laboratorio usar Máquina, Añadir, G3Nicolas.vbox. Plan C sin internet: copiar la guía dentro de la VM (C:\\Eva3\\guia.md) y abrirla con notepad."
+      "notes": "Al exportar a .ova se pierden las instantáneas. Para conservarlas, copiar la carpeta completa de la VM (%USERPROFILE%\\VirtualBox VMs\\G3Nicolas) y en el laboratorio usar Máquina, Añadir, G3Nicolas.vbox. Sin internet en la VM los comandos se teclean (para eso están $areas y los bucles); no guardar la guía dentro de la VM sin autorización del docente, porque cuenta como «anotaciones» (la Eva1 se sancionaba con nota 1.0)."
     },
     {
       "title": "Eva3 B0: variables de la sesión (servidor, IP, dominio, OU)",
@@ -429,7 +435,7 @@
       "examples": [
         {
           "description": "Bloque B3 completo (función Set-Horario + tabla $areas + bucle)",
-          "code": "Import-Module ActiveDirectory\n\n# Horario de inicio de sesión: logonHours son 21 bytes (168 h de la semana) y se guardan en UTC\nfunction Set-Horario($sam, [int[]]$dias, [int]$inicio, [int]$horas) {\n    $bytes  = New-Object byte[] 21\n    $offset = [int][TimeZoneInfo]::Local.GetUtcOffset((Get-Date)).TotalHours\n    foreach ($d in $dias) {\n        for ($h = $inicio; $h -lt $inicio + $horas; $h++) {\n            $utc = ($d * 24 + $h - $offset) % 168\n            if ($utc -lt 0) { $utc += 168 }\n            $bytes[[math]::Floor($utc / 8)] = $bytes[[math]::Floor($utc / 8)] -bor (1 -shl ($utc % 8))\n        }\n    }\n    Set-ADUser $sam -Replace @{logonHours = [byte[]]$bytes}\n}\n\nNew-ADOrganizationalUnit -Name \"Eva3\" -Path $dn\n\n$areas = @(\n    @{OU=\"Informatica\"; G=\"G_Informatica\"; P=\"inf\"; PC=\"PC-INF\"; Dias=0..6; Ini=8; H=5},\n    @{OU=\"Admin\";       G=\"G_Admin\";       P=\"adm\"; PC=\"PC-ADM\"; Dias=1..5; Ini=9; H=8},\n    @{OU=\"Logistica\";   G=\"G_Logistica\";   P=\"log\"; PC=\"PC-LOG\"; Dias=1..6; Ini=8; H=7},\n    @{OU=\"Mantencion\";  G=\"G_Mantencion\";  P=\"man\"; PC=\"PC-MAN\"; Dias=0..6; Ini=8; H=6}\n)\n\nforeach ($a in $areas) {\n    New-ADOrganizationalUnit -Name $a.OU -Path $raiz\n    $ou = \"OU=$($a.OU),$raiz\"\n    New-ADGroup -Name $a.G -GroupScope Global -GroupCategory Security -Path $ou\n    foreach ($n in 1..2) {\n        $sam = \"$($a.P).usuario$n\"\n        New-ADUser -Name \"Usuario$n $($a.OU)\" -GivenName \"Usuario$n\" -Surname $a.OU `\n            -SamAccountName $sam -UserPrincipalName \"$sam@$dominio\" -Path $ou `\n            -AccountPassword $pass -Enabled $true -PasswordNeverExpires $true `\n            -LogonWorkstations (\"{0}0{1}\" -f $a.PC, $n)\n        Add-ADGroupMember -Identity $a.G -Members $sam\n        Set-Horario $sam $a.Dias $a.Ini $a.H\n    }\n}"
+          "code": "Import-Module ActiveDirectory\n\n# Horario de inicio de sesión: logonHours son 21 bytes (168 h de la semana) y se guardan en UTC\nfunction Set-Horario($sam, [int[]]$dias, [int]$inicio, [int]$horas) {\n    $bytes  = New-Object byte[] 21\n    $offset = [int][TimeZoneInfo]::Local.GetUtcOffset((Get-Date)).TotalHours\n    foreach ($d in $dias) {\n        for ($h = $inicio; $h -lt $inicio + $horas; $h++) {\n            $utc = ($d * 24 + $h - $offset) % 168\n            if ($utc -lt 0) { $utc += 168 }\n            $bytes[[math]::Floor($utc / 8)] = $bytes[[math]::Floor($utc / 8)] -bor (1 -shl ($utc % 8))\n        }\n    }\n    Set-ADUser $sam -Replace @{logonHours = [byte[]]$bytes}\n}\n\nNew-ADOrganizationalUnit -Name \"Eva3\" -Path $dn\n\n$areas = @(\n    @{OU=\"Informática\"; G=\"G_Informatica\"; P=\"inf\"; PC=\"PC-INF\"; Dias=0..6; Ini=8; H=5},\n    @{OU=\"Admin\";       G=\"G_Admin\";       P=\"adm\"; PC=\"PC-ADM\"; Dias=1..5; Ini=9; H=8},\n    @{OU=\"Logistica\";   G=\"G_Logistica\";   P=\"log\"; PC=\"PC-LOG\"; Dias=1..6; Ini=8; H=7},\n    @{OU=\"Mantención\";  G=\"G_Mantencion\";  P=\"man\"; PC=\"PC-MAN\"; Dias=0..6; Ini=8; H=6}\n)\n\nforeach ($a in $areas) {\n    New-ADOrganizationalUnit -Name $a.OU -Path $raiz\n    $ou = \"OU=$($a.OU),$raiz\"\n    New-ADGroup -Name $a.G -GroupScope Global -GroupCategory Security -Path $ou\n    foreach ($n in 1..2) {\n        $sam = \"$($a.P).usuario$n\"\n        New-ADUser -Name \"Usuario$n $($a.OU)\" -GivenName \"Usuario$n\" -Surname $a.OU `\n            -SamAccountName $sam -UserPrincipalName \"$sam@$dominio\" -Path $ou `\n            -AccountPassword $pass -Enabled $true -PasswordNeverExpires $true `\n            -LogonWorkstations (\"{0}0{1}\" -f $a.PC, $n)\n        Add-ADGroupMember -Identity $a.G -Members $sam\n        Set-Horario $sam $a.Dias $a.Ini $a.H\n    }\n}"
         }
       ],
       "tags": [
@@ -449,7 +455,7 @@
         "DevOps",
         "SRE"
       ],
-      "notes": "Dias va de 0 (domingo) a 6 (sábado), Ini es la hora de inicio y H la cantidad de horas. Si se guarda como .ps1, hacerlo en UTF-8 con BOM: PowerShell 5.1 lee los .ps1 sin BOM como ANSI y rompe las tildes (por eso la tabla va sin tildes). -LogonWorkstations es el «Iniciar sesión en…» de la GUI: con él el usuario solo entra desde ese PC (también desde un cliente de prueba); si no lo piden, borrar esa línea. Requiere B0 y el dominio promovido."
+      "notes": "Dias va de 0 (domingo) a 6 (sábado), Ini es la hora de inicio y H la cantidad de horas. Si se guarda como .ps1, hacerlo en UTF-8 con BOM: PowerShell 5.1 lee los .ps1 sin BOM como ANSI y rompe las tildes. Las OU llevan los nombres del enunciado, con tildes (Informática, Mantención); los grupos y los inicios de sesión van sin tildes. -LogonWorkstations es el «Iniciar sesión en…» de la GUI: con él el usuario solo entra desde ese PC (también desde un cliente de prueba); si no lo piden, borrar esa línea. Requiere B0 y el dominio promovido."
     },
     {
       "title": "Crear OU, grupo y usuario sueltos en AD (cmdlets individuales)",
@@ -848,7 +854,7 @@
       "examples": [
         {
           "description": "Bloque B5.3 completo (tabla $reglas + bucle)",
-          "code": "$reglas = @{\n    \"Informatica\" = @{Key=\"$polU\\Explorer\"; ValueName=\"NoControlPanel\"; Value=1}\n    \"Admin\"       = @{Key=\"$polU\\Explorer\"; ValueName=\"NoRun\";          Value=1}\n    \"Logistica\"   = @{Key=\"$polU\\System\";   ValueName=\"DisableTaskMgr\"; Value=1}\n    \"Mantencion\"  = @{Key=\"HKCU\\Software\\Policies\\Microsoft\\Windows\\System\"; ValueName=\"DisableCMD\"; Value=2}\n}\nforeach ($ou in $reglas.Keys) {\n    $g = $reglas[$ou]\n    New-GPO -Name \"GPO_$ou\" -Comment \"Politica del departamento $ou\" | New-GPLink -Target \"OU=$ou,$raiz\"\n    Set-GPRegistryValue -Name \"GPO_$ou\" -Key $g.Key -ValueName $g.ValueName -Type DWord -Value $g.Value\n}"
+          "code": "# Clave = nombre de la OU (igual que en $areas, con tildes); el nombre de la GPO va sin tildes\n$reglas = @{\n    \"Informática\" = @{GPO=\"GPO_Informatica\"; Key=\"$polU\\Explorer\"; ValueName=\"NoControlPanel\"; Value=1}\n    \"Admin\"       = @{GPO=\"GPO_Admin\";       Key=\"$polU\\Explorer\"; ValueName=\"NoRun\";          Value=1}\n    \"Logistica\"   = @{GPO=\"GPO_Logistica\";   Key=\"$polU\\System\";   ValueName=\"DisableTaskMgr\"; Value=1}\n    \"Mantención\"  = @{GPO=\"GPO_Mantencion\";  Key=\"HKCU\\Software\\Policies\\Microsoft\\Windows\\System\"; ValueName=\"DisableCMD\"; Value=2}\n}\nforeach ($ou in $reglas.Keys) {\n    $g = $reglas[$ou]\n    New-GPO -Name $g.GPO -Comment \"Politica del departamento $ou\" | New-GPLink -Target \"OU=$ou,$raiz\"\n    Set-GPRegistryValue -Name $g.GPO -Key $g.Key -ValueName $g.ValueName -Type DWord -Value $g.Value\n}"
         }
       ],
       "tags": [
@@ -867,7 +873,7 @@
         "DevOps",
         "SRE"
       ],
-      "notes": "Mapa: Informatica NoControlPanel=1, Admin NoRun=1, Logistica DisableTaskMgr=1, Mantencion DisableCMD=2 (bloquea el símbolo del sistema pero permite scripts). Requiere $polU de B5.1. Las GPO por OU de usuarios no se ven en el DC: para verlas hace falta una VM cliente unida al dominio."
+      "notes": "Mapa (clave = OU con tildes, GPO sin tildes): Informática NoControlPanel=1, Admin NoRun=1, Logistica DisableTaskMgr=1, Mantención DisableCMD=2 (bloquea el símbolo del sistema pero permite scripts). Requiere $polU de B5.1. Las GPO por OU de usuarios no se ven en el DC: para verlas hace falta una VM cliente unida al dominio."
     },
     {
       "title": "Set-ADDefaultDomainPasswordPolicy: contraseñas y bloqueo de cuenta",
@@ -1036,7 +1042,7 @@
         },
         {
           "description": "Mover el equipo a una OU para recibir GPO de equipo (en el servidor)",
-          "code": "Get-ADComputer CLIENTE01 | Move-ADObject -TargetPath \"OU=Informatica,$raiz\""
+          "code": "Get-ADComputer CLIENTE01 | Move-ADObject -TargetPath \"OU=Informática,$raiz\""
         }
       ],
       "tags": [
@@ -1153,6 +1159,297 @@
         "SRE"
       ],
       "notes": "Capturas: hostname e ipconfig /all, consola DNS, Usuarios y equipos de AD, consola DHCP y Administración de directivas de grupo."
+    },
+    {
+      "title": "Quitar IPv6 del adaptador (Disable-NetAdapterBinding ms_tcpip6)",
+      "command": "Disable-NetAdapterBinding -Name \"LAN\" -ComponentID ms_tcpip6",
+      "section": "Windows Server",
+      "topic": "Eva3 · Imagen base (red, DNS, internet)",
+      "description": "Paso de la clase y de la Eva1: desactiva IPv6 en el adaptador para que el dominio resuelva solo por IPv4, y comprueba el resultado.",
+      "examples": [
+        {
+          "description": "Desactivar y comprobar (Enabled : False)",
+          "code": "Disable-NetAdapterBinding -Name \"LAN\" -ComponentID ms_tcpip6\nGet-NetAdapterBinding -Name \"LAN\" -ComponentID ms_tcpip6      # Enabled : False"
+        },
+        {
+          "description": "Volver a activarlo",
+          "code": "Enable-NetAdapterBinding -Name \"LAN\" -ComponentID ms_tcpip6"
+        },
+        {
+          "description": "Ver el enlace IPv6 de todos los adaptadores",
+          "code": "Get-NetAdapterBinding -ComponentID ms_tcpip6 | Format-Table Name, DisplayName, Enabled"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "ipv6",
+        "red",
+        "adaptador",
+        "disable-netadapterbinding"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Cumple el ítem «IPv6 desactivado» de la Eva1. En la GUI: propiedades del adaptador, desmarcar Protocolo de Internet versión 6 (TCP/IPv6). Capturar ipconfig /all sin direcciones IPv6."
+    },
+    {
+      "title": "Eva3 B5.6: exigir, bloquear herencia y ordenar vínculos de GPO",
+      "command": "Set-GPLink -Enforced Yes; Set-GPInheritance -IsBlocked Yes; Set-GPLink -LinkEnabled -Order",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Administra cómo se aplican las GPO: marcar el vínculo como Exigido, bloquear la herencia en una OU, deshabilitar un vínculo, cambiar su orden de prioridad y desactivar la parte de equipo de una GPO.",
+      "examples": [
+        {
+          "description": "Exigido (Enforced) en el vínculo de la GPO general",
+          "code": "Set-GPLink -Name \"GPO_General\" -Target $dn -Enforced Yes"
+        },
+        {
+          "description": "Bloquear la herencia en una OU y comprobarlo",
+          "code": "# La OU no recibe GPO_General... salvo que esté Exigida\nSet-GPInheritance -Target \"OU=Admin,$raiz\" -IsBlocked Yes\nGet-GPInheritance -Target \"OU=Admin,$raiz\" | Select-Object GpoInheritanceBlocked, @{n=\"Heredadas\";e={$_.InheritedGpoLinks.DisplayName -join \", \"}}"
+        },
+        {
+          "description": "Deshabilitar un vínculo sin borrar la GPO y cambiar el orden",
+          "code": "Set-GPLink -Name \"GPO_Logistica\" -Target \"OU=Logistica,$raiz\" -LinkEnabled No\nSet-GPLink -Name \"GPO_Logistica\" -Target \"OU=Logistica,$raiz\" -Order 1"
+        },
+        {
+          "description": "Deshabilitar la parte de equipo de una GPO que solo configura usuario",
+          "code": "(Get-GPO -Name \"GPO_Admin\").GpoStatus = \"ComputerSettingsDisabled\""
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "herencia",
+        "exigido",
+        "enforced",
+        "orden",
+        "set-gplink",
+        "set-gpinheritance"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Exigido le gana a Bloquear herencia y no se puede sobrescribir más abajo. LSDOU: gana la última aplicada, la OU más cercana al objeto. Deshabilitar el vínculo no borra la GPO. GUI: clic derecho en el vínculo, Exigido o Vínculo habilitado; clic derecho en la OU, Bloquear herencia; pestaña Herencia de objetos de directiva de grupo de la OU como captura. Requiere B0."
+    },
+    {
+      "title": "Vincular, copiar, renombrar y borrar GPO (New-GPLink, Copy-GPO, Rename-GPO, Remove-GPO)",
+      "command": "New-GPLink / Copy-GPO / Rename-GPO / Remove-GPO",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Ciclo de vida de una GPO existente: vincularla a otra OU, duplicarla, cambiarle el nombre y eliminarla.",
+      "examples": [
+        {
+          "description": "Vincular una GPO existente a otra OU",
+          "code": "New-GPLink -Name \"GPO_SinUSB\" -Target \"OU=Mantención,$raiz\""
+        },
+        {
+          "description": "Copiar, renombrar y borrar",
+          "code": "Copy-GPO   -SourceName \"GPO_Admin\" -TargetName \"GPO_Admin_copia\"\nRename-GPO -Name \"GPO_Admin_copia\" -TargetName \"GPO_Prueba\"\nRemove-GPO -Name \"GPO_Prueba\""
+        },
+        {
+          "description": "Quitar solo el vínculo (la GPO sigue existiendo)",
+          "code": "Remove-GPLink -Name \"GPO_SinUSB\" -Target \"OU=Mantención,$raiz\""
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "vinculo",
+        "copy-gpo",
+        "rename-gpo",
+        "remove-gpo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Una GPO existe una sola vez y puede vincularse a varias OU. Remove-GPO borra la GPO de AD y SYSVOL: probar solo en la VM. Requiere B0."
+    },
+    {
+      "title": "Backup-GPO y Restore-GPO: respaldar y restaurar las GPO",
+      "command": "Backup-GPO -All -Path C:\\BackupGPO",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Respalda todas las GPO del dominio en una carpeta y restaura una de ellas.",
+      "examples": [
+        {
+          "description": "Respaldar todo y restaurar una GPO",
+          "code": "New-Item C:\\BackupGPO -ItemType Directory -Force\nBackup-GPO  -All -Path C:\\BackupGPO\nRestore-GPO -Name \"GPO_Admin\" -Path C:\\BackupGPO"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "respaldo",
+        "backup-gpo",
+        "restore-gpo"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Restore-GPO sobrescribe la configuración actual de la GPO con la del respaldo."
+    },
+    {
+      "title": "Get-GPResultantSetOfPolicy: informe de lo aplicado (como rsop.msc)",
+      "command": "Get-GPResultantSetOfPolicy -ReportType Html -Path C:\\rsop.html",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Genera el informe HTML del conjunto resultante de directivas aplicado al equipo y al usuario actual, equivalente a rsop.msc.",
+      "examples": [
+        {
+          "description": "Generar y abrir el informe",
+          "code": "Get-GPResultantSetOfPolicy -ReportType Html -Path C:\\rsop.html ; Start-Process C:\\rsop.html"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "rsop",
+        "resultado",
+        "informe"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Herramientas gráficas: gpmc.msc (Administración de directivas de grupo), gpedit.msc (directiva local de un equipo), rsop.msc (resultado aplicado)."
+    },
+    {
+      "title": "Eva3 B5.7: script de inicio de sesión en NETLOGON y unidad Z:",
+      "command": "Set-ADUser -ScriptPath",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Alternativa por terminal a la preferencia gráfica de unidad de red: crea un .bat por departamento en NETLOGON que monta Z: con net use y lo asigna a los usuarios de cada OU.",
+      "examples": [
+        {
+          "description": "Bloque B5.7 (requiere $areas de B3)",
+          "code": "foreach ($a in $areas) {\n    $bat = \"\\\\$dominio\\NETLOGON\\$($a.P).bat\"\n    Set-Content $bat \"@echo off`r`nnet use Z: \\\\$srv\\$($a.OU) /persistent:no\" -Encoding Default\n    Get-ADUser -SearchBase \"OU=$($a.OU),$raiz\" -Filter * | Set-ADUser -ScriptPath \"$($a.P).bat\"\n}\nGet-ADUser -SearchBase $raiz -Filter * -Properties ScriptPath | Select-Object SamAccountName, ScriptPath"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "netlogon",
+        "script-de-inicio",
+        "net-use",
+        "unidad-de-red"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "-Encoding Default (ANSI) porque cmd no entiende el BOM de UTF-8. Con tildes en el nombre del recurso (Informática) conviene probar el .bat. Por GUI (Preferencia, solo gráfico): editar GPO_Admin, Configuración de usuario, Preferencias, Configuración de Windows, Asignaciones de unidades, Nuevo, Unidad asignada: Acción Crear, Ubicación \\\\G3Nicolas\\Admin, Volver a conectar, Etiqueta Admin, Letra Z:."
+    },
+    {
+      "title": "GPO de firewall: Open-NetGPO, New-NetFirewallRule y Save-NetGPO",
+      "command": "Open-NetGPO -PolicyStore \"$dominio\\GPO_Firewall\"",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Crea una GPO que permite ping y escritorio remoto en todo el dominio, escribiendo las reglas de firewall dentro de la GPO con una sesión (GPOSession).",
+      "examples": [
+        {
+          "description": "Bloque de firewall en GPO",
+          "code": "New-GPO -Name \"GPO_Firewall\" | New-GPLink -Target $dn\n$s = Open-NetGPO -PolicyStore \"$dominio\\GPO_Firewall\"\nNew-NetFirewallRule -GPOSession $s -DisplayName \"Permitir ping (ICMPv4)\" -Direction Inbound -Protocol ICMPv4 -IcmpType 8 -Action Allow\nNew-NetFirewallRule -GPOSession $s -DisplayName \"RDP (TCP 3389)\"         -Direction Inbound -Protocol TCP -LocalPort 3389 -Action Allow\nSave-NetGPO -GPOSession $s\nGet-NetFirewallRule -PolicyStore \"$dominio\\GPO_Firewall\" | Format-Table DisplayName, Direction, Action"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "firewall",
+        "icmp",
+        "rdp",
+        "open-netgpo"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Sin Save-NetGPO las reglas no se guardan en la GPO. Es una directiva de equipo: se aplica a los equipos de la OU o dominio donde esté vinculada. Requiere B0."
+    },
+    {
+      "title": "GPO de Escritorio remoto permitido con NLA",
+      "command": "Set-GPRegistryValue -Name \"GPO_RDP\" -ValueName fDenyTSConnections -Type DWord -Value 0",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Crea una GPO de dominio que permite las conexiones de Escritorio remoto y exige autenticación a nivel de red (NLA).",
+      "examples": [
+        {
+          "description": "GPO_RDP",
+          "code": "$ts = \"HKLM\\Software\\Policies\\Microsoft\\Windows NT\\Terminal Services\"\nNew-GPO -Name \"GPO_RDP\" | New-GPLink -Target $dn\nSet-GPRegistryValue -Name \"GPO_RDP\" -Key $ts -ValueName \"fDenyTSConnections\" -Type DWord -Value 0\nSet-GPRegistryValue -Name \"GPO_RDP\" -Key $ts -ValueName \"UserAuthentication\" -Type DWord -Value 1"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "rdp",
+        "escritorio-remoto",
+        "nla"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Para un mensaje de inicio solo de un departamento: legalnotice* es directiva de equipo (B5.2), así que solo aplica en la OU donde están los equipos; para usuarios usar un script de sesión (msg * Hola en el .bat) o el fondo. Requiere B0."
+    },
+    {
+      "title": "Teoría de GPO: LSDOU, herencia, Exigido y filtrado (gpmc.msc)",
+      "command": "gpmc.msc",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Resumen de las preguntas teóricas de GPO que pueden venir en la prueba: orden de aplicación, herencia, Exigido, filtrado, Default Domain Policy, actualización y herramientas.",
+      "examples": [
+        {
+          "description": "Abrir las herramientas gráficas de GPO",
+          "code": "gpmc.msc      # Administración de directivas de grupo\ngpedit.msc    # directiva LOCAL de un equipo\nrsop.msc      # resultado aplicado"
+        },
+        {
+          "description": "Forzar y ver lo aplicado",
+          "code": "gpupdate /force\ngpresult /r"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "teoria",
+        "lsdou",
+        "herencia",
+        "exigido"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "GPO: conjunto de configuraciones que AD aplica a usuarios y equipos de un sitio, dominio u OU; se guarda en AD (contenedor) y en SYSVOL (plantilla). Equipo (HKLM, al arrancar) vs usuario (HKCU, al iniciar sesión). Directivas se imponen; preferencias se aplican una vez y el usuario las puede cambiar. LSDOU: Local, Sitio, Dominio, OU; gana la última aplicada (la OU más cercana al objeto). Herencia: la OU recibe las GPO de arriba. Bloquear herencia (en la OU): no recibe las de arriba salvo las Exigidas. Exigido (en el vínculo): no se puede bloquear ni sobrescribir; le gana a Bloquear herencia. Vínculo: la GPO existe una vez y se vincula a varias OU; deshabilitar el vínculo no la borra. Filtrado de seguridad: por defecto Usuarios autentificados; se restringe a un grupo con Leer + Aplicar directiva de grupo. Default Domain Policy: contraseñas, bloqueo y Kerberos, solo valen a nivel de dominio. Default Domain Controllers Policy: derechos de usuario y auditoría de los DC. Actualización: cada 90 min ± 30 en clientes y 5 min en DC."
     }
   ]
 }

@@ -4,6 +4,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Sin publicar]
 
+## [1.2.1] — 22 de octubre de 2026
+
+### Agregado
+- **Windows Server, GPO avanzadas e IPv6** (+9 comandos y +18 ejemplos en `windows-server.json`, que pasa a 46
+  comandos; el entorno Windows queda en 156 y el total en 1.575 comandos y 4.252 ejemplos), siguiendo la guía
+  actualizada de la Eva3:
+  - Imagen base: quitar IPv6 del adaptador (`Disable-NetAdapterBinding ms_tcpip6`).
+  - GPO: Exigido, bloquear herencia, deshabilitar y ordenar vínculos (B5.6); `New-GPLink`/`Copy-GPO`/
+    `Rename-GPO`/`Remove-GPO`; `Backup-GPO`/`Restore-GPO`; `Get-GPResultantSetOfPolicy`; script de sesión en
+    NETLOGON con `net use` (B5.7); GPO de firewall con `Open-NetGPO`/`Save-NetGPO`; GPO de RDP con NLA y una
+    entrada de teoría (LSDOU, herencia, Exigido, filtrado).
+
+### Cambiado
+- Ejemplos de Windows Server sincronizados con la guía: A2 con IPv6 desactivado y variante /16
+  (255.255.0.0, Red NAT `172.168.0.0/16`), OU con tildes (`Informática`, `Mantención`) en B3, B5.3 y B6, y el
+  plan C ya no recomienda guardar la guía dentro de la VM.
+
 ## [1.2.0] — 22 de octubre de 2026
 
 ### Agregado
