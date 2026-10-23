@@ -11,7 +11,7 @@
 | **Autor** | [Nicolás Andrés Cano Leal](#autor) |
 
 Biblioteca de consulta para un roadmap **DevOps → SRE → Arquitecto Fullstack (IA, Cloud, Software)**:
-**1.566 comandos y 4.234 ejemplos** sobre **18 entornos**, pensados para usar la terminal en todo, en
+**1.575 comandos y 4.252 ejemplos** sobre **18 entornos**, pensados para usar la terminal en todo, en
 desarrollo y en producción (sitios web, servidores y VPS). Cada comando trae descripción, sintaxis, ejemplos
 de uso común, notas con trampas reales (Ubuntu vs AlmaLinux, PowerShell 5.1 vs 7, Helm 4, `use_lockfile` de
 Terraform, el volumen de Postgres 18…), nivel, tags y la ruta del roadmap a la que pertenece. Incluye además
@@ -24,7 +24,7 @@ con Ansible** y se **verifica con Jenkins** y GitHub Actions.
 |---|---|---|
 | Linux | Común · Ubuntu · AlmaLinux | 148 |
 | Python | Python · Django · DRF · FastAPI | 119 |
-| Windows | CMD · PowerShell · Windows Server | 147 |
+| Windows | CMD · PowerShell · Windows Server | 156 |
 | Jenkins | Pipeline · CLI · Docker · Administración | 66 |
 | Docker | Imágenes · Contenedores · Compose · Redes y volúmenes · Build y registro · Sistema y diagnóstico | 125 |
 | Kubernetes | kubectl básico · Workloads · Redes y servicios · Configuración y secretos · Troubleshooting · Helm · Clúster y contexto | 116 |
@@ -40,7 +40,7 @@ con Ansible** y se **verifica con Jenkins** y GitHub Actions.
 | Claude | Claude Code (sesiones, automatización, permisos, MCP/plugins/agentes, dentro de la sesión) · API con curl · CLI ant · SDK Python | 63 |
 | Git y GitHub | Configuración · Día a día · Ramas y merge · Rebase e historial · Remotos · Deshacer y recuperar · Inspección y búsqueda · Avanzado · GitHub CLI (gh) | 64 |
 | Terminal | Atajos y shell · Búsqueda moderna · JSON y YAML · tmux · Vim y nano · Scripting robusto · Productividad | 41 |
-| **Total** | | **1.566** |
+| **Total** | | **1.575** |
 
 - **Frontend**: NiceGUI 3 (puerto 8090) con tres temas: **Dark**, **Luffy · Quinta Marcha** y
   **Eren · Titán Fundador**.
@@ -93,7 +93,7 @@ CmdVault/
 │   │       ├── loader.py     #   lectura y fusión de JSON + skills (puro, sin BD)
 │   │       ├── sync.py       #   sincronización idempotente con la BD
 │   │       ├── validate.py   #   validador para CI: contrato + títulos duplicados
-│   │       ├── data/         #   70 JSON con los 1.566 comandos
+│   │       ├── data/         #   70 JSON con los 1.575 comandos
 │   │       └── skills/       #   12 SKILL.md de ingeniería
 │   └── tests/                # pytest: lógica pura, seed, API (TestClient); SQLite o Postgres
 └── frontend/
