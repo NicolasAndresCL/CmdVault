@@ -1,0 +1,1158 @@
+{
+  "category": {
+    "slug": "windows",
+    "name": "Windows",
+    "icon": "desktop_windows",
+    "order": 3,
+    "description": "Línea de comandos de Windows: CMD clásico y PowerShell para automatización y diagnóstico."
+  },
+  "commands": [
+    {
+      "title": "Eva3 A2: nombre, IP fija y DNS del servidor",
+      "command": "New-NetIPAddress -InterfaceAlias LAN -IPAddress $ip -PrefixLength 24 -DefaultGateway $gw",
+      "section": "Windows Server",
+      "topic": "Eva3 · Imagen base (red, DNS, internet)",
+      "description": "Bloque base de la imagen que se lleva desde casa: renombra el adaptador, fija IP y puerta de enlace, apunta el DNS a sí mismo, instala el rol DNS con reenviadores y renombra el equipo (reinicia).",
+      "examples": [
+        {
+          "description": "Bloque A2 completo (PowerShell como administrador, red NAT Eva3)",
+          "code": "$srv = \"G3Nicolas\"\n$ip  = \"172.168.100.10\"          # en casa; en la prueba se cambia por la X del docente\n$gw  = \"172.168.100.1\"\n\nGet-NetAdapter                    # anotar el nombre (normalmente \"Ethernet\")\nRename-NetAdapter -Name \"Ethernet\" -NewName \"LAN\"\n\nSet-NetIPInterface -InterfaceAlias \"LAN\" -Dhcp Disabled\nNew-NetIPAddress -InterfaceAlias \"LAN\" -IPAddress $ip -PrefixLength 24 -DefaultGateway $gw\nSet-DnsClientServerAddress -InterfaceAlias \"LAN\" -ServerAddresses $ip\n\nInstall-WindowsFeature DNS -IncludeManagementTools\n\n# Reenviadores: el DNS local responde lo suyo y pregunta afuera lo demás (internet)\nAdd-DnsServerForwarder -IPAddress 8.8.8.8, 1.1.1.1\n\nRename-Computer -NewName $srv -Restart"
+        },
+        {
+          "description": "Plan B (dos adaptadores NAT + intnet): renombrar y fijar el DNS",
+          "code": "$nat = (Get-NetIPAddress -AddressFamily IPv4 -IPAddress 10.0.2.* ).InterfaceAlias\nRename-NetAdapter -Name $nat -NewName \"NAT\"\nRename-NetAdapter -Name (Get-NetAdapter | Where-Object Name -ne \"NAT\").Name -NewName \"LAN\"\n# Igual que el bloque A2, pero New-NetIPAddress SIN -DefaultGateway (la salida es por NAT)\nSet-DnsClientServerAddress -InterfaceAlias \"NAT\" -ServerAddresses $ip\nSet-DnsClient -InterfaceAlias \"NAT\" -RegisterThisConnectionsAddress $false"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "red",
+        "ip",
+        "dns",
+        "g3nicolas",
+        "hostname"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "La IP .X la asigna el docente al inicio de la prueba; X no puede ser 1, 2 ni 3 en una Red NAT de VirtualBox (.1 es la puerta de enlace, .2 reenvía al host y .3 está reservada para su DHCP). 172.168.x.x no es rango privado real (el privado de clase B es 172.16.0.0–172.31.255.255), pero en la prueba se usa el valor del docente. Tras Rename-Computer -Restart se pierden las variables de la sesión."
+    },
+    {
+      "title": "Reenviadores DNS con Add-DnsServerForwarder",
+      "command": "Add-DnsServerForwarder -IPAddress 8.8.8.8, 1.1.1.1",
+      "section": "Windows Server",
+      "topic": "Eva3 · Imagen base (red, DNS, internet)",
+      "description": "Hace que el DNS local resuelva lo suyo y pregunte afuera lo demás, de modo que la VM tenga internet aun usando su propia IP como DNS.",
+      "examples": [
+        {
+          "description": "Agregar los reenviadores de Google y Cloudflare",
+          "code": "Add-DnsServerForwarder -IPAddress 8.8.8.8, 1.1.1.1"
+        },
+        {
+          "description": "Comprobar los reenviadores y que internet resuelve",
+          "code": "Get-DnsServerForwarder\nResolve-DnsName www.google.com\nTest-NetConnection 8.8.8.8 -Port 443    # TcpTestSucceeded : True"
+        },
+        {
+          "description": "Quitar un reenviador",
+          "code": "Remove-DnsServerForwarder -IPAddress 1.1.1.1 -Force"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "dns",
+        "reenviadores",
+        "internet"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Síntoma típico de que faltan: ping 8.8.8.8 responde pero no se resuelven nombres. Los reenviadores siguen activos después de promover el servidor a controlador de dominio."
+    },
+    {
+      "title": "Habilitar el ping en el firewall (FPS-ICMP4-ERQ-In)",
+      "command": "Enable-NetFirewallRule -Name FPS-ICMP4-ERQ-In",
+      "section": "Windows Server",
+      "topic": "Eva3 · Imagen base (red, DNS, internet)",
+      "description": "Windows Server bloquea el eco ICMPv4 de entrada por defecto; esta regla lo habilita para que otras VMs puedan hacer ping al servidor.",
+      "examples": [
+        {
+          "description": "Habilitar la regla y comprobarla",
+          "code": "Enable-NetFirewallRule -Name FPS-ICMP4-ERQ-In          # \"Compartir archivos e impresoras (petición eco: ICMPv4 de entrada)\"\nGet-NetFirewallRule -Name FPS-ICMP4-ERQ-In | Select-Object DisplayName, Enabled"
+        },
+        {
+          "description": "Equivalente en cmd (el nombre depende del idioma)",
+          "code": "netsh advfirewall firewall set rule name=\"Compartir archivos e impresoras (petición eco: ICMPv4 de entrada)\" new enable=yes"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "firewall",
+        "ping",
+        "icmp",
+        "red"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Conviene el -Name de PowerShell (FPS-ICMP4-ERQ-In) porque no cambia con el idioma del sistema; el DisplayName que usa netsh sí."
+    },
+    {
+      "title": "Instalar Firefox por PowerShell (TLS 1.2) para abrir CmdVault",
+      "command": "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
+      "section": "Windows Server",
+      "topic": "Eva3 · Imagen base (red, DNS, internet)",
+      "description": "Descarga e instala Firefox en silencio dentro de Windows Server 2016, porque Internet Explorer 11 no carga CmdVault (NiceGUI usa Vue 3).",
+      "examples": [
+        {
+          "description": "Bloque A4 completo: Firefox con TLS 1.2",
+          "code": "# PowerShell 5.1 en Server 2016 negocia TLS 1.0 por defecto y los sitios actuales lo rechazan\n[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\n\n$url = \"https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=es-ES\"\nInvoke-WebRequest -Uri $url -OutFile \"$env:TEMP\\firefox.exe\" -UseBasicParsing\nStart-Process \"$env:TEMP\\firefox.exe\" -ArgumentList \"/S\" -Wait     # instalación silenciosa\nTest-Path \"C:\\Program Files\\Mozilla Firefox\\firefox.exe\""
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "firefox",
+        "tls",
+        "invoke-webrequest",
+        "navegador",
+        "cmdvault"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "PowerShell 5.1 negocia TLS 1.0: sin la línea de Tls12 falla con «No se puede crear un canal seguro SSL/TLS». -UseBasicParsing evita el motor de IE, que en Server 2016 falla si nunca se abrió IE. IE11 se ve en blanco con CmdVault: usar Firefox y guardar la URL como marcador."
+    },
+    {
+      "title": "Desactivar la seguridad mejorada de IE (Server 2016)",
+      "command": "Set-ItemProperty \"$k\\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}\" -Name IsInstalled -Value 0",
+      "section": "Windows Server",
+      "topic": "Eva3 · Imagen base (red, DNS, internet)",
+      "description": "Apaga la «Configuración de seguridad mejorada de Internet Explorer» para administradores y usuarios, que bloquea casi todos los sitios.",
+      "examples": [
+        {
+          "description": "Desactivarla por registro",
+          "code": "$k = \"HKLM:\\SOFTWARE\\Microsoft\\Active Setup\\Installed Components\"\nSet-ItemProperty \"$k\\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}\" -Name IsInstalled -Value 0   # administradores\nSet-ItemProperty \"$k\\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}\" -Name IsInstalled -Value 0   # usuarios"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "ie",
+        "seguridad",
+        "registro",
+        "navegador"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Por GUI: Administrador del servidor, Servidor local, Configuración de seguridad mejorada de IE, Desactivado. Aun así IE11 no carga CmdVault: usar Firefox."
+    },
+    {
+      "title": "Eva3 A6: cambiar la IP por la X del docente (antes de promover)",
+      "command": "Remove-NetIPAddress -InterfaceAlias LAN -AddressFamily IPv4 -Confirm:$false",
+      "section": "Windows Server",
+      "topic": "Eva3 · Imagen base (red, DNS, internet)",
+      "description": "Día de la prueba: reemplaza la IP de casa (.10) por la asignada por el docente. Es una línea en un servidor sin dominio; en un DC hay pasos extra.",
+      "examples": [
+        {
+          "description": "Servidor sin dominio (caso recomendado)",
+          "code": "$ipNueva = \"172.168.100.X\"        # ← la del docente\nRemove-NetIPAddress -InterfaceAlias \"LAN\" -AddressFamily IPv4 -Confirm:$false\nRemove-NetRoute     -InterfaceAlias \"LAN\" -DestinationPrefix 0.0.0.0/0 -Confirm:$false\nNew-NetIPAddress    -InterfaceAlias \"LAN\" -IPAddress $ipNueva -PrefixLength 24 -DefaultGateway 172.168.100.1\nSet-DnsClientServerAddress -InterfaceAlias \"LAN\" -ServerAddresses $ipNueva\nipconfig /all"
+        },
+        {
+          "description": "Si ya era controlador de dominio: volver a registrar DNS y borrar el A viejo",
+          "code": "ipconfig /registerdns\nRestart-Service Netlogon               # vuelve a registrar los SRV del dominio con la IP nueva\ndcdiag /test:dns /v | Select-String -Pattern \"error|failed|fall\"\n# Borrar el A viejo si quedó:\nGet-DnsServerResourceRecord -ZoneName (Get-ADDomain).DNSRoot -RRType A |\n  Where-Object { $_.RecordData.IPv4Address -eq \"172.168.100.10\" } |\n  Remove-DnsServerResourceRecord -ZoneName (Get-ADDomain).DNSRoot -Force"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "ip",
+        "red",
+        "dc",
+        "dcdiag"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Reemplazar X por el número real antes de pegar. Recomendación de la guía: llevar la VM sin promover; cambiar la IP de un DC ya promovido es delicado."
+    },
+    {
+      "title": "Comprobar la imagen base (hostname, IP, DNS e internet)",
+      "command": "hostname; ipconfig /all; Get-DnsServerForwarder",
+      "section": "Windows Server",
+      "topic": "Eva3 · Imagen base (red, DNS, internet)",
+      "description": "Verificaciones que se capturan en casa tras el reinicio: nombre, IP estática, rol DNS, reenviadores y salida a internet.",
+      "examples": [
+        {
+          "description": "Checklist de la imagen base",
+          "code": "hostname                                   # G3Nicolas\nipconfig /all                              # 172.168.100.10 · 255.255.255.0 · DHCP habilitado: No\nGet-WindowsFeature DNS                     # [X] Servidor DNS\nGet-DnsServerForwarder                     # 8.8.8.8, 1.1.1.1\nResolve-DnsName www.google.com             # internet resuelve a través del DNS local\nTest-NetConnection 8.8.8.8 -Port 443       # TcpTestSucceeded : True"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "verificacion",
+        "hostname",
+        "ipconfig",
+        "dns"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "VBoxManage natnetwork add: crear la Red NAT Eva3",
+      "command": "VBoxManage natnetwork add --netname Eva3 --network \"172.168.100.0/24\" --enable --dhcp off",
+      "section": "Windows Server",
+      "topic": "Eva3 · VirtualBox (host)",
+      "description": "Crea en el host una Red NAT con el rango de la pizarra y el DHCP de VirtualBox apagado: la VM tiene IP fija en 172.168.100.0/24 y sale a internet por 172.168.100.1.",
+      "examples": [
+        {
+          "description": "Crear la red y listarla (PowerShell del host)",
+          "code": "$vbox = \"C:\\Program Files\\Oracle\\VirtualBox\\VBoxManage.exe\"\n\n# Crear la red NAT con el rango de la pizarra y el DHCP de VirtualBox apagado\n& $vbox natnetwork add --netname Eva3 --network \"172.168.100.0/24\" --enable --dhcp off\n& $vbox natnetwork list"
+        },
+        {
+          "description": "Borrarla si hay que recrearla",
+          "code": "& $vbox natnetwork remove --netname Eva3"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "virtualbox",
+        "vboxmanage",
+        "red-nat",
+        "host"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "La Red NAT vive en la configuración de VirtualBox del equipo, no en la VM: en el PC del laboratorio hay que volver a crearla antes de encender la VM. Un adaptador NAT simple no sirve porque obliga a 10.0.2.x por DHCP."
+    },
+    {
+      "title": "VBoxManage modifyvm --nic1 natnetwork: conectar la VM a la Red NAT",
+      "command": "VBoxManage modifyvm \"G3Nicolas\" --nic1 natnetwork --nat-network1 Eva3",
+      "section": "Windows Server",
+      "topic": "Eva3 · VirtualBox (host)",
+      "description": "Conecta el adaptador 1 de la VM a la Red NAT Eva3 y permite verificar la configuración. La VM debe estar apagada.",
+      "examples": [
+        {
+          "description": "Conectar el adaptador y verificarlo",
+          "code": "& $vbox modifyvm \"G3Nicolas\" --nic1 natnetwork --nat-network1 Eva3\n& $vbox showvminfo \"G3Nicolas\" --machinereadable | Select-String \"^nic1|natnet1\""
+        },
+        {
+          "description": "Plan B: dos adaptadores (NAT para internet + red interna para la IP fija)",
+          "code": "& $vbox modifyvm \"G3Nicolas\" --nic1 nat --nic2 intnet --intnet2 intnet"
+        },
+        {
+          "description": "Encender y apagar la VM",
+          "code": "& $vbox startvm \"G3Nicolas\"\n& $vbox controlvm \"G3Nicolas\" acpipowerbutton"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "virtualbox",
+        "vboxmanage",
+        "red-nat",
+        "nic"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Plan B: con dos tarjetas el DC registra ambas IP en DNS; aplicar después de la promoción el bloque de ListeningIPAddress y borrar los A de 10.0.2.x. Por GUI: Configuración, Red, Adaptador 1, Conectado a Red NAT, Eva3."
+    },
+    {
+      "title": "VBoxManage snapshot: instantánea base-eva3",
+      "command": "VBoxManage snapshot \"G3Nicolas\" take \"base-eva3\"",
+      "section": "Windows Server",
+      "topic": "Eva3 · VirtualBox (host)",
+      "description": "Guarda el estado de la imagen (nombre + IP + DNS + Firefox, sin dominio) para volver a él después de practicar la Parte B.",
+      "examples": [
+        {
+          "description": "Tomar y listar la instantánea",
+          "code": "& $vbox snapshot \"G3Nicolas\" take \"base-eva3\" --description \"Nombre + IP + DNS + Firefox, sin dominio\"\n& $vbox snapshot \"G3Nicolas\" list"
+        },
+        {
+          "description": "Volver al estado base (VM apagada)",
+          "code": "& $vbox snapshot \"G3Nicolas\" restore \"base-eva3\""
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "virtualbox",
+        "vboxmanage",
+        "snapshot",
+        "restaurar"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Llevar la VM sin promover a dominio: promover forma parte de lo que se evalúa."
+    },
+    {
+      "title": "VBoxManage export/import: llevar la VM al laboratorio",
+      "command": "VBoxManage export \"G3Nicolas\" --output \"D:\\G3Nicolas.ova\"",
+      "section": "Windows Server",
+      "topic": "Eva3 · VirtualBox (host)",
+      "description": "Exporta la VM a un .ova en casa y la importa en el PC del laboratorio, recreando la Red NAT y reconectando el adaptador.",
+      "examples": [
+        {
+          "description": "En casa: exportar (VM apagada)",
+          "code": "& $vbox export \"G3Nicolas\" --output \"D:\\G3Nicolas.ova\""
+        },
+        {
+          "description": "En el laboratorio: importar, recrear la Red NAT y arrancar",
+          "code": "& $vbox import \"D:\\G3Nicolas.ova\"\n& $vbox natnetwork add --netname Eva3 --network \"172.168.100.0/24\" --enable --dhcp off\n& $vbox modifyvm \"G3Nicolas\" --nic1 natnetwork --nat-network1 Eva3\n& $vbox startvm \"G3Nicolas\""
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "virtualbox",
+        "vboxmanage",
+        "ova",
+        "export",
+        "import"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Al exportar a .ova se pierden las instantáneas. Para conservarlas, copiar la carpeta completa de la VM (%USERPROFILE%\\VirtualBox VMs\\G3Nicolas) y en el laboratorio usar Máquina, Añadir, G3Nicolas.vbox. Plan C sin internet: copiar la guía dentro de la VM (C:\\Eva3\\guia.md) y abrirla con notepad."
+    },
+    {
+      "title": "Eva3 B0: variables de la sesión (servidor, IP, dominio, OU)",
+      "command": "$dominio = \"Nicolas.Eva3\"; $dn = \"DC=Nicolas,DC=Eva3\"",
+      "section": "Windows Server",
+      "topic": "Active Directory",
+      "description": "Bloque de variables del que parten todos los bloques de la Parte B. Se pega al inicio de cada sesión de PowerShell y después de cada reinicio.",
+      "examples": [
+        {
+          "description": "Bloque B0 completo (cambiar solo $ip, $dominio y $dn si el enunciado lo pide)",
+          "code": "$srv     = $env:COMPUTERNAME                 # G3NICOLAS\n$ip      = \"172.168.100.X\"                   # ← la del docente\n$gw      = \"172.168.100.1\"\n$red     = \"172.168.100.0\"\n$dominio = \"Nicolas.Eva3\"                    # ← confirmar con el enunciado\n$netbios = \"NICOLAS\"\n$dn      = \"DC=Nicolas,DC=Eva3\"              # debe coincidir con $dominio\n$raiz    = \"OU=Eva3,$dn\"                     # carpeta (OU) raíz que pida el enunciado\n$pass    = ConvertTo-SecureString \"Eva3.2026!\" -AsPlainText -Force"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "variables",
+        "sesion",
+        "dominio"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Reemplazar la X de $ip por la IP del docente. El reinicio (por ejemplo tras promover a DC) borra las variables: volver a pegar este bloque. $dn debe coincidir con $dominio."
+    },
+    {
+      "title": "Instalar AD DS y promover a controlador de dominio (Install-ADDSForest)",
+      "command": "Install-ADDSForest -DomainName $dominio -DomainNetbiosName $netbios -InstallDns",
+      "section": "Windows Server",
+      "topic": "Active Directory",
+      "description": "Instala el rol Servicios de dominio de Active Directory y crea un bosque nuevo con DNS integrado. El servidor se reinicia al terminar.",
+      "examples": [
+        {
+          "description": "Bloque B1 completo (pide la clave DSRM)",
+          "code": "Install-WindowsFeature AD-Domain-Services -IncludeManagementTools\nInstall-ADDSForest -DomainName $dominio -DomainNetbiosName $netbios -InstallDns `\n  -ForestMode WinThreshold -DomainMode WinThreshold `\n  -SafeModeAdministratorPassword (Read-Host \"Clave DSRM\" -AsSecureString) -Force"
+        },
+        {
+          "description": "Comprobar tras el reinicio (entrar como NICOLAS\\Administrador)",
+          "code": "Get-ADDomain | Select-Object DNSRoot, NetBIOSName, DomainMode\nGet-ADDomainController | Select-Object HostName, IPv4Address\nGet-DnsClientServerAddress -InterfaceAlias LAN       # la promoción suele dejar 127.0.0.1: vale, o vuelve a $ip\nResolve-DnsName www.google.com                       # los reenviadores siguen activos"
+        },
+        {
+          "description": "Si falla por la clave del administrador local",
+          "code": "net user Administrador Eva3.2026!"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "active-directory",
+        "ad-ds",
+        "dominio",
+        "promocion",
+        "dc"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "La advertencia «No se puede crear una delegación…» es normal. Si Install-ADDSForest rechaza la contraseña del administrador local, ponerle una clave compleja con net user. GUI equivalente: Agregar roles, Servicios de dominio de Active Directory, bandera amarilla, Promover este servidor a controlador de dominio, Agregar un nuevo bosque. Requiere variables de B0."
+    },
+    {
+      "title": "Eva3 B3: OU, grupos, usuarios, horarios y equipos permitidos",
+      "command": "New-ADOrganizationalUnit / New-ADGroup / New-ADUser / Set-Horario",
+      "section": "Windows Server",
+      "topic": "Active Directory",
+      "description": "Crea la OU raíz, una OU por departamento con su grupo global, dos usuarios por área, el horario de inicio de sesión (logonHours) y el equipo permitido. Solo se edita la tabla $areas.",
+      "examples": [
+        {
+          "description": "Bloque B3 completo (función Set-Horario + tabla $areas + bucle)",
+          "code": "Import-Module ActiveDirectory\n\n# Horario de inicio de sesión: logonHours son 21 bytes (168 h de la semana) y se guardan en UTC\nfunction Set-Horario($sam, [int[]]$dias, [int]$inicio, [int]$horas) {\n    $bytes  = New-Object byte[] 21\n    $offset = [int][TimeZoneInfo]::Local.GetUtcOffset((Get-Date)).TotalHours\n    foreach ($d in $dias) {\n        for ($h = $inicio; $h -lt $inicio + $horas; $h++) {\n            $utc = ($d * 24 + $h - $offset) % 168\n            if ($utc -lt 0) { $utc += 168 }\n            $bytes[[math]::Floor($utc / 8)] = $bytes[[math]::Floor($utc / 8)] -bor (1 -shl ($utc % 8))\n        }\n    }\n    Set-ADUser $sam -Replace @{logonHours = [byte[]]$bytes}\n}\n\nNew-ADOrganizationalUnit -Name \"Eva3\" -Path $dn\n\n$areas = @(\n    @{OU=\"Informatica\"; G=\"G_Informatica\"; P=\"inf\"; PC=\"PC-INF\"; Dias=0..6; Ini=8; H=5},\n    @{OU=\"Admin\";       G=\"G_Admin\";       P=\"adm\"; PC=\"PC-ADM\"; Dias=1..5; Ini=9; H=8},\n    @{OU=\"Logistica\";   G=\"G_Logistica\";   P=\"log\"; PC=\"PC-LOG\"; Dias=1..6; Ini=8; H=7},\n    @{OU=\"Mantencion\";  G=\"G_Mantencion\";  P=\"man\"; PC=\"PC-MAN\"; Dias=0..6; Ini=8; H=6}\n)\n\nforeach ($a in $areas) {\n    New-ADOrganizationalUnit -Name $a.OU -Path $raiz\n    $ou = \"OU=$($a.OU),$raiz\"\n    New-ADGroup -Name $a.G -GroupScope Global -GroupCategory Security -Path $ou\n    foreach ($n in 1..2) {\n        $sam = \"$($a.P).usuario$n\"\n        New-ADUser -Name \"Usuario$n $($a.OU)\" -GivenName \"Usuario$n\" -Surname $a.OU `\n            -SamAccountName $sam -UserPrincipalName \"$sam@$dominio\" -Path $ou `\n            -AccountPassword $pass -Enabled $true -PasswordNeverExpires $true `\n            -LogonWorkstations (\"{0}0{1}\" -f $a.PC, $n)\n        Add-ADGroupMember -Identity $a.G -Members $sam\n        Set-Horario $sam $a.Dias $a.Ini $a.H\n    }\n}"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "active-directory",
+        "ou",
+        "usuarios",
+        "grupos",
+        "horarios",
+        "logonhours",
+        "bucle"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Dias va de 0 (domingo) a 6 (sábado), Ini es la hora de inicio y H la cantidad de horas. Si se guarda como .ps1, hacerlo en UTF-8 con BOM: PowerShell 5.1 lee los .ps1 sin BOM como ANSI y rompe las tildes (por eso la tabla va sin tildes). -LogonWorkstations es el «Iniciar sesión en…» de la GUI: con él el usuario solo entra desde ese PC (también desde un cliente de prueba); si no lo piden, borrar esa línea. Requiere B0 y el dominio promovido."
+    },
+    {
+      "title": "Crear OU, grupo y usuario sueltos en AD (cmdlets individuales)",
+      "command": "New-ADUser -Name \"Ana Perez\" -SamAccountName aperez -Path \"OU=Ventas,$raiz\"",
+      "section": "Windows Server",
+      "topic": "Active Directory",
+      "description": "Versión uno a uno de lo que hace el bloque masivo: crear una OU, un grupo, un usuario, agregarlo al grupo, restringir su equipo, deshabilitarlo, cambiar su clave y moverlo de OU.",
+      "examples": [
+        {
+          "description": "Bloque de comandos sueltos",
+          "code": "New-ADOrganizationalUnit -Name \"Ventas\" -Path $raiz -ProtectedFromAccidentalDeletion $true\nNew-ADGroup -Name \"G_Ventas\" -GroupScope Global -GroupCategory Security -Path \"OU=Ventas,$raiz\"\nNew-ADUser -Name \"Ana Perez\" -SamAccountName \"aperez\" -UserPrincipalName \"aperez@$dominio\" `\n  -Path \"OU=Ventas,$raiz\" -AccountPassword $pass -Enabled $true -ChangePasswordAtLogon $true\nAdd-ADGroupMember -Identity \"G_Ventas\" -Members \"aperez\"\nSet-ADUser aperez -LogonWorkstations \"PC-VEN01\"\nDisable-ADAccount aperez ; Enable-ADAccount aperez\nSet-ADAccountPassword aperez -Reset -NewPassword $pass\nMove-ADObject -Identity \"CN=Ana Perez,OU=Ventas,$raiz\" -TargetPath \"OU=Admin,$raiz\""
+        },
+        {
+          "description": "Equivalente en cmd clásico",
+          "code": "net user aperez Eva3.2026! /add /domain\nnet group G_Ventas aperez /add /domain"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "active-directory",
+        "usuarios",
+        "ou",
+        "grupos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Requiere variables de B0. Una OU creada con ProtectedFromAccidentalDeletion no se puede borrar hasta quitar la protección."
+    },
+    {
+      "title": "Quitar la protección de una OU para poder borrarla",
+      "command": "Set-ADOrganizationalUnit <dn> -ProtectedFromAccidentalDeletion $false",
+      "section": "Windows Server",
+      "topic": "Active Directory",
+      "description": "Las OU creadas desde la consola vienen protegidas contra eliminación accidental; hay que quitar la marca antes de borrarlas.",
+      "examples": [
+        {
+          "description": "Quitar la protección y borrar",
+          "code": "Set-ADOrganizationalUnit -Identity \"OU=Ventas,$raiz\" -ProtectedFromAccidentalDeletion $false\nRemove-ADOrganizationalUnit -Identity \"OU=Ventas,$raiz\" -Recursive -Confirm:$false"
+        },
+        {
+          "description": "Si dice «ya existe» al pegar dos veces el bloque, listar las OU",
+          "code": "Get-ADOrganizationalUnit -Filter * | Select-Object Name, DistinguishedName"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "active-directory",
+        "ou",
+        "proteccion",
+        "borrar"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Remove-ADOrganizationalUnit -Recursive borra todo lo que cuelga de la OU: probar solo en la VM."
+    },
+    {
+      "title": "Comprobar OU, usuarios, grupos y horas permitidas",
+      "command": "Get-ADUser -SearchBase $raiz -Filter * -Properties LogonWorkstations, MemberOf",
+      "section": "Windows Server",
+      "topic": "Active Directory",
+      "description": "Verifica el árbol de OU, los usuarios con su equipo permitido y grupo, los miembros de un grupo y las horas de inicio de sesión.",
+      "examples": [
+        {
+          "description": "Comprobaciones de B3",
+          "code": "Get-ADOrganizationalUnit -SearchBase $raiz -Filter * | Select-Object Name, DistinguishedName\nGet-ADUser -SearchBase $raiz -Filter * -Properties LogonWorkstations, MemberOf |\n  Select-Object SamAccountName, LogonWorkstations, @{n=\"Grupo\";e={($_.MemberOf -split \",\")[0] -replace \"CN=\"}}\nGet-ADGroupMember G_Admin | Select-Object SamAccountName\nnet user adm.usuario1 /domain          # muestra \"Horas de inicio de sesión permitidas\""
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "active-directory",
+        "verificacion",
+        "usuarios",
+        "ou"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Capturas que pide la evaluación (consola gráfica): Usuarios y equipos de AD con Ver, Características avanzadas; contenido de cada OU, pestaña Miembros, grilla de Horas de inicio de sesión y ventana Iniciar sesión en…"
+    },
+    {
+      "title": "Zona inversa y registro PTR del servidor",
+      "command": "Add-DnsServerPrimaryZone -NetworkId \"$red/24\" -ReplicationScope Domain",
+      "section": "Windows Server",
+      "topic": "DNS",
+      "description": "Crea la zona de búsqueda inversa de la red 172.168.100.0/24 integrada en AD y el registro PTR del propio servidor.",
+      "examples": [
+        {
+          "description": "Bloque B2.1 completo",
+          "code": "Add-DnsServerPrimaryZone -NetworkId \"$red/24\" -ReplicationScope Domain\n$octeto = $ip.Split(\".\")[3]\nAdd-DnsServerResourceRecordPtr -ZoneName \"100.168.172.in-addr.arpa\" -Name $octeto -PtrDomainName \"$srv.$dominio\"\nipconfig /registerdns"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "dns",
+        "zona-inversa",
+        "ptr",
+        "in-addr.arpa"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Requiere variables de B0 y el dominio (ReplicationScope Domain solo existe con AD). La zona inversa de 172.168.100.0/24 se llama 100.168.172.in-addr.arpa."
+    },
+    {
+      "title": "Zona directa extra con registros A y CNAME",
+      "command": "Add-DnsServerPrimaryZone -Name nicolas.net -ReplicationScope Domain",
+      "section": "Windows Server",
+      "topic": "DNS",
+      "description": "Crea una zona directa adicional (como nicolas.net) con el registro A del servidor (y su PTR) y un alias www.",
+      "examples": [
+        {
+          "description": "Bloque B2.2 completo",
+          "code": "$zonaNet = \"nicolas.net\"\nAdd-DnsServerPrimaryZone -Name $zonaNet -ReplicationScope Domain\nAdd-DnsServerResourceRecordA     -ZoneName $zonaNet -Name $srv  -IPv4Address $ip -CreatePtr\nAdd-DnsServerResourceRecordCName -ZoneName $zonaNet -Name \"www\" -HostNameAlias \"$srv.$zonaNet\""
+        },
+        {
+          "description": "Sin dominio (solo rol DNS): zona primaria en archivo",
+          "code": "Add-DnsServerPrimaryZone -Name $zonaNet -ZoneFile \"$zonaNet.dns\""
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "dns",
+        "zona-directa",
+        "registro-a",
+        "cname"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Sin AD no existen zonas integradas: usar -ZoneFile en lugar de -ReplicationScope Domain. Requiere variables de B0."
+    },
+    {
+      "title": "Comprobar DNS con ping, nslookup y Get-DnsServerZone",
+      "command": "ping -a 172.168.100.X; nslookup G3Nicolas.Nicolas.Eva3",
+      "section": "Windows Server",
+      "topic": "DNS",
+      "description": "Pruebas que se evalúan para DNS: resolución directa e inversa desde cmd y listado de zonas y registros desde PowerShell.",
+      "examples": [
+        {
+          "description": "En cmd: es lo que se evalúa (cambiar X por la IP del docente)",
+          "code": "ping 172.168.100.X\nping G3Nicolas.Nicolas.Eva3\nping -a 172.168.100.X\nnslookup G3Nicolas.Nicolas.Eva3\nnslookup 172.168.100.X"
+        },
+        {
+          "description": "En PowerShell: zonas y registros PTR",
+          "code": "Get-DnsServerZone | Format-Table ZoneName, ZoneType, IsDsIntegrated, IsReverseLookupZone\nGet-DnsServerResourceRecord -ZoneName \"100.168.172.in-addr.arpa\" -RRType Ptr"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "dns",
+        "nslookup",
+        "ping",
+        "verificacion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Captura: consola DNS con las zonas directa e inversa, más la ventana de cmd con los ping y nslookup. Si el ping falla desde otra VM, habilitar FPS-ICMP4-ERQ-In."
+    },
+    {
+      "title": "Set-DnsServerSetting: que el DNS escuche solo en la IP de la LAN",
+      "command": "Set-DnsServerSetting -InputObject $s",
+      "section": "Windows Server",
+      "topic": "DNS",
+      "description": "Plan B de dos adaptadores: evita que el DC registre y responda con la IP 10.0.2.15 del adaptador NAT.",
+      "examples": [
+        {
+          "description": "Bloque B2.4: limitar el DNS y borrar los A de la IP de NAT",
+          "code": "# El DNS escucha solo en la IP de la LAN\n$s = Get-DnsServerSetting -All\n$s.ListeningIPAddress = @($ip)\nSet-DnsServerSetting -InputObject $s\nRestart-Service DNS\n\n# Borrar los A que apuntan a la IP de NAT\nGet-DnsServerResourceRecord -ZoneName $dominio -RRType A |\n  Where-Object { $_.RecordData.IPv4Address -like \"10.0.2.*\" } |\n  Remove-DnsServerResourceRecord -ZoneName $dominio -Force\n\nnslookup $dominio          # debe devolver SOLO 172.168.100.X"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "dns",
+        "plan-b",
+        "nat",
+        "dos-adaptadores"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Solo aplica con el plan B (dos adaptadores). Con la Red NAT Eva3 de un solo adaptador no hace falta. Requiere variables de B0."
+    },
+    {
+      "title": "Eva3 B4: DHCP con ámbito, exclusión, opciones y reserva",
+      "command": "Add-DhcpServerv4Scope -Name 'Ambito Eva3' -StartRange 172.168.100.100 -EndRange 172.168.100.200",
+      "section": "Windows Server",
+      "topic": "DHCP",
+      "description": "Instala el rol DHCP, completa la configuración que haría el asistente de la bandera amarilla, lo autoriza en AD y crea ámbito, exclusión, opciones y una reserva.",
+      "examples": [
+        {
+          "description": "Bloque B4 completo (ajustar rango, máscara, concesión y MAC al enunciado)",
+          "code": "Install-WindowsFeature DHCP -IncludeManagementTools\n\n# Lo que hace el asistente de la bandera amarilla (\"Completar configuración de DHCP\")\nnetsh dhcp add securitygroups\nRestart-Service dhcpserver\nAdd-DhcpServerInDC -DnsName \"$srv.$dominio\" -IPAddress $ip\nSet-ItemProperty HKLM:\\SOFTWARE\\Microsoft\\ServerManager\\Roles\\12 -Name ConfigurationState -Value 2\n\n# Ámbito (ajusta el rango, la máscara y la concesión al enunciado)\nAdd-DhcpServerv4Scope -Name \"Ambito Eva3\" -StartRange 172.168.100.100 -EndRange 172.168.100.200 `\n  -SubnetMask 255.255.255.0 -LeaseDuration 0.08:00:00 -State Active\nAdd-DhcpServerv4ExclusionRange -ScopeId $red -StartRange 172.168.100.150 -EndRange 172.168.100.160\nSet-DhcpServerv4OptionValue    -ScopeId $red -Router $gw -DnsServer $ip -DnsDomain $dominio\nAdd-DhcpServerv4Reservation    -ScopeId $red -IPAddress 172.168.100.180 `\n  -ClientId \"00-1A-2B-3C-4D-5E\" -Name \"PC Jefe\" -Description \"Reserva pedida en la Eva3\""
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "dhcp",
+        "ambito",
+        "reserva",
+        "exclusion",
+        "autorizar"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "El DHCP de la Red NAT Eva3 está apagado (--dhcp off): este servidor es el único DHCP de la red. Sin dominio (servidor suelto) sobra Add-DhcpServerInDC: los DHCP que no son del dominio no se autorizan. Si aparece la flecha roja en la consola DHCP, pulsar F5 y revisar Get-DhcpServerInDC. Requiere variables de B0."
+    },
+    {
+      "title": "Set-DhcpServerv4Binding: que no reparta por el adaptador NAT",
+      "command": "Set-DhcpServerv4Binding -InterfaceAlias \"NAT\" -BindingState $false",
+      "section": "Windows Server",
+      "topic": "DHCP",
+      "description": "Plan B de dos adaptadores: desactiva el enlace del servidor DHCP en la tarjeta NAT para que solo reparta por la LAN.",
+      "examples": [
+        {
+          "description": "Desactivar el enlace y revisar los enlaces",
+          "code": "Set-DhcpServerv4Binding -InterfaceAlias \"NAT\" -BindingState $false\nGet-DhcpServerv4Binding"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "dhcp",
+        "plan-b",
+        "nat",
+        "binding"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Solo aplica con el plan B de dos adaptadores."
+    },
+    {
+      "title": "Add-DhcpServerv4Reservation: reservar una IP por MAC",
+      "command": "Add-DhcpServerv4Reservation -ScopeId $red -IPAddress 172.168.100.180 -ClientId \"00-1A-2B-3C-4D-5E\"",
+      "section": "Windows Server",
+      "topic": "DHCP",
+      "description": "Reserva una dirección dentro del ámbito para un equipo concreto, identificado por su dirección MAC.",
+      "examples": [
+        {
+          "description": "Crear la reserva",
+          "code": "Add-DhcpServerv4Reservation -ScopeId $red -IPAddress 172.168.100.180 `\n  -ClientId \"00-1A-2B-3C-4D-5E\" -Name \"PC Jefe\" -Description \"Reserva pedida en la Eva3\""
+        },
+        {
+          "description": "Listar y borrar reservas",
+          "code": "Get-DhcpServerv4Reservation -ScopeId $red\nRemove-DhcpServerv4Reservation -ScopeId $red -IPAddress 172.168.100.180"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "dhcp",
+        "reserva",
+        "mac"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Captura: consola DHCP, IPv4, ámbito, Reservas. El ClientId es la MAC con guiones."
+    },
+    {
+      "title": "Comprobar el servidor DHCP (autorización, ámbito, exclusión, opciones)",
+      "command": "Get-DhcpServerInDC; Get-DhcpServerv4Scope",
+      "section": "Windows Server",
+      "topic": "DHCP",
+      "description": "Verifica que el servidor está autorizado en AD y revisa ámbito, rango excluido, reservas y opciones.",
+      "examples": [
+        {
+          "description": "Comprobaciones de B4",
+          "code": "Get-DhcpServerInDC\nGet-DhcpServerv4Scope | Format-List ScopeId, Name, StartRange, EndRange, SubnetMask, LeaseDuration, State\nGet-DhcpServerv4ExclusionRange -ScopeId $red\nGet-DhcpServerv4Reservation    -ScopeId $red\nGet-DhcpServerv4OptionValue    -ScopeId $red"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "dhcp",
+        "verificacion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Captura: consola DHCP, IPv4, propiedades del ámbito, Grupo de direcciones (la exclusión) y Reservas."
+    },
+    {
+      "title": "Eva3 B5.1: carpetas compartidas por departamento y del fondo (New-SmbShare)",
+      "command": "New-SmbShare -Name Fondos -Path C:\\Fondos -ReadAccess $todos -FullAccess $admins",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Prepara los recursos que usarán las GPO: la carpeta del fondo de escritorio y una carpeta compartida por departamento con permiso de cambio para su grupo. Los grupos integrados se resuelven por SID para funcionar en español e inglés.",
+      "examples": [
+        {
+          "description": "Bloque B5.1 completo (incluye el preámbulo de B5)",
+          "code": "Import-Module GroupPolicy\n$polU = \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\"\n$polM = \"HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\"\n\n# Grupos integrados por SID: en Windows en español se llaman distinto que en inglés\nfunction N($sid) { ([Security.Principal.SecurityIdentifier]$sid).Translate([Security.Principal.NTAccount]).Value }\n$admins = N \"S-1-5-32-544\"     # Administradores\n$todos  = N \"S-1-1-0\"          # Todos\n\nNew-Item C:\\Fondos -ItemType Directory -Force\nCopy-Item C:\\Windows\\Web\\Wallpaper\\Windows\\img0.jpg C:\\Fondos\\fondo.jpg\nNew-SmbShare -Name Fondos -Path C:\\Fondos -ReadAccess $todos -FullAccess $admins\n\nforeach ($a in $areas) {\n    New-Item \"C:\\Departamentos\\$($a.OU)\" -ItemType Directory -Force\n    New-SmbShare -Name $a.OU -Path \"C:\\Departamentos\\$($a.OU)\" -ChangeAccess \"$netbios\\$($a.G)\" -FullAccess $admins\n}\nGet-SmbShare"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "smb",
+        "carpetas-compartidas",
+        "sid",
+        "bucle"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Requiere variables de B0 y la tabla $areas de B3. La función N y las variables $polU/$polM se reutilizan en los demás bloques de GPO: pegar este bloque antes. La N está para resolver S-1-5-32-544 (Administradores) y S-1-1-0 (Todos) sin depender del idioma."
+    },
+    {
+      "title": "Eva3 B5.2: GPO general del dominio (fondo y mensaje de inicio)",
+      "command": "New-GPO -Name \"GPO_General\" | New-GPLink -Target $dn",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Crea una GPO vinculada al dominio que fija el fondo de escritorio desde el recurso compartido y un aviso legal al iniciar sesión.",
+      "examples": [
+        {
+          "description": "Bloque B5.2 completo (requiere $polU, $polM y la carpeta Fondos de B5.1)",
+          "code": "New-GPO -Name \"GPO_General\" -Comment \"Fondo y aviso para todo el dominio\" | New-GPLink -Target $dn\nSet-GPRegistryValue -Name \"GPO_General\" -Key \"$polU\\System\" -ValueName \"Wallpaper\"      -Type String -Value \"\\\\$srv\\Fondos\\fondo.jpg\"\nSet-GPRegistryValue -Name \"GPO_General\" -Key \"$polU\\System\" -ValueName \"WallpaperStyle\" -Type String -Value \"2\"\nSet-GPRegistryValue -Name \"GPO_General\" -Key \"$polM\\System\" -ValueName \"legalnoticecaption\" -Type String -Value \"Bienvenido a $dominio\"\nSet-GPRegistryValue -Name \"GPO_General\" -Key \"$polM\\System\" -ValueName \"legalnoticetext\"    -Type String -Value \"Servidor $srv - uso exclusivo del personal.\""
+        },
+        {
+          "description": "Impedir que el usuario cambie el fondo",
+          "code": "Set-GPRegistryValue -Name \"GPO_General\" -Key \"$polU\\ActiveDesktop\" -ValueName \"NoChangingWallPaper\" -Type DWord -Value 1"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "fondo",
+        "legalnotice",
+        "set-gpregistryvalue",
+        "dominio"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "GPO_General vinculada al dominio también se aplica en el propio servidor: al cerrar sesión y volver a entrar aparecen el aviso y el fondo (sirve como captura). Patrón de toda GPO: crear, vincular, configurar, comprobar."
+    },
+    {
+      "title": "Eva3 B5.3: una GPO distinta por departamento (OU)",
+      "command": "New-GPO -Name \"GPO_$ou\" | New-GPLink -Target \"OU=$ou,$raiz\"",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Crea una GPO por OU con su restricción: bloquear Panel de control, quitar Ejecutar, bloquear el Administrador de tareas y bloquear el símbolo del sistema.",
+      "examples": [
+        {
+          "description": "Bloque B5.3 completo (tabla $reglas + bucle)",
+          "code": "$reglas = @{\n    \"Informatica\" = @{Key=\"$polU\\Explorer\"; ValueName=\"NoControlPanel\"; Value=1}\n    \"Admin\"       = @{Key=\"$polU\\Explorer\"; ValueName=\"NoRun\";          Value=1}\n    \"Logistica\"   = @{Key=\"$polU\\System\";   ValueName=\"DisableTaskMgr\"; Value=1}\n    \"Mantencion\"  = @{Key=\"HKCU\\Software\\Policies\\Microsoft\\Windows\\System\"; ValueName=\"DisableCMD\"; Value=2}\n}\nforeach ($ou in $reglas.Keys) {\n    $g = $reglas[$ou]\n    New-GPO -Name \"GPO_$ou\" -Comment \"Politica del departamento $ou\" | New-GPLink -Target \"OU=$ou,$raiz\"\n    Set-GPRegistryValue -Name \"GPO_$ou\" -Key $g.Key -ValueName $g.ValueName -Type DWord -Value $g.Value\n}"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "ou",
+        "restricciones",
+        "panel-de-control",
+        "taskmgr",
+        "bucle"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Mapa: Informatica NoControlPanel=1, Admin NoRun=1, Logistica DisableTaskMgr=1, Mantencion DisableCMD=2 (bloquea el símbolo del sistema pero permite scripts). Requiere $polU de B5.1. Las GPO por OU de usuarios no se ven en el DC: para verlas hace falta una VM cliente unida al dominio."
+    },
+    {
+      "title": "Set-ADDefaultDomainPasswordPolicy: contraseñas y bloqueo de cuenta",
+      "command": "Set-ADDefaultDomainPasswordPolicy -Identity $dominio -MinPasswordLength 8 -ComplexityEnabled $true",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Fija la política de contraseñas y de bloqueo de cuenta del dominio (longitud, complejidad, vigencia, historial, umbral y duración de bloqueo).",
+      "examples": [
+        {
+          "description": "Política típica del Excel del docente",
+          "code": "Set-ADDefaultDomainPasswordPolicy -Identity $dominio -MinPasswordLength 8 -ComplexityEnabled $true `\n  -MaxPasswordAge 42.00:00:00 -MinPasswordAge 1.00:00:00 -PasswordHistoryCount 24 `\n  -LockoutThreshold 5 -LockoutDuration 00:30:00 -LockoutObservationWindow 00:30:00\nGet-ADDefaultDomainPasswordPolicy"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "contraseñas",
+        "bloqueo-de-cuenta",
+        "politica",
+        "dominio"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Las políticas de contraseñas y de bloqueo de cuenta solo se aplican a nivel de dominio (Default Domain Policy): una GPO vinculada a una OU no las aplica a los usuarios de esa OU. Los valores son los típicos; ajustar al enunciado."
+    },
+    {
+      "title": "GPO probables del examen: USB, bloqueo de pantalla y Windows Update",
+      "command": "Set-GPRegistryValue -Name \"GPO_SinUSB\" -ValueName Deny_All -Type DWord -Value 1",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Tres GPO por registro que suelen aparecer en el Excel del docente: denegar almacenamiento extraíble, bloquear la pantalla a los 10 minutos con contraseña y programar Windows Update a las 03:00.",
+      "examples": [
+        {
+          "description": "USB: denegar todo el almacenamiento extraíble (equipo)",
+          "code": "New-GPO -Name \"GPO_SinUSB\" | New-GPLink -Target $dn\nSet-GPRegistryValue -Name \"GPO_SinUSB\" -Key \"HKLM\\Software\\Policies\\Microsoft\\Windows\\RemovableStorageDevices\" `\n  -ValueName \"Deny_All\" -Type DWord -Value 1"
+        },
+        {
+          "description": "Bloqueo de pantalla a los 10 min con contraseña (usuario; los valores son String)",
+          "code": "$cp = \"HKCU\\Software\\Policies\\Microsoft\\Windows\\Control Panel\\Desktop\"\nNew-GPO -Name \"GPO_BloqueoPantalla\" | New-GPLink -Target $dn\n\"ScreenSaveActive=1\",\"ScreenSaverIsSecure=1\",\"ScreenSaveTimeOut=600\",\"SCRNSAVE.EXE=scrnsave.scr\" | ForEach-Object {\n    $n, $v = $_ -split \"=\", 2\n    Set-GPRegistryValue -Name \"GPO_BloqueoPantalla\" -Key $cp -ValueName $n -Type String -Value $v\n}"
+        },
+        {
+          "description": "Windows Update automático a las 03:00",
+          "code": "$wu = \"HKLM\\Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU\"\nNew-GPO -Name \"GPO_WindowsUpdate\" | New-GPLink -Target $dn\nSet-GPRegistryValue -Name \"GPO_WindowsUpdate\" -Key $wu -ValueName \"NoAutoUpdate\"         -Type DWord -Value 0\nSet-GPRegistryValue -Name \"GPO_WindowsUpdate\" -Key $wu -ValueName \"AUOptions\"            -Type DWord -Value 4\nSet-GPRegistryValue -Name \"GPO_WindowsUpdate\" -Key $wu -ValueName \"ScheduledInstallDay\"  -Type DWord -Value 0\nSet-GPRegistryValue -Name \"GPO_WindowsUpdate\" -Key $wu -ValueName \"ScheduledInstallTime\" -Type DWord -Value 3"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "usb",
+        "pantalla",
+        "windows-update",
+        "set-gpregistryvalue"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Los valores del salvapantallas son String, no DWord. USB y Windows Update son GPO de equipo (HKLM): para verlas en un cliente hay que mover su cuenta a una OU con esas GPO. Sin cmdlet (solo editor gráfico): asignar unidades de red (Preferencias, Asignaciones de unidades), scripts de inicio/apagado, redirección de carpetas, instalación de software y derechos de usuario."
+    },
+    {
+      "title": "Set-GPPermission: filtrado de seguridad de una GPO",
+      "command": "Set-GPPermission -Name \"GPO_Admin\" -TargetName \"G_Admin\" -TargetType Group -PermissionLevel GpoApply",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Hace que una GPO se aplique solo a un grupo: concede GpoApply al grupo y deja a Usuarios autentificados solo con lectura.",
+      "examples": [
+        {
+          "description": "Bloque B5.5: aplicar GPO_Admin solo a G_Admin (requiere la función N de B5.1)",
+          "code": "Set-GPPermission -Name \"GPO_Admin\" -TargetName \"G_Admin\" -TargetType Group -PermissionLevel GpoApply\nSet-GPPermission -Name \"GPO_Admin\" -TargetName (N \"S-1-5-11\") -TargetType Group -PermissionLevel GpoRead -Replace   # Usuarios autentificados"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "filtrado-de-seguridad",
+        "permisos",
+        "set-gpermission"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "S-1-5-11 es «Usuarios autentificados» en cualquier idioma; sin quitarle GpoApply, la GPO seguiría aplicándose a todos. Por GUI: pestaña Ámbito de la GPO, Filtrado de seguridad."
+    },
+    {
+      "title": "Get-GPOReport y Get-GPInheritance: revisar GPO y vínculos",
+      "command": "Get-GPOReport -Name \"GPO_Admin\" -ReportType Html -Path C:\\GPO_Admin.html",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Lista las GPO, muestra qué GPO están vinculadas a una OU y genera un informe HTML de la configuración de una GPO.",
+      "examples": [
+        {
+          "description": "Listar GPO, vínculos de la OU y exportar el informe",
+          "code": "Get-GPO -All | Format-Table DisplayName, GpoStatus, CreationTime\nGet-GPInheritance -Target \"OU=Admin,$raiz\" | Select-Object -ExpandProperty GpoLinks | Format-Table DisplayName, Enabled, Order\nGet-GPOReport -Name \"GPO_Admin\" -ReportType Html -Path C:\\GPO_Admin.html ; Start-Process C:\\GPO_Admin.html"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "informe",
+        "herencia",
+        "vinculos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Capturas: Administración de directivas de grupo con el árbol del dominio y las GPO vinculadas a cada OU; pestaña Configuración de cada GPO; pantalla del aviso de inicio de sesión."
+    },
+    {
+      "title": "gpupdate /force y gpresult /r: aplicar y verificar las GPO",
+      "command": "gpupdate /force; gpresult /r",
+      "section": "Windows Server",
+      "topic": "GPO",
+      "description": "Fuerza la aplicación inmediata de las directivas y muestra cuáles se aplicaron al equipo y al usuario.",
+      "examples": [
+        {
+          "description": "Aplicar y comprobar",
+          "code": "gpupdate /force\ngpresult /r"
+        },
+        {
+          "description": "Informe HTML del resultado",
+          "code": "gpresult /h C:\\gpresult.html /f\nStart-Process C:\\gpresult.html"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "gpo",
+        "gpresult",
+        "gpupdate",
+        "verificacion"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En «Objetos de directiva de grupo aplicados» deben aparecer GPO_General y la GPO de la OU del usuario. Algunas directivas (fondo, restricciones de usuario) requieren cerrar sesión y volver a entrar."
+    },
+    {
+      "title": "Eva3 B6: unir un cliente al dominio y probar las GPO",
+      "command": "Add-Computer -DomainName Nicolas.Eva3 -Credential NICOLAS\\Administrador -Restart",
+      "section": "Windows Server",
+      "topic": "Comprobación y diagnóstico",
+      "description": "En una VM cliente conectada a la misma Red NAT Eva3: toma IP del DHCP, apunta su DNS al servidor y se une al dominio. Luego se prueban las GPO con un usuario de una OU.",
+      "examples": [
+        {
+          "description": "Bloque B6 completo (PowerShell como administrador en el cliente)",
+          "code": "ipconfig /renew                                      # IP del ámbito DHCP de B4\nSet-DnsClientServerAddress -InterfaceAlias \"Ethernet\" -ServerAddresses 172.168.100.X   # si no tomó la del DHCP\nAdd-Computer -DomainName Nicolas.Eva3 -Credential NICOLAS\\Administrador -Restart"
+        },
+        {
+          "description": "Mover el equipo a una OU para recibir GPO de equipo (en el servidor)",
+          "code": "Get-ADComputer CLIENTE01 | Move-ADObject -TargetPath \"OU=Informatica,$raiz\""
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "cliente",
+        "dominio",
+        "add-computer",
+        "gpo",
+        "dhcp"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Reemplazar la X por la IP del docente. Después de reiniciar, iniciar sesión con un usuario de una OU y ejecutar gpupdate /force y gpresult /r. Si los usuarios tienen -LogonWorkstations, solo podrán entrar desde el equipo permitido. Une al dominio y reinicia: probar solo en la VM."
+    },
+    {
+      "title": "dcdiag /test:dns: diagnóstico del DNS de un controlador de dominio",
+      "command": "dcdiag /test:dns /v",
+      "section": "Windows Server",
+      "topic": "Comprobación y diagnóstico",
+      "description": "Valida el registro y la resolución DNS del DC; útil después de cambiar la IP del servidor o con el plan B de dos adaptadores.",
+      "examples": [
+        {
+          "description": "Mostrar solo lo que falla",
+          "code": "dcdiag /test:dns /v | Select-String -Pattern \"error|failed|fall\""
+        },
+        {
+          "description": "Diagnóstico completo del DC",
+          "code": "dcdiag /v"
+        },
+        {
+          "description": "Revisar registros SRV del dominio",
+          "code": "nslookup -type=SRV _ldap._tcp.dc._msdcs.Nicolas.Eva3"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "dcdiag",
+        "dns",
+        "diagnostico",
+        "active-directory"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Si tras cambiar la IP aparecen errores: ipconfig /registerdns y Restart-Service Netlogon, y borrar el registro A viejo."
+    },
+    {
+      "title": "Get-WindowsFeature: verificar los roles instalados (DNS, AD, DHCP)",
+      "command": "Get-WindowsFeature DNS, AD-Domain-Services, DHCP",
+      "section": "Windows Server",
+      "topic": "Comprobación y diagnóstico",
+      "description": "Muestra si los roles de la evaluación están instalados ([X]) y permite instalarlos o desinstalarlos desde PowerShell.",
+      "examples": [
+        {
+          "description": "Ver el estado de los tres roles",
+          "code": "Get-WindowsFeature DNS, AD-Domain-Services, DHCP | Format-Table Name, InstallState"
+        },
+        {
+          "description": "Solo los roles instalados",
+          "code": "Get-WindowsFeature | Where-Object Installed"
+        },
+        {
+          "description": "Instalar los tres con sus herramientas",
+          "code": "Install-WindowsFeature DNS, AD-Domain-Services, DHCP -IncludeManagementTools"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "roles",
+        "caracteristicas",
+        "verificacion",
+        "install-windowsfeature"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ]
+    },
+    {
+      "title": "Checklist final de la Eva3 en PowerShell",
+      "command": "Get-ADDomain; Get-DnsServerZone; Get-DhcpServerv4Scope; Get-GPO -All",
+      "section": "Windows Server",
+      "topic": "Comprobación y diagnóstico",
+      "description": "Una sola tanda de comprobaciones para repasar antes de entregar: nombre, IP, dominio, zonas DNS, ámbito DHCP, GPO y política de contraseñas.",
+      "examples": [
+        {
+          "description": "Repaso rápido de toda la evaluación",
+          "code": "hostname\nipconfig /all\nGet-WindowsFeature DNS, AD-Domain-Services, DHCP | Format-Table Name, InstallState\nGet-ADDomain | Select-Object DNSRoot, NetBIOSName, DomainMode\nGet-DnsServerZone | Format-Table ZoneName, ZoneType, IsDsIntegrated, IsReverseLookupZone\nGet-DhcpServerInDC\nGet-DhcpServerv4Scope | Format-Table ScopeId, Name, StartRange, EndRange, State\nGet-GPO -All | Format-Table DisplayName, GpoStatus\nGet-ADDefaultDomainPasswordPolicy\ngpresult /r"
+        }
+      ],
+      "tags": [
+        "eva3",
+        "examen",
+        "windows-server",
+        "checklist",
+        "verificacion",
+        "resumen"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Capturas: hostname e ipconfig /all, consola DNS, Usuarios y equipos de AD, consola DHCP y Administración de directivas de grupo."
+    }
+  ]
+}

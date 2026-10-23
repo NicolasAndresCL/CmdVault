@@ -4,6 +4,22 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Sin publicar]
 
+## [1.2.0] — 22 de octubre de 2026
+
+### Agregado
+- **Sección «Windows Server»** en el entorno Windows (`windows-server.json`): 37 comandos y 63 ejemplos de la
+  guía de la Evaluación 3 (Windows Server 2016), con bloques completos listos para copiar y pegar dentro de la
+  VM. Etiquetados con `eva3` y `examen` para encontrarlos al buscar. El entorno Windows pasa a 145 comandos y el
+  total a 1.547 comandos y 4.184 ejemplos.
+  - Eva3 · Imagen base (+7): nombre, IP fija y DNS (A2), reenviadores, ping, Firefox con TLS 1.2, seguridad
+    mejorada de IE, cambio de IP el día de la prueba (A6) y comprobación.
+  - Eva3 · VirtualBox (+4): Red NAT `Eva3`, `modifyvm --nic1 natnetwork`, instantáneas y export/import `.ova`.
+  - Active Directory (+6): variables B0, promoción con `Install-ADDSForest`, bloque masivo de OU, grupos,
+    usuarios y horarios (B3), comandos sueltos, protección de OU y comprobaciones.
+  - DNS (+4), DHCP (+4), GPO (+8: recursos compartidos, GPO general, por departamento, política de
+    contraseñas, USB/pantalla/Windows Update, filtrado de seguridad, informes y `gpresult`) y Comprobación y
+    diagnóstico (+4: cliente al dominio, `dcdiag`, roles y checklist final).
+
 ### Corregido
 - `lint-iac.sh` reintenta hasta 3 veces la descarga de colecciones de Ansible Galaxy: un corte TLS de Galaxy
   dejó en rojo un build de Jenkins sin cambios en el código.

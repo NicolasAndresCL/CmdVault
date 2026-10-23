@@ -1,17 +1,17 @@
 # CmdVault — biblioteca personal para dominar la terminal: DevOps · SRE · Fullstack
 
 [![CI](https://github.com/NicolasAndresCL/CmdVault/actions/workflows/ci.yml/badge.svg)](https://github.com/NicolasAndresCL/CmdVault/actions/workflows/ci.yml)
-![Versión](https://img.shields.io/badge/versi%C3%B3n-1.1.0-blue)
+![Versión](https://img.shields.io/badge/versi%C3%B3n-1.2.0-blue)
 ![Python](https://img.shields.io/badge/python-3.14-3776AB)
 
 | | |
 |---|---|
-| **Versión** | 1.1.0 |
-| **Fecha** | 19 de octubre de 2026 |
+| **Versión** | 1.2.0 |
+| **Fecha** | 22 de octubre de 2026 |
 | **Autor** | [Nicolás Andrés Cano Leal](#autor) |
 
 Biblioteca de consulta para un roadmap **DevOps → SRE → Arquitecto Fullstack (IA, Cloud, Software)**:
-**1.510 comandos y 4.121 ejemplos** sobre **18 entornos**, pensados para usar la terminal en todo, en
+**1.547 comandos y 4.184 ejemplos** sobre **18 entornos**, pensados para usar la terminal en todo, en
 desarrollo y en producción (sitios web, servidores y VPS). Cada comando trae descripción, sintaxis, ejemplos
 de uso común, notas con trampas reales (Ubuntu vs AlmaLinux, PowerShell 5.1 vs 7, Helm 4, `use_lockfile` de
 Terraform, el volumen de Postgres 18…), nivel, tags y la ruta del roadmap a la que pertenece. Incluye además
@@ -24,7 +24,7 @@ con Ansible** y se **verifica con Jenkins** y GitHub Actions.
 |---|---|---|
 | Linux | Común · Ubuntu · AlmaLinux | 146 |
 | Python | Python · Django · DRF · FastAPI | 115 |
-| Windows | CMD · PowerShell | 108 |
+| Windows | CMD · PowerShell · Windows Server | 145 |
 | Jenkins | Pipeline · CLI · Docker · Administración | 66 |
 | Docker | Imágenes · Contenedores · Compose · Redes y volúmenes · Build y registro · Sistema y diagnóstico | 122 |
 | Kubernetes | kubectl básico · Workloads · Redes y servicios · Configuración y secretos · Troubleshooting · Helm · Clúster y contexto | 116 |
@@ -40,7 +40,7 @@ con Ansible** y se **verifica con Jenkins** y GitHub Actions.
 | Claude | Claude Code (sesiones, automatización, permisos, MCP/plugins/agentes, dentro de la sesión) · API con curl · CLI ant · SDK Python | 63 |
 | Git y GitHub | Configuración · Día a día · Ramas y merge · Rebase e historial · Remotos · Deshacer y recuperar · Inspección y búsqueda · Avanzado · GitHub CLI (gh) | 59 |
 | Terminal | Atajos y shell · Búsqueda moderna · JSON y YAML · tmux · Vim y nano · Scripting robusto · Productividad | 41 |
-| **Total** | | **1.510** |
+| **Total** | | **1.547** |
 
 - **Frontend**: NiceGUI 3 (puerto 8090) con tres temas: **Dark**, **Luffy · Quinta Marcha** y
   **Eren · Titán Fundador**.
@@ -93,7 +93,7 @@ CmdVault/
 │   │       ├── loader.py     #   lectura y fusión de JSON + skills (puro, sin BD)
 │   │       ├── sync.py       #   sincronización idempotente con la BD
 │   │       ├── validate.py   #   validador para CI: contrato + títulos duplicados
-│   │       ├── data/         #   69 JSON con los 1.510 comandos
+│   │       ├── data/         #   70 JSON con los 1.547 comandos
 │   │       └── skills/       #   12 SKILL.md de ingeniería
 │   └── tests/                # pytest: lógica pura, seed, API (TestClient); SQLite o Postgres
 └── frontend/
@@ -190,7 +190,7 @@ cp group_vars/cmdvault/vault.yml.example group_vars/cmdvault/vault.yml   # poner
 ansible-vault encrypt group_vars/cmdvault/vault.yml
 ansible-galaxy collection install -r requirements.yml -p ./collections
 ansible-playbook playbooks/site.yml --ask-vault-pass                        # todo
-ansible-playbook playbooks/site.yml --tags deploy --ask-vault-pass -e cmdvault_version=v1.1.0  # solo redeploy
+ansible-playbook playbooks/site.yml --tags deploy --ask-vault-pass -e cmdvault_version=v1.2.0  # solo redeploy
 ```
 
 | Rol | Qué hace (Ubuntu y AlmaLinux) |
@@ -226,7 +226,7 @@ el 80): se aplica `compose.traefik.yml` encima del compose base.
 
 ```bash
 sudo git clone https://github.com/NicolasAndresCL/CmdVault.git /opt/cmdvault && cd /opt/cmdvault
-sudo git checkout v1.1.0
+sudo git checkout v1.2.0
 docker network ls                                  # red donde vive Traefik → TRAEFIK_NETWORK
 openssl passwd -apr1                               # hash para CMDVAULT_BASIC_AUTH
 sudo cp .env.example .env && sudo chmod 600 .env   # secretos + las variables del override (ver tabla)
@@ -396,4 +396,4 @@ Backend Engineer → SRE | Python · Django · Kubernetes · Terraform · CI/CD
 - Portafolio: [nicolasandrescl.github.io](https://nicolasandrescl.github.io/)
 - Correo: [nicolas.cano.leal@gmail.com](mailto:nicolas.cano.leal@gmail.com)
 
-CmdVault v1.1.0 · 19 de octubre de 2026
+CmdVault v1.2.0 · 22 de octubre de 2026
