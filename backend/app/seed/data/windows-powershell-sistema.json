@@ -1027,6 +1027,60 @@
         "Cloud"
       ],
       "notes": "--unregister borra el disco virtual sin pedir confirmación: exporta antes."
+    },
+    {
+      "title": "Validar la sintaxis de un script PowerShell sin ejecutarlo",
+      "command": "$e=$null; [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path .\\script.ps1), [ref]$null, [ref]$e); $e | % { \"L$($_.Extent.StartLineNumber): $($_.Message)\" }",
+      "section": "PowerShell",
+      "topic": "Scripting",
+      "description": "Usa el parser oficial de PowerShell para listar los errores de sintaxis de un `.ps1` tal como lo leerá el intérprete, sin correr nada.",
+      "examples": [
+        {
+          "description": "Revisar si el archivo tiene BOM UTF-8 (debe dar 239 187 191)",
+          "code": "[IO.File]::ReadAllBytes('.\\script.ps1')[0..2]"
+        }
+      ],
+      "tags": [
+        "powershell",
+        "parser",
+        "encoding",
+        "bom"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Windows PowerShell 5.1 lee un `.ps1` SIN BOM como cp1252: un `—` en UTF-8 se vuelve `”` y PowerShell lo toma como comillas → errores que el editor no muestra. Solución: guardar en UTF-8 con BOM."
+    },
+    {
+      "title": "Ocupar un puerto TCP a propósito para probar un script",
+      "command": "$l = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 9010); $l.Start()",
+      "section": "PowerShell",
+      "topic": "Redes",
+      "description": "Abre un listener TCP en un puerto de localhost desde la propia sesión de PowerShell, para simular que otro programa lo tiene tomado y probar cómo reacciona un script.",
+      "examples": [
+        {
+          "description": "Liberarlo al terminar",
+          "code": "$l.Stop()"
+        },
+        {
+          "description": "Ver quién ocupa un puerto",
+          "code": "Get-NetTCPConnection -LocalPort 9010 -State Listen | % { Get-Process -Id $_.OwningProcess }"
+        }
+      ],
+      "tags": [
+        "powershell",
+        "tcp",
+        "puertos",
+        "pruebas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Usar `try { ... } finally { $l.Stop() }` para no dejar el puerto tomado si la prueba falla."
     }
   ]
 }

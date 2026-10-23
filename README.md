@@ -11,7 +11,7 @@
 | **Autor** | [Nicolás Andrés Cano Leal](#autor) |
 
 Biblioteca de consulta para un roadmap **DevOps → SRE → Arquitecto Fullstack (IA, Cloud, Software)**:
-**1.547 comandos y 4.184 ejemplos** sobre **18 entornos**, pensados para usar la terminal en todo, en
+**1.566 comandos y 4.234 ejemplos** sobre **18 entornos**, pensados para usar la terminal en todo, en
 desarrollo y en producción (sitios web, servidores y VPS). Cada comando trae descripción, sintaxis, ejemplos
 de uso común, notas con trampas reales (Ubuntu vs AlmaLinux, PowerShell 5.1 vs 7, Helm 4, `use_lockfile` de
 Terraform, el volumen de Postgres 18…), nivel, tags y la ruta del roadmap a la que pertenece. Incluye además
@@ -22,25 +22,25 @@ con Ansible** y se **verifica con Jenkins** y GitHub Actions.
 
 | Entorno | Secciones | Comandos |
 |---|---|---|
-| Linux | Común · Ubuntu · AlmaLinux | 146 |
-| Python | Python · Django · DRF · FastAPI | 115 |
-| Windows | CMD · PowerShell · Windows Server | 145 |
+| Linux | Común · Ubuntu · AlmaLinux | 148 |
+| Python | Python · Django · DRF · FastAPI | 119 |
+| Windows | CMD · PowerShell · Windows Server | 147 |
 | Jenkins | Pipeline · CLI · Docker · Administración | 66 |
-| Docker | Imágenes · Contenedores · Compose · Redes y volúmenes · Build y registro · Sistema y diagnóstico | 122 |
+| Docker | Imágenes · Contenedores · Compose · Redes y volúmenes · Build y registro · Sistema y diagnóstico | 125 |
 | Kubernetes | kubectl básico · Workloads · Redes y servicios · Configuración y secretos · Troubleshooting · Helm · Clúster y contexto | 116 |
 | Terraform | Flujo básico · Estado · Módulos y workspaces · HCL · Calidad y CI | 79 |
 | Ansible | Ad-hoc · Playbooks · Inventario · Roles y Galaxy · Vault y secretos · Calidad y depuración | 78 |
-| MySQL | Cliente y conexión · Consultas y esquema · Usuarios y permisos · Backup y restauración · Administración y rendimiento · Docker y producción | 71 |
+| MySQL | Cliente y conexión · Consultas y esquema · Usuarios y permisos · Backup y restauración · Administración y rendimiento · Docker y producción | 72 |
 | PostgreSQL | psql y conexión · Consultas y esquema · Roles y permisos · Backup y restauración · Rendimiento y diagnóstico · Administración y producción | 76 |
 | MongoDB | mongosh y conexión · CRUD y consultas · Índices y agregación · Usuarios y seguridad · Backup y herramientas · Administración y producción | 56 |
 | AWS | Configuración e identidad · Cómputo (EC2) · Almacenamiento (S3) · Redes y DNS · Bases de datos y contenedores · Serverless y mensajería · Monitoreo y costos | 90 |
 | Cloud | Google Cloud (gcloud) · Azure (az) · DigitalOcean (doctl) · Cloudflare (wrangler) · Hetzner (hcloud) | 73 |
 | Servidores web | Nginx · Apache · Caddy · TLS y certificados · Pruebas HTTP y diagnóstico | 75 |
-| VPS y producción | Primer acceso y hardening · Usuarios y SSH · Despliegue · Servicios y procesos · Backups · Monitoreo y logs · Mantenimiento | 76 |
+| VPS y producción | Primer acceso y hardening · Usuarios y SSH · Despliegue · Servicios y procesos · Backups · Monitoreo y logs · Mantenimiento | 78 |
 | Claude | Claude Code (sesiones, automatización, permisos, MCP/plugins/agentes, dentro de la sesión) · API con curl · CLI ant · SDK Python | 63 |
-| Git y GitHub | Configuración · Día a día · Ramas y merge · Rebase e historial · Remotos · Deshacer y recuperar · Inspección y búsqueda · Avanzado · GitHub CLI (gh) | 59 |
+| Git y GitHub | Configuración · Día a día · Ramas y merge · Rebase e historial · Remotos · Deshacer y recuperar · Inspección y búsqueda · Avanzado · GitHub CLI (gh) | 64 |
 | Terminal | Atajos y shell · Búsqueda moderna · JSON y YAML · tmux · Vim y nano · Scripting robusto · Productividad | 41 |
-| **Total** | | **1.547** |
+| **Total** | | **1.566** |
 
 - **Frontend**: NiceGUI 3 (puerto 8090) con tres temas: **Dark**, **Luffy · Quinta Marcha** y
   **Eren · Titán Fundador**.
@@ -93,7 +93,7 @@ CmdVault/
 │   │       ├── loader.py     #   lectura y fusión de JSON + skills (puro, sin BD)
 │   │       ├── sync.py       #   sincronización idempotente con la BD
 │   │       ├── validate.py   #   validador para CI: contrato + títulos duplicados
-│   │       ├── data/         #   70 JSON con los 1.547 comandos
+│   │       ├── data/         #   70 JSON con los 1.566 comandos
 │   │       └── skills/       #   12 SKILL.md de ingeniería
 │   └── tests/                # pytest: lógica pura, seed, API (TestClient); SQLite o Postgres
 └── frontend/

@@ -1363,6 +1363,41 @@
         "DevOps",
         "SRE"
       ]
+    },
+    {
+      "title": "Extraer la sección de una versión del CHANGELOG con awk",
+      "command": "awk -v v=\"2.0.0\" 'index($0, \"## [\" v \"]\") == 1 {f=1; next} /^## \\[/ {f=0} f' CHANGELOG.md > notas.md",
+      "section": "Común",
+      "topic": "Procesamiento de texto",
+      "description": "Imprime solo las líneas entre `## [X.Y.Z]` y el siguiente `## [`, que es el cuerpo de esa versión en un CHANGELOG con formato Keep a Changelog. Sirve para pasar las notas a `gh release create --notes-file`.",
+      "examples": [
+        {
+          "description": "Extraer la sección de la versión 2.0.0",
+          "code": "awk -v v=\"2.0.0\" 'index($0, \"## [\" v \"]\") == 1 {f=1; next} /^## \\[/ {f=0} f' CHANGELOG.md > notas.md"
+        },
+        {
+          "description": "Desde el tag del workflow (sin la v)",
+          "code": "v=\"${GITHUB_REF_NAME#v}\"; awk -v v=\"$v\" 'index($0, \"## [\" v \"]\") == 1 {f=1; next} /^## \\[/ {f=0} f' CHANGELOG.md > notas.md"
+        },
+        {
+          "description": "Fallar si la sección no existe",
+          "code": "test -s notas.md || { echo \"CHANGELOG sin sección\"; exit 1; }"
+        }
+      ],
+      "tags": [
+        "awk",
+        "changelog",
+        "release",
+        "keep-a-changelog",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE",
+        "Software"
+      ],
+      "notes": "Se usa `index(...) == 1` (texto literal) y no una regex `$0 ~ \"## \\[\" v`, porque en una regex los puntos de `1.2.0` calzan con cualquier carácter. Las líneas de enlaces del final (`[1.0.0]: https://…`) no empiezan con `## [`, así que entran en las notas de la última sección, pero no se ven porque son definiciones de enlace de Markdown."
     }
   ]
 }

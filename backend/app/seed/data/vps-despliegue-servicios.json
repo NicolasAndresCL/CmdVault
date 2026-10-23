@@ -696,6 +696,75 @@
         "Fullstack"
       ],
       "notes": "OOMKilled true significa que el contenedor excedió la memoria y fue muerto: sube el límite o la RAM. Usa restart: unless-stopped en producción para que los contenedores vuelvan tras un reinicio del servidor."
+    },
+    {
+      "title": "Publicar un servicio en un Traefik existente con HTTPS y basic auth",
+      "command": "docker compose -f docker-compose.yml -f compose.traefik.yml up -d --build --wait",
+      "section": "Despliegue",
+      "topic": "Traefik",
+      "description": "Etiquetas de un servicio Compose para que el Traefik ya instalado lo publique por HTTPS con el resolver ACME existente y exija usuario y contraseña. El servicio se une a la red de Traefik (externa) y no publica puertos.",
+      "examples": [
+        {
+          "description": "Hash para el .env, ENTRE COMILLAS SIMPLES",
+          "code": "echo \"CMDVAULT_BASIC_AUTH='<usuario>:$(openssl passwd -apr1)'\""
+        },
+        {
+          "description": "Red donde vive Traefik",
+          "code": "docker inspect traefik -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'"
+        },
+        {
+          "description": "Probar sin y con credenciales",
+          "code": "curl -s -o /dev/null -w '%{http_code}\\n' https://app.example/ ; curl -s -u <usuario> -o /dev/null -w '%{http_code}\\n' https://app.example/"
+        }
+      ],
+      "tags": [
+        "traefik",
+        "basic-auth",
+        "labels",
+        "letsencrypt",
+        "docker"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Etiquetas clave: `traefik.enable=true`, `traefik.docker.network=<red>` (obligatoria si el contenedor está en dos redes), `routers.X.rule=Host(...)`, `entrypoints=websecure`, `tls.certresolver=le`, `middlewares=X-auth`, `middlewares.X-auth.basicauth.users=${VAR}`, `services.X.loadbalancer.server.port`. Sin comillas simples en el .env, Compose interpola el `$apr1$...`. Probado en local con Traefik v3.6 + `curl --resolve -k`: 401 sin credenciales, 200 con ellas, 301 de HTTP a HTTPS y 404 para otros hosts. Confirmado en un VPS el 2026-10-20 (Traefik 3.7.13): 401 / 200 / 301 y certificado Let's Encrypt emitido al primer arranque. El ejemplo del hash con `echo` lo muestra en pantalla: preferir «Generar el hash de basic auth sin que pase por pantalla y verificarlo sin imprimirlo»."
+    },
+    {
+      "title": "Generar el hash de basic auth sin que pase por pantalla y verificarlo sin imprimirlo",
+      "command": "H=$(openssl passwd -apr1) && echo ${#H}",
+      "section": "Despliegue",
+      "topic": "Traefik",
+      "description": "Guarda el hash `apr1` en una variable de la shell (no queda en pantalla ni en el historial), comprueba su largo y lo vuelca al `.env` con un heredoc. Después se verifica el formato con `grep -c`, que cuenta sin imprimir la línea.",
+      "examples": [
+        {
+          "description": "Escribir el .env como root con secretos aleatorios y el hash",
+          "code": "sudo tee .env >/dev/null <<EOF\nAPI_KEY=$(openssl rand -hex 24)\nAPP_BASIC_AUTH='<usuario>:$H'\nEOF"
+        },
+        {
+          "description": "Proteger y limpiar",
+          "code": "sudo chmod 600 .env && unset H"
+        },
+        {
+          "description": "Comprobar sin mostrar el hash (debe dar 1)",
+          "code": "sudo grep -c -F \"APP_BASIC_AUTH='<usuario>:\\$apr1\\$\" .env"
+        }
+      ],
+      "tags": [
+        "openssl",
+        "basic-auth",
+        "traefik",
+        "secretos",
+        "heredoc",
+        "env"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`echo ${#H}` debe dar 37 (`$apr1$` + sal de 8 + `$` + hash de 22); `0` = las contraseñas no coincidieron. Heredoc con `EOF` SIN comillas para que bash expanda `$(...)` y `$H`; las comillas simples sí llegan al archivo y evitan que Compose interprete los `$` del hash. `-F` en grep porque `$` es ancla en regex; `\\$` porque va entre comillas dobles. La contraseña debe ser NUEVA, nunca la de `sudo`: `apr1` es MD5, se rompe offline y el hash queda visible en `docker inspect`. `>/dev/null` evita que `tee` repita los secretos en pantalla."
     }
   ]
 }

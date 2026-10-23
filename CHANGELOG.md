@@ -10,7 +10,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - **Sección «Windows Server»** en el entorno Windows (`windows-server.json`): 37 comandos y 63 ejemplos de la
   guía de la Evaluación 3 (Windows Server 2016), con bloques completos listos para copiar y pegar dentro de la
   VM. Etiquetados con `eva3` y `examen` para encontrarlos al buscar. El entorno Windows pasa a 145 comandos y el
-  total a 1.547 comandos y 4.184 ejemplos.
+  total a 1.547 comandos y 4.184 ejemplos (antes de la bandeja, abajo).
   - Eva3 · Imagen base (+7): nombre, IP fija y DNS (A2), reenviadores, ping, Firefox con TLS 1.2, seguridad
     mejorada de IE, cambio de IP el día de la prueba (A6) y comprobación.
   - Eva3 · VirtualBox (+4): Red NAT `Eva3`, `modifyvm --nic1 natnetwork`, instantáneas y export/import `.ova`.
@@ -19,7 +19,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   - DNS (+4), DHCP (+4), GPO (+8: recursos compartidos, GPO general, por departamento, política de
     contraseñas, USB/pantalla/Windows Update, filtrado de seguridad, informes y `gpresult`) y Comprobación y
     diagnóstico (+4: cliente al dominio, `dcdiag`, roles y checklist final).
-
+- **Segunda importación de la bandeja** (24 entradas de `all_in_django`, `LiveOps_Core`, `vps`,
+  `ConsultaBasesDatos` y del propio despliegue de CmdVault): 19 comandos nuevos y 5 existentes enriquecidos —
+  total **1.566 comandos y 4.234 ejemplos**.
+  - Git (+5): clonar un tag para producción, clon `--no-local` para reproducir el CI, mover commits de `main`
+    a una rama (GitHub Flow), protección de rama y alertas de Dependabot con `gh api`.
+  - Python (+4): `pytest -m "not …" --collect-only`, plugins con `-p`, `playwright install chromium` y
+    `pip list --format=freeze` para fijar versiones.
+  - Docker (+3): `ports: !reset []` en un override, versión real de una imagen `:latest` y memoria `anon` vs
+    caché de archivos en el cgroup.
+  - Linux (+2): sección de una versión del CHANGELOG con `awk` y `read -rsp` para secretos sin eco.
+  - VPS (+2): servicio detrás de un Traefik existente con HTTPS y basic auth, y hash `apr1` sin pasar por
+    pantalla.
+  - Windows (+2): validar la sintaxis de un `.ps1` con el parser y ocupar un puerto TCP para pruebas.
+  - MySQL (+1): importar un `.sql` a MySQL en Docker desde PowerShell 5.1.
+  - Enriquecidos: «Publicar una release» (`--verify-tag --latest=false`), «Ver los runs de GitHub Actions»
+    (etiquetas publicadas en GHCR), «Llamar a la API de GitHub» (ruta sin `/` en Git Bash), «Etiquetar una
+    versión» (`git tag -n`) y «Terminar procesos con taskkill» (`/T` y el `python.exe` lanzador del venv).
 - **`.github/workflows/release.yml`**: al pushear un tag `vX.Y.Z` verifica que coincide con
   `backend/pyproject.toml` y con una sección del CHANGELOG, y publica la GitHub Release con esas notas.
 
