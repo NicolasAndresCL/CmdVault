@@ -706,6 +706,36 @@
         "DevOps",
         "SRE"
       ]
+    },
+    {
+      "title": "Leer un secreto sin eco ni historial y comprobar su largo",
+      "command": "read -rsp 'PASSWORD_INICIAL: ' P; echo",
+      "section": "Común",
+      "topic": "Secretos en la terminal",
+      "description": "Guarda en una variable lo que se tipea, sin mostrarlo ni dejarlo en el historial, para usarlo luego en un heredoc y borrarlo con `unset`.",
+      "examples": [
+        {
+          "description": "Ver solo el largo, no el valor",
+          "code": "echo ${#P}"
+        },
+        {
+          "description": "Usarla y borrarla",
+          "code": "sudo tee .env >/dev/null <<EOF\nPASSWORD_INICIAL='$P'\nEOF\nunset P"
+        }
+      ],
+      "tags": [
+        "bash",
+        "read",
+        "secretos",
+        "historial",
+        "env"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`-s` sin eco, `-r` no interpreta `\\`, `-p` muestra el aviso; el `echo` final solo da el salto de línea que `-s` se come. En el `.env` va entre comillas simples para que Compose no interprete un `$`; por eso el secreto no puede llevar `'`. Si `sudo` pide contraseña en medio del heredoc no pasa nada: lee del tty, el heredoc va por stdin."
     }
   ]
 }

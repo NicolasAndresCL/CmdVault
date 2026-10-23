@@ -713,6 +713,10 @@
         {
           "description": "Terminar procesos que no responden",
           "code": "taskkill /fi \"status eq not responding\" /f"
+        },
+        {
+          "description": "Matar un proceso y todo su árbol de hijos (p. ej. un uvicorn lanzado desde un venv)",
+          "code": "taskkill /PID <pid> /T /F"
         }
       ],
       "tags": [
@@ -724,7 +728,8 @@
         "DevOps",
         "SRE",
         "Software"
-      ]
+      ],
+      "notes": "En Windows el `python.exe` de un venv es un LANZADOR que arranca el Python real como hijo: `Stop-Process -Id` o `terminate()` sobre él dejan vivo al hijo con el puerto y los archivos tomados. `/T` = árbol, `/F` = forzado."
     },
     {
       "title": "Gestionar servicios con sc",

@@ -1026,6 +1026,70 @@
         "SRE"
       ],
       "notes": "import:workflow SE SALTA EN SILENCIO los archivos que no puede importar y reporta éxito igual: comparar cuántos archivos hay contra cuántos lista list:workflow (formato id|nombre). --entrypoint sh -c '...' permite encadenar dos comandos en el mismo contenedor. En Git Bash, anteponer MSYS_NO_PATHCONV=1 para que no reescriba /wf."
+    },
+    {
+      "title": "Ver la versión real de una imagen :latest que está corriendo",
+      "command": "docker exec traefik traefik version",
+      "section": "Contenedores",
+      "topic": "Versiones",
+      "description": "Una etiqueta `latest` no dice qué versión corre: depende de cuándo se descargó la imagen. Preguntarle al binario dentro del contenedor da el número real, el que conviene fijar en el compose.",
+      "examples": [
+        {
+          "description": "Qué etiqueta declara el contenedor",
+          "code": "docker inspect traefik -f '{{.Config.Image}}'"
+        },
+        {
+          "description": "Digest exacto, para fijarlo por hash",
+          "code": "docker image inspect traefik:latest -f '{{index .RepoDigests 0}}'"
+        },
+        {
+          "description": "Otros binarios",
+          "code": "docker exec redis redis-server --version"
+        }
+      ],
+      "tags": [
+        "docker",
+        "exec",
+        "latest",
+        "versiones",
+        "traefik"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "En un VPS, `traefik:latest` resultó ser 3.7.13 (2026-10-20) y la prueba local se había hecho con 3.6: dentro de una major las etiquetas son compatibles, entre v2 y v3 no. Compose también cambió de numeración (v2 → v5 a fines de 2025): `docker compose version` → `v5.6.0` sigue soportando `!reset` y `--wait`."
+    },
+    {
+      "title": "Ver la memoria real de un contenedor: anónima vs caché de archivos",
+      "command": "sudo docker exec <contenedor> grep -E '^(anon|file|active_file|inactive_file) ' /sys/fs/cgroup/memory.stat",
+      "section": "Contenedores",
+      "topic": "Memoria y límites",
+      "description": "Lee la contabilidad del cgroup v2 del contenedor para separar la memoria del proceso (`anon`) de la caché de archivos (`file`), que el kernel recupera antes de llegar a un OOM. Complementa «Uso de recursos en vivo».",
+      "examples": [
+        {
+          "description": "Foto única de uso y límite de todos",
+          "code": "sudo docker stats --no-stream --format 'table {{.Name}}\\t{{.MemUsage}}'"
+        },
+        {
+          "description": "Núcleos visibles (las arenas de malloc crecen con ellos)",
+          "code": "nproc"
+        }
+      ],
+      "tags": [
+        "docker",
+        "memoria",
+        "cgroup",
+        "oom",
+        "diagnóstico"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`docker stats` calcula uso = total − `inactive_file`, así que incluye `active_file`: la caché del venv recién leído (numpy, matplotlib). En un VPS la API marcaba 258,6/320 MiB, pero `anon` era 110,6 MiB y `active_file` 144,3 MiB: el margen real era ~210 MiB. Valores en bytes. Solo cgroup v2 (AlmaLinux 9, Docker Desktop); en v1 el archivo y los nombres cambian."
     }
   ]
 }

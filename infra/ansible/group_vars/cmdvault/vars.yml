@@ -1,7 +1,7 @@
 ---
 # Variables no secretas. Los secretos van en vault.yml (cifrado con ansible-vault, no versionado).
 cmdvault_repo: https://github.com/NicolasAndresCL/CmdVault.git
-cmdvault_version: main            # rama, tag (v1.1.0) o commit
+cmdvault_version: main            # rama, tag (v1.2.0) o commit
 cmdvault_dir: /opt/cmdvault
 cmdvault_frontend_port: 80        # UI publicada en el puerto 80 del host
 cmdvault_default_theme: eren

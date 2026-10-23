@@ -704,6 +704,37 @@
         "DevOps"
       ],
       "notes": "Si el proceso muere sin mensaje, revisa el OOM killer: sudo dmesg -T | grep -i 'killed process'. En VPS con poca RAM es una causa común: baja innodb_buffer_pool_size o agrega swap."
+    },
+    {
+      "title": "Importar un .sql a MySQL en Docker desde PowerShell (docker cp + `<` dentro del contenedor)",
+      "command": "docker cp script.sql <contenedor>:/tmp/script.sql\ndocker exec <contenedor> sh -c 'mysql -uroot -p$MYSQL_ROOT_PASSWORD < /tmp/script.sql'",
+      "section": "Docker y producción",
+      "topic": "Contenedor",
+      "description": "Carga un script SQL en un MySQL que corre en un contenedor, desde Windows PowerShell 5.1. Se copia el archivo al contenedor y la redirección `<` se hace en el shell del contenedor, no en el del host.",
+      "examples": [
+        {
+          "description": "MariaDB",
+          "code": "docker exec <contenedor> sh -c 'mariadb -uroot -p$MARIADB_ROOT_PASSWORD < /tmp/script.sql'"
+        },
+        {
+          "description": "Consulta con comillas dobles desde PS 5.1",
+          "code": "docker exec <contenedor> sh -c 'mysql -uroot -p$MYSQL_ROOT_PASSWORD -e \\\"SELECT 1\\\"'"
+        }
+      ],
+      "tags": [
+        "docker",
+        "docker-cp",
+        "mysql",
+        "import",
+        "powershell",
+        "comillas"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "En PowerShell no existe el operador `<`, así que `docker exec -i ... < script.sql` no funciona. Tampoco funciona `-e \"source /tmp/script.sql\"` dentro de comillas simples: PowerShell 5.1 elimina las comillas dobles internas al pasar argumentos a un programa externo, y MySQL recibe solo `source` (ERROR 1064 near 'source'). Si hacen falta comillas dobles, se escriben como `\\\"`. Pasar el archivo con `Get-Content | docker exec -i` también es arriesgado, porque PS 5.1 puede recodificar los acentos."
     }
   ]
 }

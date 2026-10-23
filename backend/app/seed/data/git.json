@@ -916,6 +916,18 @@
         {
           "description": "Borrar un tag local y remoto",
           "code": "git tag -d v1.0.1-rc\ngit push origin :refs/tags/v1.0.1-rc"
+        },
+        {
+          "description": "Traer los tags del remoto y listarlos con su mensaje",
+          "code": "git fetch --tags && git tag -n"
+        },
+        {
+          "description": "Qué commit apunta un tag",
+          "code": "git log --oneline -1 v1.0.0"
+        },
+        {
+          "description": "Cuántos commits hay sin versionar desde el último tag",
+          "code": "git log --oneline v1.0.0..HEAD | wc -l"
         }
       ],
       "tags": [
@@ -927,7 +939,8 @@
       "roadmap": [
         "DevOps",
         "Software"
-      ]
+      ],
+      "notes": "Un tag ligero (`git tag v1.0.0` sin `-a`) no tiene mensaje: `git tag -n` le muestra el asunto del commit. La norma pide tags anotados."
     },
     {
       "title": "Descartar cambios de un archivo",
@@ -1514,6 +1527,14 @@
         {
           "description": "Resultado por job y log de lo que falló",
           "code": "gh run view <id> --json jobs --jq '.jobs[] | .name + \": \" + .conclusion'\ngh run view <id> --log-failed"
+        },
+        {
+          "description": "Qué imágenes publicó el último run de un workflow (tags en el registry)",
+          "code": "id=$(gh run list --workflow docker-publish.yml --limit 1 --json databaseId --jq '.[0].databaseId'); gh run view $id --log | grep -E \"ghcr.io/.*:\""
+        },
+        {
+          "description": "Solo los pasos que fallaron",
+          "code": "gh run view <id> --log-failed"
         }
       ],
       "tags": [
@@ -1525,7 +1546,8 @@
       "roadmap": [
         "DevOps",
         "SRE"
-      ]
+      ],
+      "notes": "Buscar en el log del último run es la fuente de verdad de qué tags existen en el registry, más fiable que la documentación propia. Así se descubrió que `docker/metadata-action` con `type=semver` publica sin la `v` (`:1.0.0`, no `:v1.0.0`) y que añade `:latest` por defecto (se apaga con `flavor: latest=false`). Listar las versiones del paquete por la API requiere el scope `read:packages`, que el token normal de `gh` no trae."
     },
     {
       "title": "Relanzar o disparar workflows",
@@ -1597,6 +1619,18 @@
         {
           "description": "Con notas propias y un artefacto",
           "code": "gh release create v1.0.1 --title \"CmdVault 1.0.1\" --notes-file CHANGELOG.md dist/cmdvault-1.0.1.tar.gz"
+        },
+        {
+          "description": "Release de un tag viejo con notas desde archivo, sin quitarle «Latest» a la actual",
+          "code": "gh release create v1.0.0 --verify-tag --title v1.0.0 --notes-file notas.md --latest=false"
+        },
+        {
+          "description": "Pre-release (sufijo -rc/-beta)",
+          "code": "gh release create v2.1.0-rc.1 --verify-tag --prerelease --notes-file notas.md"
+        },
+        {
+          "description": "Confirmar que salió con sus notas",
+          "code": "gh release view v2.0.0"
         }
       ],
       "tags": [
@@ -1607,7 +1641,8 @@
       "roadmap": [
         "DevOps",
         "Software"
-      ]
+      ],
+      "notes": "Sin `--verify-tag`, si el tag no existe en el remoto `gh` crea uno ligero por su cuenta. Sin `--latest=false`, la release vieja queda como «Latest» por ser la más reciente en crearse. Un workflow disparado por tag corre el archivo que está en el árbol de ese tag, así que los tags anteriores a `release.yml` no generan release solos."
     },
     {
       "title": "Secretos de Actions desde la terminal",
@@ -1654,6 +1689,18 @@
         {
           "description": "Paginar todos tus repos",
           "code": "gh api --paginate user/repos --jq '.[].full_name'"
+        },
+        {
+          "description": "En Git Bash la ruta va SIN barra inicial (versiones de un paquete GHCR)",
+          "code": "gh api users/<owner>/packages/container/<paquete>/versions --jq '.[].metadata.container.tags'"
+        },
+        {
+          "description": "Forma que falla en Git Bash (da `invalid API endpoint: \"C:/Program Files/Git/users/...\"`)",
+          "code": "gh api /users/<owner>/packages/..."
+        },
+        {
+          "description": "Desactivar la conversión de rutas para un comando",
+          "code": "MSYS_NO_PATHCONV=1 gh api /users/<owner>/packages/..."
         }
       ],
       "tags": [
@@ -1664,7 +1711,8 @@
       "roadmap": [
         "DevOps",
         "Software"
-      ]
+      ],
+      "notes": "En Git Bash (MSYS), un argumento que empieza con `/` se reescribe como ruta de Windows y `gh api` recibe `C:/Program Files/Git/users/...`. Los endpoints de packages devuelven 403 sin el scope `read:packages`; se agrega con `gh auth refresh -s read:packages`."
     },
     {
       "title": "Comprobar que un repo remoto existe y está vacío antes del primer push",
@@ -1725,6 +1773,142 @@
         "DevOps"
       ],
       "notes": "El color va en hex sin '#'. Si ya existe, falla; usar --force para actualizarla."
+    },
+    {
+      "title": "Clonar exactamente una versión publicada (tag) para producción",
+      "command": "sudo git clone --branch v1.4.0 https://github.com/<usuario>/<repo>.git /opt/<repo>",
+      "section": "Avanzado",
+      "topic": "Despliegue por tag",
+      "description": "Clona el repositorio y deja el árbol directamente en un tag (detached HEAD), sin pasar por la rama principal. Producción sigue una versión fija, no una rama que se mueve.",
+      "examples": [
+        {
+          "description": "Confirmar en qué commit quedó (sudo evita `dubious ownership` si el repo es de root)",
+          "code": "cd /opt/<repo> && sudo git log --oneline -1"
+        },
+        {
+          "description": "Actualizar a otra versión",
+          "code": "sudo git fetch --tags && sudo git checkout v1.5.0"
+        }
+      ],
+      "tags": [
+        "git",
+        "clone",
+        "tag",
+        "despliegue",
+        "producción"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Con un tag **anotado** aparece `warning: refs/tags/v1.4.0 <hash> is not a commit!` seguido de `Note: switching to '<commit>'`: es inofensivo, el hash es el objeto del tag (con mensaje y autor) y git lo resuelve al commit. Con un tag ligero no sale. El aviso de detached HEAD también es lo esperado."
+    },
+    {
+      "title": "Activar las alertas y correcciones de seguridad de Dependabot desde la terminal",
+      "command": "gh api -X PUT repos/<usuario>/<repo>/vulnerability-alerts\ngh api -X PUT repos/<usuario>/<repo>/automated-security-fixes",
+      "section": "GitHub CLI (gh)",
+      "topic": "Seguridad del repositorio",
+      "description": "Enciende las alertas de vulnerabilidades de Dependabot y los PRs automáticos con la versión parchada, sin entrar a Settings. Es independiente de `dependabot.yml`, que solo controla las actualizaciones de versión.",
+      "examples": [
+        {
+          "description": "Comprobar las alertas (204 = activas, 404 = apagadas)",
+          "code": "gh api repos/<usuario>/<repo>/vulnerability-alerts -i | head -1"
+        },
+        {
+          "description": "Comprobar las correcciones (devuelve {\"enabled\":true,\"paused\":false})",
+          "code": "gh api repos/<usuario>/<repo>/automated-security-fixes"
+        }
+      ],
+      "tags": [
+        "gh",
+        "api",
+        "dependabot",
+        "seguridad",
+        "cve"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "El orden importa: las correcciones automáticas exigen las alertas activas. Un `404` en `vulnerability-alerts` no significa que el repo no exista, sino que están apagadas. Con `versioning-strategy: increase-if-necessary` en `dependabot.yml`, estas alertas pasan a ser el único aviso de una CVE."
+    },
+    {
+      "title": "Clonar el repo local sin hardlinks para reproducir el CI",
+      "command": "git clone --no-local . <directorio-temporal>",
+      "section": "Avanzado",
+      "topic": "Reproducir el CI en local",
+      "description": "Clona el repositorio actual (solo lo commiteado en HEAD) a otra carpeta copiando los objetos en vez de enlazarlos, para correr el pipeline sobre exactamente lo que verá el runner.",
+      "examples": [
+        {
+          "description": "Clon limpio en un temporal de Windows",
+          "code": "git clone --no-local . $env:TEMP\\<proyecto>-ci"
+        }
+      ],
+      "tags": [
+        "git",
+        "ci",
+        "clone",
+        "verificación"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Sin `--no-local` git crea hardlinks a `.git/objects` cuando origen y destino están en el mismo disco; con `--no-local` es una copia real, como un clon remoto. El clon NO incluye cambios sin commitear: justo lo que se quiere, porque el runner tampoco los ve."
+    },
+    {
+      "title": "Mover commits locales de main a una rama (GitHub Flow)",
+      "command": "git fetch && git switch -c <tipo>/<descripcion> && git branch -f main origin/main",
+      "section": "Ramas y merge",
+      "topic": "GitHub Flow",
+      "description": "Cuando se commiteó por error sobre `main` y esos commits aún NO están en el remoto, crea una rama con ellos y devuelve `main` a donde está `origin/main`, sin perder trabajo.",
+      "examples": [
+        {
+          "description": "Verificar antes qué commits se van a mover",
+          "code": "git log --oneline origin/main..main"
+        },
+        {
+          "description": "Confirmar en qué rama se está antes de commitear",
+          "code": "git branch --show-current"
+        }
+      ],
+      "tags": [
+        "git",
+        "ramas",
+        "github-flow"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Solo si `git log origin/main..main` muestra commits que no están pusheados. Si ya están en el remoto, NO se mueven (sería reescribir historia publicada). `git branch -f` mueve el puntero de una rama en la que no se está parado: por eso primero se cambia a la nueva."
+    },
+    {
+      "title": "Consultar la protección de una rama con la API de GitHub",
+      "command": "gh api repos/<owner>/<repo>/branches/main/protection",
+      "section": "GitHub CLI (gh)",
+      "topic": "Protección de ramas",
+      "description": "Lee la configuración de protección de una rama (checks requeridos, PR obligatorio, force-push) usando `gh api`, con la autenticación de `gh`.",
+      "examples": [
+        {
+          "description": "Con la rama principal de un repo concreto",
+          "code": "gh api repos/<owner>/<repo>/branches/main/protection"
+        }
+      ],
+      "tags": [
+        "gh",
+        "github",
+        "api",
+        "branch-protection"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps"
+      ],
+      "notes": "`404 Branch not protected` = se puede proteger pero no está. `403 Upgrade to GitHub Pro or make this repository public` = repo privado del plan gratuito: la función no existe ahí (verificado el 2026-10-21)."
     }
   ]
 }

@@ -830,6 +830,110 @@
         "Software"
       ],
       "notes": "Especifica siempre encoding='utf-8': en Windows el valor por defecto puede ser cp1252."
+    },
+    {
+      "title": "Excluir tests por marker y contar los que quedan",
+      "command": "pytest -m \"not dell\" --collect-only -q",
+      "section": "Python",
+      "topic": "pytest",
+      "description": "Selecciona tests con una expresión de markers: el CI corre todo menos lo marcado como dependiente de la red corporativa; `--collect-only -q` muestra cuántos tests entran sin ejecutarlos.",
+      "examples": [
+        {
+          "description": "Correr la suite del CI con cobertura",
+          "code": "pytest -m \"not dell\" --cov"
+        },
+        {
+          "description": "Correr solo los de la red corporativa",
+          "code": "pytest -m dell"
+        }
+      ],
+      "tags": [
+        "pytest",
+        "markers",
+        "ci"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "El marker tiene que estar declarado en `[tool.pytest.ini_options] markers`; con `--strict-markers` un typo en el nombre falla en vez de seleccionar cero tests en silencio."
+    },
+    {
+      "title": "Instalar el navegador de Playwright para Python",
+      "command": "python -m playwright install chromium",
+      "section": "Python",
+      "topic": "Automatización de navegador",
+      "description": "Descarga el Chromium que usa Playwright; hace falta una vez por máquina después de `pip install playwright`, salvo que se use el Chrome instalado con `channel=\"chrome\"`.",
+      "examples": [
+        {
+          "description": "Con el venv del proyecto en Windows",
+          "code": "env\\Scripts\\python -m playwright install chromium"
+        }
+      ],
+      "tags": [
+        "playwright",
+        "navegador",
+        "scraping"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "IA"
+      ],
+      "notes": "En la red corporativa conviene `channel=\"chrome\"` (Chrome del sistema): trae el CA corporativo del almacén de Windows y la sesión de Okta, que el Chromium descargado no tiene."
+    },
+    {
+      "title": "Listar versiones exactas instaladas para pinear requirements",
+      "command": "python -m pip list --format=freeze | grep -iE '^(django|pydantic|pandas)=='",
+      "section": "Python",
+      "topic": "pip y entornos",
+      "description": "Muestra los paquetes instalados en formato `paquete==versión`, filtrados, para copiar las versiones exactas a un requirements sin volcar todo el entorno con `pip freeze`.",
+      "examples": [
+        {
+          "description": "En PowerShell",
+          "code": "python -m pip list --format=freeze | Select-String '^(Django|pandas)=='"
+        }
+      ],
+      "tags": [
+        "pip",
+        "requirements",
+        "versiones"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "A diferencia de `pip freeze`, no muestra rutas `@ file://` de paquetes instalados en modo editable."
+    },
+    {
+      "title": "Cargar un plugin de pytest y desactivar otro desde la línea de comandos",
+      "command": "pytest -p nicegui.testing.user_plugin -p no:cacheprovider",
+      "section": "Python",
+      "topic": "pytest",
+      "description": "`-p modulo` carga un plugin de pytest por nombre de módulo (sus fixtures y hooks quedan disponibles en toda la suite); `-p no:nombre` desactiva uno, por ejemplo el caché.",
+      "examples": [
+        {
+          "description": "Dejarlo fijo para todo el proyecto, en pyproject.toml",
+          "code": "addopts = \"-p nicegui.testing.user_plugin\""
+        },
+        {
+          "description": "Correr sin escribir .pytest_cache (útil en clones temporales)",
+          "code": "pytest -p no:cacheprovider"
+        }
+      ],
+      "tags": [
+        "pytest",
+        "plugins",
+        "testing"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "Los hooks `pytest_addoption`/`pytest_configure` de un plugin NO corren si se importan desde un `conftest.py` anidado (solo desde plugins o el conftest raíz): por eso el simulador de NiceGUI 3 se carga con `-p` y no importando sus fixtures en `tests/ui/conftest.py`."
     }
   ]
 }

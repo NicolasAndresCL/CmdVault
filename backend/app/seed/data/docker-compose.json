@@ -648,6 +648,41 @@
       "roadmap": [
         "DevOps"
       ]
+    },
+    {
+      "title": "Quitar los puertos publicados con un override de Compose (!reset)",
+      "command": "docker compose -f docker-compose.yml -f compose.traefik.yml config | grep -c published",
+      "section": "Compose",
+      "topic": "Overrides",
+      "description": "En un archivo override, `ports:` se SUMA a los puertos del compose base; `!reset []` la vacía. Se verifica con la configuración final fusionada, contando los puertos publicados.",
+      "examples": [
+        {
+          "description": "En el override (YAML)",
+          "code": "services:\n  backend:\n    ports: !reset []"
+        },
+        {
+          "description": "Validar sin levantar nada (sirve en CI, no necesita el daemon)",
+          "code": "docker compose -f docker-compose.yml -f compose.traefik.yml config --quiet"
+        },
+        {
+          "description": "Fijar el override en el servidor (.env)",
+          "code": "COMPOSE_PATH_SEPARATOR=:\nCOMPOSE_FILE=docker-compose.yml:compose.traefik.yml"
+        }
+      ],
+      "tags": [
+        "compose",
+        "override",
+        "ports",
+        "reset",
+        "firewall",
+        "seguridad"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`!reset` requiere Compose ≥ 2.24. Los puertos que publica Docker se saltan firewalld/ufw: en un VPS con Traefik delante, la app no debe publicar ninguno. Sin `COMPOSE_PATH_SEPARATOR=:`, en Windows el separador de `COMPOSE_FILE` es `;` y la ruta con `:` falla. `config` muestra los `$` escapados como `$$` (salida normalizada)."
     }
   ]
 }
