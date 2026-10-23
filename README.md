@@ -1,12 +1,12 @@
 # CmdVault — biblioteca personal para dominar la terminal: DevOps · SRE · Fullstack
 
 [![CI](https://github.com/NicolasAndresCL/CmdVault/actions/workflows/ci.yml/badge.svg)](https://github.com/NicolasAndresCL/CmdVault/actions/workflows/ci.yml)
-![Versión](https://img.shields.io/badge/versi%C3%B3n-1.2.0-blue)
+![Versión](https://img.shields.io/badge/versi%C3%B3n-1.2.1-blue)
 ![Python](https://img.shields.io/badge/python-3.14-3776AB)
 
 | | |
 |---|---|
-| **Versión** | 1.2.0 |
+| **Versión** | 1.2.1 |
 | **Fecha** | 22 de octubre de 2026 |
 | **Autor** | [Nicolás Andrés Cano Leal](#autor) |
 
@@ -190,7 +190,7 @@ cp group_vars/cmdvault/vault.yml.example group_vars/cmdvault/vault.yml   # poner
 ansible-vault encrypt group_vars/cmdvault/vault.yml
 ansible-galaxy collection install -r requirements.yml -p ./collections
 ansible-playbook playbooks/site.yml --ask-vault-pass                        # todo
-ansible-playbook playbooks/site.yml --tags deploy --ask-vault-pass -e cmdvault_version=v1.2.0  # solo redeploy
+ansible-playbook playbooks/site.yml --tags deploy --ask-vault-pass -e cmdvault_version=v1.2.1  # solo redeploy
 ```
 
 | Rol | Qué hace (Ubuntu y AlmaLinux) |
@@ -226,7 +226,7 @@ el 80): se aplica `compose.traefik.yml` encima del compose base.
 
 ```bash
 sudo git clone https://github.com/NicolasAndresCL/CmdVault.git /opt/cmdvault && cd /opt/cmdvault
-sudo git checkout v1.2.0
+sudo git checkout v1.2.1
 docker network ls                                  # red donde vive Traefik → TRAEFIK_NETWORK
 openssl passwd -apr1                               # hash para CMDVAULT_BASIC_AUTH
 sudo cp .env.example .env && sudo chmod 600 .env   # secretos + las variables del override (ver tabla)
@@ -399,4 +399,4 @@ Backend Engineer → SRE | Python · Django · Kubernetes · Terraform · CI/CD
 - Portafolio: [nicolasandrescl.github.io](https://nicolasandrescl.github.io/)
 - Correo: [nicolas.cano.leal@gmail.com](mailto:nicolas.cano.leal@gmail.com)
 
-CmdVault v1.2.0 · 22 de octubre de 2026
+CmdVault v1.2.1 · 22 de octubre de 2026

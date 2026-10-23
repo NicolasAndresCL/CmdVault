@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Sin publicar]
 
+## [1.2.1] — 22 de octubre de 2026
+
 ### Agregado
 - **Windows Server, GPO avanzadas e IPv6** (+9 comandos y +18 ejemplos en `windows-server.json`, que pasa a 46
   comandos; el entorno Windows queda en 156 y el total en 1.575 comandos y 4.252 ejemplos), siguiendo la guía
