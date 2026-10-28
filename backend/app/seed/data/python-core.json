@@ -869,19 +869,31 @@
         {
           "description": "Con el venv del proyecto en Windows",
           "code": "env\\Scripts\\python -m playwright install chromium"
+        },
+        {
+          "description": "Actualizar Playwright y su navegador en un venv",
+          "code": "env\\Scripts\\python -m pip install --upgrade \"playwright>=1.48\"; env\\Scripts\\python -m playwright install chromium"
+        },
+        {
+          "description": "Probar que lanza",
+          "code": "env\\Scripts\\python -c \"from playwright.sync_api import sync_playwright; p=sync_playwright().start(); b=p.chromium.launch(); print(b.version); b.close(); p.stop()\""
         }
       ],
       "tags": [
-        "playwright",
+        "chromium",
         "navegador",
-        "scraping"
+        "pip",
+        "playwright",
+        "pruebas",
+        "scraping",
+        "venv"
       ],
       "level": "básico",
       "roadmap": [
         "Software",
         "IA"
       ],
-      "notes": "En la red corporativa conviene `channel=\"chrome\"` (Chrome del sistema): trae el CA corporativo del almacén de Windows y la sesión de Okta, que el Chromium descargado no tiene."
+      "notes": "En la red corporativa conviene `channel=\"chrome\"` (Chrome del sistema): trae el CA corporativo del almacén de Windows y la sesión de Okta, que el Chromium descargado no tiene. cada versión de Playwright exige **su** build de navegador (`chromium_headless_shell-1248` para 1.64.1); tras actualizar el paquete falla con `Executable doesn't exist … Please run playwright install`. `playwright install` también borra los navegadores que ya no usa ninguna instalación registrada (`Removing unused browser … chromium-1234`). Con `>=` en los requirements un venv nuevo trae otra versión que el viejo: eso es lo que resuelve un lockfile."
     },
     {
       "title": "Listar versiones exactas instaladas para pinear requirements",
@@ -934,6 +946,86 @@
         "DevOps"
       ],
       "notes": "Los hooks `pytest_addoption`/`pytest_configure` de un plugin NO corren si se importan desde un `conftest.py` anidado (solo desde plugins o el conftest raíz): por eso el simulador de NiceGUI 3 se carga con `-p` y no importando sus fixtures en `tests/ui/conftest.py`."
+    },
+    {
+      "title": "Empaquetar una app Python como .exe con una receta .spec de PyInstaller",
+      "command": "python -m PyInstaller escritorio.spec --noconfirm --clean",
+      "section": "Python",
+      "topic": "Empaquetado",
+      "description": "Construye el ejecutable a partir de una receta versionada (.spec) con hiddenimports y datos, en vez de una línea de flags imposible de revisar.",
+      "examples": [
+        {
+          "description": "Primera vez, generar el .spec desde flags",
+          "code": "pyi-makespec --onedir --windowed --name \"Mi App\" app.py"
+        }
+      ],
+      "tags": [
+        "empaquetado",
+        "exe",
+        "pyinstaller",
+        "windows"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "`--onedir` antes que `--onefile`: el .exe único se descomprime en %TEMP% en cada arranque, es más lento y lo marcan los antivirus. Con `--windowed`, `sys.stdout` es None: hay que redirigirlo antes de arrancar uvicorn o cualquier cosa que haga print. Django carga apps por texto: `collect_submodules` en el .spec."
+    },
+    {
+      "title": "Forzar UTF-8 en Python aunque se ejecute en modo aislado",
+      "command": "python -I -X utf8 script.py archivo.docx",
+      "section": "Python",
+      "topic": "Codificación de la salida en Windows",
+      "description": "Ejecuta Python en modo aislado (sin variables `PYTHON*` ni el directorio actual en `sys.path`) y con la salida en UTF-8, para leer archivos descargados sin errores de codificación.",
+      "examples": [
+        {
+          "description": "Solo forzar UTF-8",
+          "code": "python -X utf8 -c \"print('Ñandú →')\""
+        },
+        {
+          "description": "Sin modo aislado, por variable",
+          "code": "PYTHONIOENCODING=utf-8 python script.py"
+        }
+      ],
+      "tags": [
+        "cp1252",
+        "modo-aislado",
+        "python",
+        "utf-8",
+        "windows"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "`-I` (isolated) ignora todas las variables `PYTHON*`, por eso `PYTHONIOENCODING` deja de funcionar; `-X utf8` es una opción de línea de comandos y sí se respeta. Síntoma: `UnicodeEncodeError: 'charmap' codec can't encode character`."
+    },
+    {
+      "title": "Listar el contenido de un .zip con Python (sin unzip)",
+      "command": "python -I -c \"import zipfile; [print(i.date_time, i.file_size, i.filename) for i in zipfile.ZipFile('entrega.zip').infolist()]\"",
+      "section": "Python",
+      "topic": "Archivos comprimidos",
+      "description": "Muestra fecha, tamaño y ruta de cada entrada de un zip, para confirmar que no lleva `build/`, `nbproject/private/` ni archivos de más.",
+      "examples": [
+        {
+          "description": "Con el módulo de línea de comandos de zipfile",
+          "code": "python -m zipfile -l entrega.zip"
+        }
+      ],
+      "tags": [
+        "entregable",
+        "python",
+        "zip",
+        "zipfile"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "`-I` (modo aislado) evita que Python importe módulos del directorio actual, útil cuando el zip viene de otra persona. Funciona en Windows sin instalar `unzip`."
     }
   ]
 }

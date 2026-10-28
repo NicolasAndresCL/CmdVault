@@ -62,17 +62,30 @@
         {
           "description": "Imágenes creadas antes que otra",
           "code": "docker image ls -f before=app:2.0"
+        },
+        {
+          "description": "image prune en 0 B con el almacén de containerd",
+          "code": "sudo docker images -f dangling=true"
+        },
+        {
+          "description": "Después de revisar la lista",
+          "code": "sudo docker image prune -f"
         }
       ],
       "tags": [
+        "containerd",
+        "dangling",
+        "docker",
         "image",
-        "listar"
+        "listar",
+        "prune"
       ],
       "level": "básico",
       "roadmap": [
         "DevOps",
         "SRE"
-      ]
+      ],
+      "notes": "En Docker con el almacén de imágenes de containerd (columnas `DISK USAGE`/`CONTENT SIZE`, `unpacking to…` en el build), un `compose up --build` no dejó imágenes `<none>`: la lista salió vacía y `prune` dio `Total reclaimed space: 0B`. No es un error."
     },
     {
       "title": "Etiquetar imagen",

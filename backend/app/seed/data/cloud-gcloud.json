@@ -139,12 +139,22 @@
         {
           "description": "Cambiar el proyecto activo",
           "code": "gcloud config set project mi-proyecto-123"
+        },
+        {
+          "description": "Auditar qué APIs tiene habilitadas cada proyecto de GCP",
+          "code": "foreach ($p in 'proyecto-a','proyecto-b') { \"=== $p\"; gcloud services list --enabled --project $p --format=\"value(config.name)\" --quiet 2>&1 | Select-String -Pattern 'run|compute|aiplatform|cloudfunctions|secretmanager' }"
+        },
+        {
+          "description": "Primero sacar los ID de proyecto",
+          "code": "gcloud projects list --format=\"table(projectId,name)\""
         }
       ],
       "tags": [
-        "gcloud",
-        "proyectos",
         "apis",
+        "gcloud",
+        "inventario",
+        "powershell",
+        "proyectos",
         "services"
       ],
       "level": "básico",
@@ -153,7 +163,7 @@
         "SRE",
         "Cloud"
       ],
-      "notes": "El error 'API has not been used in project... or it is disabled' se resuelve con gcloud services enable. Un proyecto nuevo necesita una cuenta de facturación vinculada para la mayoría de servicios."
+      "notes": "El error 'API has not been used in project... or it is disabled' se resuelve con gcloud services enable. Un proyecto nuevo necesita una cuenta de facturación vinculada para la mayoría de servicios. `--format=\"value(config.name)\"` deja un nombre por línea (sin cabecera), ideal para filtrar. `--project` evita depender del proyecto activo (en este equipo `gcloud config list` no tenía `core/project`). Que una API esté habilitada no significa que haya recursos: confirmar con el `list` del servicio."
     },
     {
       "title": "Listar y crear VM",
@@ -420,14 +430,23 @@
         {
           "description": "Descargar",
           "code": "gcloud storage cp gs://mi-bucket/backups/backup.tar.gz ."
+        },
+        {
+          "description": "Listar los buckets de Cloud Storage de un proyecto",
+          "code": "gcloud storage buckets list --project <PROYECTO> --format=\"value(name,location)\""
+        },
+        {
+          "description": "Ver el detalle de uno (clase, versionado, acceso uniforme)",
+          "code": "gcloud storage buckets describe gs://<bucket>"
         }
       ],
       "tags": [
-        "gcloud",
-        "storage",
-        "gs",
         "bucket",
-        "rsync"
+        "buckets",
+        "gcloud",
+        "gs",
+        "rsync",
+        "storage"
       ],
       "level": "básico",
       "roadmap": [
@@ -435,7 +454,7 @@
         "SRE",
         "Cloud"
       ],
-      "notes": "rsync con la opción de borrado elimina en destino lo que no está en origen: pruébalo con --dry-run antes. gsutil sigue existiendo pero Google recomienda gcloud storage."
+      "notes": "rsync con la opción de borrado elimina en destino lo que no está en origen: pruébalo con --dry-run antes. gsutil sigue existiendo pero Google recomienda gcloud storage. reemplaza a `gsutil ls`. Salida vacía = el proyecto no tiene buckets (no es un error de permisos: eso sale como `ERROR: ... 403`)."
     },
     {
       "title": "Cloud SQL: instancias y backups",
@@ -606,6 +625,150 @@
         "Cloud"
       ],
       "notes": "--freshness limita a lo reciente y acelera. Los logs tienen costos de ingesta y retención: filtra qué se exporta."
+    },
+    {
+      "title": "Auditar las llaves JSON de una cuenta de servicio",
+      "command": "gcloud iam service-accounts keys list --iam-account <SA>@<PROYECTO>.iam.gserviceaccount.com --project <PROYECTO> --managed-by user --format=\"table(name.basename(),validAfterTime,validBeforeTime)\"",
+      "section": "Google Cloud (gcloud)",
+      "topic": "IAM y cuentas de servicio",
+      "description": "Lista solo las llaves descargadas por personas (no las que gestiona Google), con su fecha de creación y vencimiento, para saber cuántas copias del secreto andan sueltas.",
+      "examples": [
+        {
+          "description": "Revocar una llave filtrada o que ya no se usa",
+          "code": "gcloud iam service-accounts keys delete <KEY_ID> --iam-account <SA>@<PROYECTO>.iam.gserviceaccount.com"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "iam",
+        "llaves",
+        "seguridad",
+        "service-account"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Cloud",
+        "DevOps"
+      ],
+      "notes": "`name.basename()` deja solo el KEY_ID, que es el prefijo del nombre del JSON descargado (`<proyecto>-<12 primeros del id>.json`). Un `EXPIRES_AT` 9999-12-31 significa **sin vencimiento**: hay que rotarla a mano. El listado no dice en qué disco está el JSON. Una cuenta de servicio **no tiene cuota de Drive**: no puede crear archivos en una «Mi unidad» compartida con ella (403 `storageQuotaExceeded`), solo editar los que ya existen."
+    },
+    {
+      "title": "Permitir que un usuario impersone a una cuenta de servicio (sin llaves)",
+      "command": "gcloud iam service-accounts add-iam-policy-binding <SA>@<PROYECTO>.iam.gserviceaccount.com --project <PROYECTO> --member=\"user:<TU_CORREO>\" --role=\"roles/iam.serviceAccountTokenCreator\" --condition=None",
+      "section": "Google Cloud (gcloud)",
+      "topic": "IAM y cuentas de servicio",
+      "description": "Da el rol Token Creator a un usuario **solo sobre una cuenta de servicio** (no en todo el proyecto), para que pida tokens de corta vida a su nombre desde cualquier equipo con `gcloud auth login`, sin llave JSON.",
+      "examples": [
+        {
+          "description": "Crear antes la cuenta, con nombre visible libre",
+          "code": "gcloud iam service-accounts create <cuenta> --project <PROYECTO> --display-name=\"<nombre visible>\" --description=\"...\""
+        },
+        {
+          "description": "Usarla en un comando de gcloud",
+          "code": "gcloud storage ls --impersonate-service-account=<SA>@<PROYECTO>.iam.gserviceaccount.com"
+        }
+      ],
+      "tags": [
+        "gcloud",
+        "iam",
+        "impersonacion",
+        "sin-llaves",
+        "token-creator"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Cloud",
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "el ID de la cuenta solo admite minúsculas, dígitos y guiones (6–30): `<nombre visible>` va solo como `--display-name`. El binding sobre la SA es mínimo privilegio; en el proyecto (`gcloud projects add-iam-policy-binding`) dejaría impersonar a **todas** sus SA. El permiso tarda hasta ~7 min en propagarse: antes da `403 PERMISSION_DENIED iam.serviceAccounts.getAccessToken`. `--condition=None` evita la pregunta interactiva cuando la política ya tiene condiciones."
+    },
+    {
+      "title": "Token de una cuenta de servicio con alcance a elección (generateAccessToken)",
+      "command": "curl -s -X POST -H \"Authorization: Bearer $(gcloud auth print-access-token)\" -H \"Content-Type: application/json\" -d '{\"scope\":[\"https://www.googleapis.com/auth/drive\"],\"lifetime\":\"600s\"}' \"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/<SA>@<PROYECTO>.iam.gserviceaccount.com:generateAccessToken\"",
+      "section": "Google Cloud (gcloud)",
+      "topic": "IAM y cuentas de servicio",
+      "description": "Con el token del usuario, pide a la API IAM Credentials un token de la cuenta de servicio con los scopes y la duración que se indiquen. Es la forma sin llave de llamar a APIs de Workspace (Drive, Sheets) como el bot.",
+      "examples": [
+        {
+          "description": "Comprobar quién es el bot para Drive",
+          "code": "curl -s -H \"Authorization: Bearer <TOKEN_DEL_BOT>\" \"https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)\""
+        }
+      ],
+      "tags": [
+        "curl",
+        "drive",
+        "iamcredentials",
+        "impersonacion",
+        "oauth",
+        "token"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Cloud",
+        "DevOps"
+      ],
+      "notes": "requiere `iamcredentials.googleapis.com` habilitada en el proyecto de la SA y el rol Token Creator. `--impersonate-service-account` de gcloud da tokens con alcance `cloud-platform`, que Drive no acepta. `projects/-` = cualquier proyecto (se resuelve por el correo de la SA). Nunca hacer `echo` del token: se guardó en variable y solo se imprimió su largo."
+    },
+    {
+      "title": "Reemplazar el contenido de un archivo de Drive con curl",
+      "command": "curl -s -X PATCH -H \"Authorization: Bearer <TOKEN>\" -H \"Content-Type: text/markdown; charset=UTF-8\" --data-binary @<archivo> \"https://www.googleapis.com/upload/drive/v3/files/<FILE_ID>?uploadType=media&fields=id,name,size,owners(emailAddress)\"",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Google Drive API",
+      "description": "Sube contenido nuevo a un archivo de Drive que ya existe, conservando su ID, su dueño y su historial de versiones. Es lo único que puede escribir una cuenta de servicio sin cuota.",
+      "examples": [
+        {
+          "description": "Descargar el contenido",
+          "code": "curl -s -H \"Authorization: Bearer <TOKEN>\" \"https://www.googleapis.com/drive/v3/files/<FILE_ID>?alt=media\""
+        },
+        {
+          "description": "Listar los archivos de una carpeta con su md5",
+          "code": "curl -s -H \"Authorization: Bearer <TOKEN>\" \"https://www.googleapis.com/drive/v3/files?q=%27<CARPETA_ID>%27+in+parents+and+trashed%3Dfalse&fields=files(id,name,md5Checksum)\""
+        }
+      ],
+      "tags": [
+        "api",
+        "cuenta-de-servicio",
+        "curl",
+        "drive",
+        "upload"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Cloud",
+        "DevOps"
+      ],
+      "notes": "la URL es la de **upload** (`/upload/drive/v3`), no `/drive/v3`. `--data-binary` respeta los bytes (`-d` quitaría los saltos de línea). Crear un archivo (`POST` multipart) con una cuenta de servicio da `403 storageQuotaExceeded`. `md5Checksum` permite comparar con `md5sum` local sin descargar."
+    },
+    {
+      "title": "Escribir filas en Google Sheets con la API (curl)",
+      "command": "curl -s -X PUT -H \"Authorization: Bearer <TOKEN>\" -H \"Content-Type: application/json\" -d '{\"values\":[[\"2026-10-26\",\"V99\",\"Tarea\",\"Qué se hizo\"]]}' \"https://sheets.googleapis.com/v4/spreadsheets/<ID>/values/'Bitácora'!A2:D2?valueInputOption=RAW\"",
+      "section": "Google Cloud (gcloud)",
+      "topic": "Google Sheets API",
+      "description": "Escribe un bloque de celdas en una hoja de una planilla existente, con el token de una cuenta de servicio que es editora de la planilla.",
+      "examples": [
+        {
+          "description": "Leer un rango",
+          "code": "curl -s -H \"Authorization: Bearer <TOKEN>\" \"https://sheets.googleapis.com/v4/spreadsheets/<ID>/values/Kanban!A1:L\""
+        },
+        {
+          "description": "Ver las hojas de la planilla",
+          "code": "curl -s -H \"Authorization: Bearer <TOKEN>\" \"https://sheets.googleapis.com/v4/spreadsheets/<ID>?fields=sheets.properties(sheetId,title)\""
+        }
+      ],
+      "tags": [
+        "api",
+        "cuenta-de-servicio",
+        "curl",
+        "kanban",
+        "sheets"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "Cloud",
+        "DevOps"
+      ],
+      "notes": "el nombre de la hoja con tildes o espacios va entre comillas simples y **codificado en la URL** (`%27Bit%C3%A1cora%27%21A2%3AD2`); en Python, `urllib.parse.quote(..., safe=\"\")`. `valueInputOption=RAW` guarda el texto tal cual (`USER_ENTERED` interpretaría fechas y fórmulas). Crear o renombrar hojas va por `:batchUpdate` (`addSheet`, `updateSheetProperties`). Requiere la API `sheets.googleapis.com` habilitada y un token con alcance `https://www.googleapis.com/auth/spreadsheets`. Una cuenta de servicio puede editar una planilla ajena compartida con ella, pero no crear una (sin cuota de Drive)."
     }
   ]
 }

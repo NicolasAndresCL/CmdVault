@@ -979,6 +979,88 @@
         "Software"
       ],
       "notes": "PS 5.1 y PS 7 tienen perfiles distintos (Documents\\WindowsPowerShell vs Documents\\PowerShell)."
+    },
+    {
+      "title": "Las comas en argumentos de PowerShell arman un arreglo",
+      "command": "gcloud projects create <ID> --name=\"Mi proyecto\" --labels=\"clave1=valor1,clave2=valor2\"",
+      "section": "PowerShell",
+      "topic": "Trampas de parseo en PowerShell",
+      "description": "En PowerShell una coma sin comillas en un argumento de un programa externo crea un arreglo, y lo pasa unido por espacios: el programa recibe otra cosa.",
+      "examples": [
+        {
+          "description": "Lo que falla (llega `--labels=uso=vps dueno=<usuario>`)",
+          "code": "gcloud projects create <ID> --labels=uso=vps,dueno=<usuario>"
+        }
+      ],
+      "tags": [
+        "arrays",
+        "gcloud",
+        "powershell",
+        "quoting"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "el error fue `Bad value [vps dueno=<usuario>]`. Pasa con cualquier flag de lista de gcloud/az/kubectl (`--tags`, `--scopes`, `--set-env-vars`). En bash no ocurre. También se evita con el token de parada `--%`. Además: los ID de proyecto son globales y `projects describe` no distingue «no existe» de «es de otro» (ambos 403); `<cuenta>` estaba tomado y se usó `<cuenta>-2026`."
+    },
+    {
+      "title": "El pipe de PowerShell 5.1 hacia un programa nativo agrega un BOM",
+      "command": "docker compose config --format json | & .\\env\\Scripts\\python.exe scripts\\comprobar.py",
+      "section": "PowerShell",
+      "topic": "Codificación en pipes",
+      "description": "Al pasar texto por `|` de un comando a un ejecutable nativo, PowerShell lo vuelve a codificar con `$OutputEncoding`; si es UTF-8 con BOM, el programa recibe `EF BB BF` al principio y un parser estricto lo rechaza.",
+      "examples": [
+        {
+          "description": "Ver la codificación que usa el pipe",
+          "code": "$OutputEncoding"
+        },
+        {
+          "description": "Lado Python, aceptar con o sin BOM",
+          "code": "json.loads(sys.stdin.buffer.read().decode(\"utf-8-sig\"))"
+        }
+      ],
+      "tags": [
+        "bom",
+        "json",
+        "pipe",
+        "powershell",
+        "python",
+        "utf-8"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "en bash o en el runner Linux no hay BOM, así que el CI pasa y solo falla el script local: hay que correr las dos variantes. Arreglarlo del lado que lee (`utf-8-sig`) es más robusto que tocar `$OutputEncoding` en cada máquina. PowerShell 7 usa UTF-8 **sin** BOM por defecto."
+    },
+    {
+      "title": "`--jq` con comillas dobles se rompe en PowerShell 5.1",
+      "command": "gh run list --limit 2 --json status,conclusion,headBranch --jq '.[] | \"\\(.headBranch) \\(.status)/\\(.conclusion)\"'",
+      "section": "PowerShell",
+      "topic": "Trampas de parseo en PowerShell",
+      "description": "PowerShell 5.1 pasa mal a los programas nativos los argumentos que contienen comillas dobles: el argumento se parte y el programa recibe trozos sueltos.",
+      "examples": [
+        {
+          "description": "En PowerShell 5.1, evitar las comillas dobles internas",
+          "code": "gh run list --limit 2 --json headBranch,conclusion --jq '.[] | .headBranch + \\\" \\\" + .conclusion'"
+        }
+      ],
+      "tags": [
+        "argumentos",
+        "comillas",
+        "gh",
+        "jq",
+        "powershell"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "el error parece de `gh` (`unknown command`), pero es PowerShell partiendo el argumento. PowerShell 7.3+ lo corrige (`$PSNativeCommandArgumentPassing = 'Standard'`). Otra salida: `--template` de Go con comillas simples."
     }
   ]
 }

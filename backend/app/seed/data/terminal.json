@@ -1260,6 +1260,180 @@
         "DevOps"
       ],
       "notes": "Síntoma típico sin la variable: el contenedor no encuentra archivos o aparece una ruta C:/Program Files/Git/... en el error."
+    },
+    {
+      "title": "`!` dentro de comillas dobles es expansión de historial en bash",
+      "command": "set +H",
+      "section": "Atajos y shell",
+      "topic": "Trampas de bash",
+      "description": "En bash interactivo, `!` dentro de comillas dobles se reemplaza por algo del historial antes de ejecutar; el comando que corre no es el que escribiste.",
+      "examples": [
+        {
+          "description": "Volver a activarla",
+          "code": "set -H"
+        },
+        {
+          "description": "Evitarla sin desactivarla: poner el `!` entre comillas simples o escaparlo",
+          "code": "echo 'hola!'"
+        }
+      ],
+      "tags": [
+        "bash",
+        "comillas",
+        "historial",
+        "history-expansion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "la señal es que bash **reimprime** la línea expandida antes del resultado. En scripts no pasa (la expansión de historial solo está activa en shells interactivas). Para comprobar algo, mejor preguntarle a la fuente de verdad que depender de un patrón con `!`."
+    },
+    {
+      "title": "Validar una paleta de colores para gráficos (daltonismo y contraste)",
+      "command": "node scripts/validate_palette.js \"#3987e5,#d95926,#199e70,#c98500,#d55181,#008300,#9085e9,#e66767\" --mode dark --surface \"#0c1222\"",
+      "section": "Productividad",
+      "topic": "Visualización de datos",
+      "description": "Comprueba una paleta categórica contra la superficie real del gráfico: banda de luminosidad, croma, separación entre colores vecinos simulando daltonismo (ΔE), suelo de visión normal y contraste ≥ 3:1.",
+      "examples": [
+        {
+          "description": "La misma paleta en modo claro",
+          "code": "node scripts/validate_palette.js \"<hex,...>\" --mode light --surface \"#fcfcfb\""
+        },
+        {
+          "description": "Exigir todos los pares (scatter, mapas), no solo los vecinos",
+          "code": "node scripts/validate_palette.js \"<hex,...>\" --mode dark --pairs all"
+        }
+      ],
+      "tags": [
+        "accesibilidad",
+        "daltonismo",
+        "dataviz",
+        "node",
+        "wcag"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Fullstack",
+        "Software"
+      ],
+      "notes": "el script es de la skill `dataviz` de Claude (`<skill>/scripts/validate_palette.js`). El `--surface` tiene que ser el color sobre el que se dibuja de verdad (aquí la tarjeta, no el fondo de la página). El ORDEN de los colores es parte de la validación: reordenarlos cambia los pares vecinos. Resultado real: peor par vecino ΔE 8,4 (protanopía), todo PASS."
+    },
+    {
+      "title": "Saber si un archivo tiene fines de línea CRLF (Git Bash)",
+      "command": "file scripts/*.sh",
+      "section": "Scripting robusto",
+      "topic": "Fin de línea (CRLF/LF)",
+      "description": "`file` identifica el tipo de archivo y avisa `with CRLF line terminators` si los tiene. Es la forma fiable en Git Bash, donde `grep $'\\r'` no ve los CR.",
+      "examples": [
+        {
+          "description": "Solo los que tienen CRLF",
+          "code": "file scripts/*.sh | grep CRLF"
+        },
+        {
+          "description": "Convertir a LF",
+          "code": "sed -i 's/\\r$//' scripts/probar.sh"
+        }
+      ],
+      "tags": [
+        "crlf",
+        "eol",
+        "file",
+        "git-bash",
+        "lf",
+        "windows"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Origen típico en Windows: `Path.write_text()` de Python traduce `\\n` a `\\r\\n`. Con `* text=auto eol=lf` en `.gitattributes` el commit normaliza, pero bash y shellcheck leen el archivo del disco."
+    },
+    {
+      "title": "Huella SHA-256 de una variable de la shell (sin salto de línea)",
+      "command": "printf %s \"$S\" | sha256sum | cut -c1-12",
+      "section": "Scripting robusto",
+      "topic": "Hashes y verificación",
+      "description": "Calcula el SHA-256 del valor de una variable y muestra solo 12 caracteres: sirve para comparar dos secretos sin mostrarlos.",
+      "examples": [
+        {
+          "description": "Largo de la variable sin mostrarla",
+          "code": "echo ${#S}"
+        },
+        {
+          "description": "Generar el secreto directo en la variable (sin copiar y pegar)",
+          "code": "S=$(openssl rand -hex 24); echo ${#S}"
+        }
+      ],
+      "tags": [
+        "cut",
+        "hash",
+        "printf",
+        "secretos",
+        "sha256sum"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "`printf %s` y no `echo`: `echo` agrega un salto de línea y la huella cambia. 12 caracteres del hash no permiten reconstruir el valor."
+    },
+    {
+      "title": "Verificar una referencia académica por su DOI en Crossref",
+      "command": "curl -s \"https://api.crossref.org/works/10.1145/3571730\" | python -c \"import json,sys; m=json.load(sys.stdin)['message']; print(m['title'][0], m['container-title'], m.get('volume'), m.get('issue'), m.get('page'), m['issued']['date-parts'])\"",
+      "section": "JSON y YAML",
+      "topic": "APIs públicas desde la terminal",
+      "description": "Consulta la API pública de Crossref y devuelve los metadatos oficiales de un artículo (título, revista, volumen, número, páginas, fecha y autores) para escribir la referencia APA sin errores.",
+      "examples": [
+        {
+          "description": "Con jq",
+          "code": "curl -s https://api.crossref.org/works/10.3390/soc15010006 | jq '.message | {title, volume, issue, page}'"
+        }
+      ],
+      "tags": [
+        "apa",
+        "crossref",
+        "curl",
+        "doi",
+        "json",
+        "referencias"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "No requiere clave. Si el DOI no existe responde `Resource not found`. Sirve para detectar DOI inventados antes de citarlos."
+    },
+    {
+      "title": "Exportar un SVG (o una página) a PNG con Edge headless",
+      "command": "\"/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe\" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 --window-size=1760,1295 --screenshot=\"C:\\salida\\diagrama.png\" \"file:///C:/ruta/pagina.html\"",
+      "section": "Productividad",
+      "topic": "Capturas y exportación de gráficos",
+      "description": "Abre una página en Edge sin ventana y guarda una captura al doble de resolución; sirve para exportar un SVG hecho a mano tal como lo ve el navegador.",
+      "examples": [
+        {
+          "description": "Captura de una URL a 1×",
+          "code": "msedge --headless=new --window-size=1280,800 --screenshot=C:\\tmp\\web.png https://example.com"
+        }
+      ],
+      "tags": [
+        "edge",
+        "headless",
+        "png",
+        "screenshot",
+        "svg",
+        "uml"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "`--window-size` debe ser el tamaño del contenido (el viewBox del SVG), porque si no la captura sale recortada. Conviene envolver el SVG en un HTML con `<img>` de tamaño fijo y `margin:0`. La ruta de `--screenshot` va en formato Windows. Chrome acepta los mismos parámetros."
     }
   ]
 }

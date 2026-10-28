@@ -150,18 +150,31 @@
         {
           "description": "Como root en una réplica concreta",
           "code": "docker compose exec -u root --index 2 worker sh"
+        },
+        {
+          "description": "Volcar Postgres de un contenedor usando sus propias variables de entorno",
+          "code": "sudo docker compose exec -T db sh -c 'pg_dump -U \"$POSTGRES_USER\" \"$POSTGRES_DB\"' | gzip > ~/<app>-pre-<version>.sql.gz"
+        },
+        {
+          "description": "Restaurar sobre una base vacía",
+          "code": "gunzip -c ~/<app>-pre-<version>.sql.gz | sudo docker compose exec -T db sh -c 'psql -U \"$POSTGRES_USER\" \"$POSTGRES_DB\"'"
         }
       ],
       "tags": [
+        "backup",
         "compose",
-        "exec"
+        "env",
+        "exec",
+        "pg_dump",
+        "postgres"
       ],
       "level": "básico",
       "roadmap": [
         "DevOps",
         "SRE",
         "Fullstack"
-      ]
+      ],
+      "notes": "Las comillas simples impiden que la shell del host expanda `$POSTGRES_USER`: se expande en el `sh` del contenedor, que tiene las variables del `environment:` del servicio. `-T` desactiva el TTY, que si no corrompe la salida binaria o con `\\r`. Comprobar con `ls -lh`: en el VPS salieron 427K (2026-10-22); ~20 bytes es un gzip vacío y el volcado falló."
     },
     {
       "title": "Tarea puntual con Compose run",
@@ -667,14 +680,26 @@
         {
           "description": "Fijar el override en el servidor (.env)",
           "code": "COMPOSE_PATH_SEPARATOR=:\nCOMPOSE_FILE=docker-compose.yml:compose.traefik.yml"
+        },
+        {
+          "description": "grep -c con cero coincidencias corta una cadena &&",
+          "code": "sudo docker compose config | grep -c published; sudo docker compose config | grep 'image:'"
+        },
+        {
+          "description": "Ver el código de salida )",
+          "code": "echo hola | grep -c adios; echo \"código: $?\"` (imprime `0` y `código: 1"
         }
       ],
       "tags": [
+        "bash",
         "compose",
+        "docker-compose",
+        "exit-code",
+        "firewall",
+        "grep",
         "override",
         "ports",
         "reset",
-        "firewall",
         "seguridad"
       ],
       "level": "avanzado",
@@ -682,7 +707,93 @@
         "DevOps",
         "SRE"
       ],
-      "notes": "`!reset` requiere Compose ≥ 2.24. Los puertos que publica Docker se saltan firewalld/ufw: en un VPS con Traefik delante, la app no debe publicar ninguno. Sin `COMPOSE_PATH_SEPARATOR=:`, en Windows el separador de `COMPOSE_FILE` es `;` y la ruta con `:` falla. `config` muestra los `$` escapados como `$$` (salida normalizada)."
+      "notes": "`!reset` requiere Compose ≥ 2.24. Los puertos que publica Docker se saltan firewalld/ufw: en un VPS con Traefik delante, la app no debe publicar ninguno. Sin `COMPOSE_PATH_SEPARATOR=:`, en Windows el separador de `COMPOSE_FILE` es `;` y la ruta con `:` falla. `config` muestra los `$` escapados como `$$` (salida normalizada). códigos de `grep`: 0 = hubo coincidencias, 1 = ninguna, 2 = error. Con `;` el segundo comando corre siempre. Para exigir el cero: `[ \"$(… | grep -c published)\" -eq 0 ] && siguiente`."
+    },
+    {
+      "title": "Consultar la API de un contenedor desde dentro, sin curl ni puertos publicados",
+      "command": "sudo docker compose exec -T backend python -c \"import json,urllib.request as u; b='http://localhost:8000'; print(json.load(u.urlopen(b+'/openapi.json'))['info']['version'], json.load(u.urlopen(b+'/api/v1/stats'))['commands'])\"",
+      "section": "Compose",
+      "topic": "Verificación de despliegues",
+      "description": "Pregunta a la API de un servicio desde su propio contenedor con un Python de una línea (solo stdlib). Sirve cuando la imagen slim no trae `curl` y el servicio no publica puertos en el host.",
+      "examples": [
+        {
+          "description": "Solo el estado de salud",
+          "code": "sudo docker compose exec -T backend python -c \"import urllib.request as u; print(u.urlopen('http://localhost:8000/health').status)\""
+        }
+      ],
+      "tags": [
+        "compose",
+        "exec",
+        "fastapi",
+        "python",
+        "urllib",
+        "verificacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`info.version` de `/openapi.json` es el `version=` de FastAPI: confirma que corre el código nuevo y no la imagen vieja. En CmdVault dio `1.2.0 1566`. Las comillas dobles por fuera y simples por dentro evitan pelear con el escape de la shell."
+    },
+    {
+      "title": "Comprobar un override de Compose como JSON, sin levantar nada",
+      "command": "docker compose --env-file .env.ci -f docker-compose.deploy.yml -f compose.traefik.yml config --format json | python3 scripts/comprobar_override_traefik.py",
+      "section": "Compose",
+      "topic": "Validación de compose",
+      "description": "Fusiona el compose base con un override y entrega el resultado final en JSON, para que un script compruebe reglas (sin puertos publicados, qué servicios tocan una red, `mem_limit` en todos) sin arrancar contenedores ni necesitar secretos reales.",
+      "examples": [
+        {
+          "description": "Solo contar los puertos publicados",
+          "code": "docker compose config | grep -c published"
+        },
+        {
+          "description": "Que resuelva o falle con el mensaje de `${VAR:?}`",
+          "code": "docker compose -f a.yml -f b.yml config --quiet"
+        }
+      ],
+      "tags": [
+        "ci",
+        "config",
+        "docker-compose",
+        "json",
+        "override"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`config` solo interpola y fusiona: no necesita el daemon y acepta valores de mentira en un `--env-file` aparte. Con `ports: !reset []` (Compose ≥ 2.24) el override vacía los puertos del base. Probarlo en los dos sentidos: con el override bueno da OK, y quitándole el `!reset` a un servicio tiene que fallar. En PowerShell 5.1 el pipe le agrega un BOM al JSON (ver la entrada siguiente)."
+    },
+    {
+      "title": "Reconstruir y reiniciar UN solo servicio de Compose esperando a que esté sano",
+      "command": "docker compose --env-file .env.docker up -d --build --wait ui",
+      "section": "Compose",
+      "topic": "Ciclo de desarrollo con Compose",
+      "description": "Reconstruye la imagen de un solo servicio, recrea solo su contenedor y no devuelve el prompt hasta que su healthcheck (y el de lo que depende) diga `healthy`.",
+      "examples": [
+        {
+          "description": "Lo mismo sin tocar las dependencias (no las arranca ni recrea)",
+          "code": "docker compose up -d --build --no-deps --wait ui"
+        },
+        {
+          "description": "En PowerShell, limpiando antes una variable que pisaría al `--env-file`",
+          "code": "$env:SECRET_KEY = $null; docker compose --env-file .env.docker up -d --build --wait ui"
+        }
+      ],
+      "tags": [
+        "build",
+        "docker-compose",
+        "healthcheck",
+        "wait"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Fullstack"
+      ],
+      "notes": "`--wait` sale con error si el servicio queda `unhealthy`: sirve de verificación, no solo de arranque. El entorno del shell manda sobre `--env-file`: una variable exportada por otro script se cuela en el contenedor sin avisar. Usado 4 veces en una tarde para iterar el CSS de la UI en ~1 min por vuelta, con la API y Postgres intactos."
     }
   ]
 }

@@ -86,18 +86,31 @@
         {
           "description": "Redirigir salida a archivos",
           "code": "Start-Process python -ArgumentList 'worker.py' -RedirectStandardOutput out.log -RedirectStandardError err.log -WindowStyle Hidden"
+        },
+        {
+          "description": "Esperar a un .exe sin consola y leer su código de salida",
+          "code": "$p = Start-Process -FilePath 'dist\\App\\App.exe' -ArgumentList '--verificar' -Wait -PassThru; $p.ExitCode"
+        },
+        {
+          "description": "Fallar el paso del CI si no salió en 0",
+          "code": "if ($p.ExitCode -ne 0) { exit 1 }"
         }
       ],
       "tags": [
+        "ci",
+        "exitcode",
+        "gui",
+        "instalación",
         "procesos",
-        "instalación"
+        "start-process"
       ],
       "level": "intermedio",
       "roadmap": [
         "DevOps",
         "SRE",
         "Software"
-      ]
+      ],
+      "notes": "`$LASTEXITCODE` no sirve con un .exe de subsistema GUI llamado directo: PowerShell no lo espera. Como el .exe no tiene stdout, el resultado conviene dejarlo en un archivo."
     },
     {
       "title": "Consultar servicios con Get-Service",
@@ -1081,6 +1094,108 @@
         "SRE"
       ],
       "notes": "Usar `try { ... } finally { $l.Stop() }` para no dejar el puerto tomado si la prueba falla."
+    },
+    {
+      "title": "Buscar procesos por su línea de comandos (no por nombre)",
+      "command": "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\" | Where-Object { $_.CommandLine -like '*hurrier-perfil*' }",
+      "section": "PowerShell",
+      "topic": "Procesos",
+      "description": "Filtra procesos por su línea de comandos completa. Sirve cuando hay varios `python.exe` o `chrome.exe` y solo hay que tocar uno.",
+      "examples": [
+        {
+          "description": "Matar solo el runserver del proyecto",
+          "code": "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | ? { $_.CommandLine -like '*manage.py runserver 127.0.0.1:8001*' } | % { Stop-Process -Id $_.ProcessId -Force }"
+        }
+      ],
+      "tags": [
+        "chrome",
+        "cim",
+        "powershell",
+        "procesos",
+        "python"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`Get-Process` no trae la línea de comandos en PS 5.1, `Get-CimInstance` sí. El `python.exe` de un venv es un lanzador que crea el python real como hijo, con la misma línea: el filtro agarra a los dos."
+    },
+    {
+      "title": "Compilar un instalador de Inno Setup con la versión por parámetro",
+      "command": "& \"$env:LOCALAPPDATA\\Programs\\Inno Setup 6\\ISCC.exe\" \"/DVersion=1.1.0-rc.1\" \"/DVersionNumerica=1.1.0\" instalador\\app.iss",
+      "section": "PowerShell",
+      "topic": "Instaladores",
+      "description": "Compila un .iss pasándole defines desde la línea de comandos, así la versión sale de un solo lugar del proyecto.",
+      "examples": [
+        {
+          "description": "Instalar Inno Setup sin admin",
+          "code": "winget install --id JRSoftware.InnoSetup -e --scope user"
+        }
+      ],
+      "tags": [
+        "inno-setup",
+        "instalador",
+        "iscc",
+        "windows"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "`VersionInfoVersion` exige x.y.z numérico (sin `-rc.1`): por eso dos defines. `PrivilegesRequired=lowest` instala en %LOCALAPPDATA%\\Programs sin pedir admin. El `AppId` fijo es lo que hace que una versión nueva actualice a la anterior."
+    },
+    {
+      "title": "Ver en qué puertos escucha un proceso y cerrar su ventana como el usuario",
+      "command": "Get-NetTCPConnection -State Listen | Where-Object OwningProcess -eq <PID>; (Get-Process -Id <PID>).CloseMainWindow()",
+      "section": "PowerShell",
+      "topic": "Procesos y red",
+      "description": "Lista los puertos en escucha de un proceso por su PID, y cierra su ventana principal como lo haría la X (no como un kill).",
+      "examples": [
+        {
+          "description": "Encontrar el proceso que tiene la ventana",
+          "code": "Get-Process | Where-Object MainWindowTitle -eq 'LiveOps Dossiers'"
+        }
+      ],
+      "tags": [
+        "closemainwindow",
+        "get-nettcpconnection",
+        "pruebas",
+        "puertos"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`CloseMainWindow()` manda WM_CLOSE: corre la lógica de cierre de la app (en NiceGUI nativo, los `on_shutdown`). `Stop-Process` la mata sin cerrar nada."
+    },
+    {
+      "title": "Exportar un .docx a PDF con Word por COM (sin LibreOffice)",
+      "command": "$w = New-Object -ComObject Word.Application; $w.Visible = $false; try { $d = $w.Documents.Open(\"C:\\ruta\\doc.docx\", $false, $true); $d.SaveAs([ref]\"C:\\ruta\\doc.pdf\", [ref]17); $d.Close([ref]$false) } finally { $w.Quit() }",
+      "section": "PowerShell",
+      "topic": "Automatizar Word desde PowerShell",
+      "description": "Abre un documento Word en solo lectura, sin ventana, y lo guarda como PDF usando el propio Word instalado.",
+      "examples": [
+        {
+          "description": "Comprobar si Word está instalado",
+          "code": "try { (New-Object -ComObject Word.Application).Version } catch { \"sin Word\" }"
+        }
+      ],
+      "tags": [
+        "com",
+        "docx",
+        "pdf",
+        "powershell",
+        "word"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "`Open(ruta, ConfirmConversions, ReadOnly)`: el tercer `$true` abre en solo lectura. `17` = `wdFormatPDF`. El `finally { $w.Quit() }` evita dejar procesos `WINWORD.EXE` colgados. Ejecutarlo directo en PowerShell; envolverlo en `-ExecutionPolicy Bypass` es innecesario y el modo auto lo bloquea."
     }
   ]
 }

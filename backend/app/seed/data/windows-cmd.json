@@ -1397,6 +1397,135 @@
         "SRE",
         "Software"
       ]
+    },
+    {
+      "title": "Lanzar un proceso en segundo plano en la misma consola, con su salida a un log",
+      "command": "start \"\" /b \"%ComSpec%\" /c \"\"%PY%\" manage.py runserver 127.0.0.1:8001 < nul > \"logs\\api.log\" 2>&1\"",
+      "section": "CMD",
+      "topic": "Procesos en segundo plano",
+      "description": "Corre un servicio sin abrir otra ventana, pegado a la consola actual (muere con ella), con stdout y stderr a un archivo.",
+      "examples": [
+        {
+          "description": "Un script de Python con salida sin buffer",
+          "code": "set PYTHONUNBUFFERED=1` y luego `start \"\" /b \"%ComSpec%\" /c \"\"%PY%\" -m webui.app < nul > \"logs\\ui.log\" 2>&1\""
+        }
+      ],
+      "tags": [
+        "batch",
+        "cmd",
+        "logs",
+        "redireccion",
+        "start"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "El `\"\"` vacío es el título: sin él, `start` toma la ruta como título. `cmd /c` se come la primera y la última comilla, por eso van dobles. Para la consola padre las comillas quedan invertidas: un `)` en los argumentos cierra un bloque `( )` que envuelva la línea, así que va suelta. `< nul` evita que el hijo le robe la tecla al `pause`. Cerrar la consola con la X mata a los hijos `/b` (CTRL_CLOSE_EVENT)."
+    },
+    {
+      "title": "Candado (mutex) en un .bat con un handle de archivo",
+      "command": "9>\"logs\\lanzador.lock\" ( call :levantar & (call ) ) || echo Ya hay otro lanzador corriendo",
+      "section": "CMD",
+      "topic": "Scripts batch",
+      "description": "Abre un archivo en exclusiva mientras dura el bloque; una segunda instancia del script no lo consigue y cae al `||`.",
+      "examples": [
+        {
+          "description": "Proteger una sección corta",
+          "code": "9>\"%TEMP%\\tarea.lock\" ( call :tarea ) || exit /b 1"
+        }
+      ],
+      "tags": [
+        "batch",
+        "cmd",
+        "concurrencia",
+        "lock",
+        "mutex"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "`(call )` deja el errorlevel en 0, así el `||` salta solo si no se pudo tomar el candado y no si falló la subrutina. Todo lo que se lanza dentro del bloque (con `start`, con o sin `/b`) hereda el handle: un Chrome abierto ahí dentro tendría el candado tomado por horas."
+    },
+    {
+      "title": "`for /f` sobre una tubería de ejecutables entre comillas",
+      "command": "for /f \"tokens=5\" %%P in ('^\"\"%NETSTAT%\" -ano ^| \"%FINDSTR%\" /C:\":8001 \" ^| \"%FINDSTR%\" /C:\"LISTENING\"^\"') do \"%TASKKILL%\" /F /PID %%P",
+      "section": "CMD",
+      "topic": "Scripts batch",
+      "description": "Mata el proceso que escucha en un puerto, con utilidades por ruta absoluta entre comillas, sin que `for /f` rompa la línea.",
+      "examples": [
+        {
+          "description": "Solo mostrar el PID, para comprobar que el `for` devuelve algo",
+          "code": "... do echo %%P"
+        }
+      ],
+      "tags": [
+        "cmd",
+        "comillas",
+        "for",
+        "netstat",
+        "taskkill"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "`for /f` corre el texto con `cmd /c`, que le saca la primera y la última comilla. Sin el `^\"…^\"` de afuera la línea llega rota, y un `2>nul` esconde el error. La prueba válida es que el `for` devuelva un PID, no que no dé error."
+    },
+    {
+      "title": "Listar las pestañas de un Chrome con depuración remota sin tocarlas",
+      "command": "curl -s --max-time 2 http://127.0.0.1:9222/json/list",
+      "section": "CMD",
+      "topic": "Chrome DevTools",
+      "description": "Devuelve en JSON las pestañas abiertas (url, title, id) de un Chrome lanzado con `--remote-debugging-port`.",
+      "examples": [
+        {
+          "description": "Versión del navegador y el websocket de CDP",
+          "code": "curl -s http://127.0.0.1:9222/json/version"
+        }
+      ],
+      "tags": [
+        "cdp",
+        "chrome",
+        "curl",
+        "devtools",
+        "selenium"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "Software",
+        "DevOps"
+      ],
+      "notes": "El `id` de cada pestaña es el mismo window handle que usa chromedriver: se puede pasar directo a `switch_to.window`. Recorrer pestañas con `switch_to.window` las activa una por una y el usuario ve saltar el foco."
+    },
+    {
+      "title": "Simular la X de una consola para probar un .bat",
+      "command": "conhost.exe cmd /c iniciar.bat",
+      "section": "CMD",
+      "topic": "Scripts batch",
+      "description": "Abre el .bat en una consola clásica (conhost y no Windows Terminal), cuya ventana se puede cerrar por mensaje para probar el cierre con la X.",
+      "examples": [
+        {
+          "description": "Cerrar esa ventana por mensaje desde PowerShell (WM_CLOSE = 0x0010 con PostMessage a la ventana ConsoleWindowClass)",
+          "code": "Get-Process conhost | Where-Object MainWindowHandle -ne 0 | ForEach-Object { $_.CloseMainWindow() }"
+        }
+      ],
+      "tags": [
+        "batch",
+        "conhost",
+        "consola",
+        "pruebas"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Windows Terminal no expone la consola como `ConsoleWindowClass`: por eso se fuerza conhost. Cerrarla manda `CTRL_CLOSE_EVENT` a todos los procesos pegados a la consola."
     }
   ]
 }

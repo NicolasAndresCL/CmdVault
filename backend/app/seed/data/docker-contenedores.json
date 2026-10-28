@@ -92,12 +92,25 @@
         {
           "description": "Verificar qué variables recibió",
           "code": "docker exec app env | sort"
+        },
+        {
+          "description": "Comprobar que una imagen trae la zona horaria (tzdata)",
+          "code": "docker run --rm -e TZ=America/Santiago python:3.14-slim python -c \"import time; print(time.strftime('%Z %z'), time.tzname)\""
+        },
+        {
+          "description": "Resultado correcto )",
+          "code": "-03 -0300 ('-04', '-03')` (sin tzdata saldría `UTC +0000"
         }
       ],
       "tags": [
-        "run",
+        "configuracion",
+        "docker",
         "env",
-        "configuracion"
+        "python",
+        "run",
+        "tz",
+        "tzdata",
+        "zona-horaria"
       ],
       "level": "básico",
       "roadmap": [
@@ -105,7 +118,7 @@
         "SRE",
         "Fullstack"
       ],
-      "notes": "El --env-file de docker run no interpreta comillas ni expansión ${VAR} como lo hace Compose: el valor se toma literal. Los secretos en variables quedan visibles en docker inspect."
+      "notes": "El --env-file de docker run no interpreta comillas ni expansión ${VAR} como lo hace Compose: el valor se toma literal. Los secretos en variables quedan visibles en docker inspect. `python:3.14-slim` ya trae tzdata; en alpine o en distroless hay que instalarlo. `date.today()` usa la hora local del contenedor: en UTC, después de las 20–21 h en Chile ya es «mañana». Django no lo sufre porque fija `TZ` desde `TIME_ZONE`, pero un proceso aparte (NiceGUI) sí."
     },
     {
       "title": "Política de reinicio",
@@ -1011,21 +1024,28 @@
         {
           "description": "Desde Git Bash en Windows",
           "code": "MSYS_NO_PATHCONV=1 docker run --rm -v \"$(pwd -W)/n8n/workflows:/wf:ro\" --entrypoint sh docker.n8n.io/n8nio/n8n:2.41.6 -c 'n8n import:workflow --separate --input=/wf && n8n list:workflow'"
+        },
+        {
+          "description": "Ver qué credencial (id y nombre) usa cada nodo de un workflow de n8n",
+          "code": "sudo docker exec n8n-main n8n export:workflow --id=AidRegistroWh001 --pretty 2>/dev/null | grep -A3 '\"httpHeaderAuth\"'"
         }
       ],
       "tags": [
-        "n8n",
-        "docker",
         "ci",
+        "credenciales",
+        "docker",
         "entrypoint",
-        "import"
+        "export-workflow",
+        "grep",
+        "import",
+        "n8n"
       ],
       "level": "avanzado",
       "roadmap": [
         "DevOps",
         "SRE"
       ],
-      "notes": "import:workflow SE SALTA EN SILENCIO los archivos que no puede importar y reporta éxito igual: comparar cuántos archivos hay contra cuántos lista list:workflow (formato id|nombre). --entrypoint sh -c '...' permite encadenar dos comandos en el mismo contenedor. En Git Bash, anteponer MSYS_NO_PATHCONV=1 para que no reescriba /wf."
+      "notes": "import:workflow SE SALTA EN SILENCIO los archivos que no puede importar y reporta éxito igual: comparar cuántos archivos hay contra cuántos lista list:workflow (formato id|nombre). --entrypoint sh -c '...' permite encadenar dos comandos en el mismo contenedor. En Git Bash, anteponer MSYS_NO_PATHCONV=1 para que no reescriba /wf. `--pretty` deja una propiedad por línea (si no, `grep` ve todo en una sola). `2>/dev/null` descarta los avisos de arranque de n8n."
     },
     {
       "title": "Ver la versión real de una imagen :latest que está corriendo",
@@ -1090,6 +1110,175 @@
         "SRE"
       ],
       "notes": "`docker stats` calcula uso = total − `inactive_file`, así que incluye `active_file`: la caché del venv recién leído (numpy, matplotlib). En un VPS la API marcaba 258,6/320 MiB, pero `anon` era 110,6 MiB y `active_file` 144,3 MiB: el margen real era ~210 MiB. Valores en bytes. Solo cgroup v2 (AlmaLinux 9, Docker Desktop); en v1 el archivo y los nombres cambian."
+    },
+    {
+      "title": "Memoria real de varios contenedores en MiB (anon vs caché)",
+      "command": "for c in <contenedor1> <contenedor2>; do printf '%-18s ' \"$c\"; sudo docker exec \"$c\" sh -c \"grep -E '^(anon|active_file|inactive_file) ' /sys/fs/cgroup/memory.stat\" | awk '{printf \"%s=%.1f MiB  \", $1, $2/1048576} END {print \"\"}'; done",
+      "section": "Contenedores",
+      "topic": "Memoria de contenedores",
+      "description": "Lee del cgroup de cada contenedor la memoria real (`anon`) y la caché de archivos, y la imprime en MiB en una línea por contenedor.",
+      "examples": [
+        {
+          "description": "Solo el uso que reporta Docker, para comparar",
+          "code": "docker stats --no-stream --format 'table {{.Name}}\\t{{.MemUsage}}\\t{{.MemPerc}}' <contenedor1> <contenedor2>"
+        }
+      ],
+      "tags": [
+        "anon",
+        "awk",
+        "cgroup",
+        "docker-stats",
+        "memory.stat"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`docker stats` = total − `inactive_file`, así que suma la caché **activa** (librerías leídas del disco), que el kernel libera antes de un OOM. Caso real: API 364,6 MiB en `docker stats` pero `anon` 225,9 MiB; los 130 MiB restantes eran `active_file`. Decidir los `mem_limit` con `anon`, no con `docker stats`."
+    },
+    {
+      "title": "Importar credenciales en n8n por CLI (sin pasar por la UI)",
+      "command": "docker compose run --rm --no-deps -T --entrypoint n8n n8n-main import:credentials --input=/cred/credenciales.json",
+      "section": "Contenedores",
+      "topic": "n8n",
+      "description": "Crea credenciales desde un JSON (`[{id, name, type, data}]`). Si `data` es un objeto en claro, n8n lo cifra con la `N8N_ENCRYPTION_KEY` de esa instancia. Con `id` fijo, los workflows que la referencian quedan enlazados al importarlos.",
+      "examples": [
+        {
+          "description": "Con la instancia corriendo",
+          "code": "docker exec n8n-main n8n import:credentials --input=/tmp/credenciales.json"
+        },
+        {
+          "description": "Exportar para respaldo (cifradas)",
+          "code": "docker exec n8n-main n8n export:credentials --all --output=/tmp/cred.json"
+        }
+      ],
+      "tags": [
+        "cli",
+        "credenciales",
+        "docker",
+        "e2e",
+        "import",
+        "n8n"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "El archivo lleva secretos en claro: crearlo en un temporal fuera del repo y borrarlo al terminar. El `type` es el nombre interno (`httpHeaderAuth`, `smtp`…), no el que muestra la UI."
+    },
+    {
+      "title": "Publicar (activar) un workflow de n8n 2.x por CLI",
+      "command": "docker exec n8n-main n8n publish:workflow --id=AidRegistroWh001",
+      "section": "Contenedores",
+      "topic": "n8n",
+      "description": "En n8n 2.x los workflows se «publican» en vez de activarse; `update:workflow --active` quedó deprecado. Publica la versión actual del workflow con ese id.",
+      "examples": [
+        {
+          "description": "Despublicar",
+          "code": "docker exec n8n-main n8n unpublish:workflow --id=AidRegistroWh001"
+        },
+        {
+          "description": "Ver ids y nombres",
+          "code": "docker exec n8n-main n8n list:workflow"
+        }
+      ],
+      "tags": [
+        "activar",
+        "cli",
+        "n8n",
+        "publish",
+        "workflow"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "Con la instancia corriendo, el webhook o el horario no se registran hasta reiniciar n8n. Para que valga al instante: importar y publicar **antes** de arrancar (pruebas) o publicar desde la UI (producción)."
+    },
+    {
+      "title": "Ejecutar un workflow de n8n por CLI en un contenedor efímero",
+      "command": "docker compose run --rm --no-deps -T --entrypoint n8n n8n-worker execute --id=AidSemanaNueva01",
+      "section": "Contenedores",
+      "topic": "n8n",
+      "description": "Corre un workflow (desde su Manual Trigger) en un contenedor nuevo con las mismas redes y variables que el servicio, y deja la ejecución guardada en la base. Sirve para probar workflows programados sin esperar al cron.",
+      "examples": [
+        {
+          "description": "Guardar la salida (JSON de la ejecución)",
+          "code": "docker compose run --rm --no-deps -T --entrypoint n8n n8n-worker execute --id=X > exec.log 2>&1"
+        }
+      ],
+      "tags": [
+        "compose-run",
+        "execute",
+        "n8n",
+        "pruebas",
+        "queue-mode",
+        "worker"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "`docker exec n8n-worker n8n execute …` falla con `n8n Task Broker's port 5679 is already in use`: el worker ya corre su task broker. Las ejecuciones por CLI tienen modo `cli` y no persisten los static data del workflow."
+    },
+    {
+      "title": "Revisar una credencial de n8n sin mostrar el secreto (nombre, largo y huella)",
+      "command": "sudo docker exec n8n-main sh -c 'n8n export:credentials --id=<id> --decrypted --output=/tmp/c.json >/dev/null 2>&1; node -e \"const j=require(\\\"/tmp/c.json\\\"); const c=(Array.isArray(j)?j[0]:j).data; console.log(JSON.stringify(c.name), c.value.length, require(\\\"crypto\\\").createHash(\\\"sha256\\\").update(c.value).digest(\\\"hex\\\").slice(0,12))\"; rm -f /tmp/c.json'",
+      "section": "Contenedores",
+      "topic": "Credenciales de n8n",
+      "description": "Exporta la credencial descifrada a un temporal dentro del contenedor, imprime solo el campo Name, el largo del Value y 12 caracteres de su SHA-256, y borra el temporal. Permite comparar con lo que se envía sin que el secreto aparezca en pantalla.",
+      "examples": [
+        {
+          "description": "Huella del secreto que se envía, para compararla con la de la credencial (deben coincidir los 12 caracteres)",
+          "code": "printf %s \"$S\" | sha256sum | cut -c1-12"
+        }
+      ],
+      "tags": [
+        "credenciales",
+        "diagnostico",
+        "docker-exec",
+        "n8n",
+        "node",
+        "secretos",
+        "sha256"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "`JSON.stringify` muestra el Name entre comillas: así se ven espacios o un título puesto donde va el nombre del header (la causa real del caso). El `id` es el final de la URL de la credencial. Usa el Node.js de la propia imagen de n8n: no instala nada en el servidor."
+    },
+    {
+      "title": "Compilar un proyecto NetBeans Ant sin abrir el IDE (equivalente a F6)",
+      "command": "docker exec --user abc poo-netbeans bash -lc 'cp -r /config/workspace/Proyecto /tmp/p && cd /tmp/p && /opt/netbeans/extide/ant/bin/ant -q jar'",
+      "section": "Contenedores",
+      "topic": "Java en contenedores",
+      "description": "Copia el proyecto a `/tmp` dentro del contenedor y corre el Ant que trae NetBeans, para comprobar que compila igual que con F6 sin generar `build/` en la carpeta real.",
+      "examples": [
+        {
+          "description": "Correr luego una clase con main",
+          "code": "docker exec --user abc poo-netbeans bash -lc 'cd /tmp/p && java -cp build/classes paquete.Clase'"
+        }
+      ],
+      "tags": [
+        "ant",
+        "build",
+        "docker",
+        "exec",
+        "java",
+        "netbeans"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "`-q` deja solo errores y el resultado (`BUILD SUCCESSFUL`). `--user abc` evita dejar archivos de NetBeans con dueño root. Desde Git Bash, antes `export MSYS_NO_PATHCONV=1`."
     }
   ]
 }

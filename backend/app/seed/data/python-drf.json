@@ -368,18 +368,30 @@
         {
           "description": "Usar el token",
           "code": "curl -H 'Authorization: Token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b' http://localhost:8000/api/pedidos/"
+        },
+        {
+          "description": "Quitar la contraseña de un usuario de Django y regenerar su token de DRF",
+          "code": "docker compose exec -T api python manage.py shell -c \"from django.contrib.auth.models import User; u=User.objects.get(username='<usuario>'); u.set_unusable_password(); u.save(); print('contraseña utilizable:', u.has_usable_password())\""
+        },
+        {
+          "description": "Token nuevo guardado sin mostrarlo",
+          "code": "T=$(docker exec <contenedor-api> python manage.py drf_create_token -r <usuario> | awk '{print $3}'); echo ${#T}"
         }
       ],
       "tags": [
-        "drf",
         "autenticación",
+        "contraseña",
+        "django",
+        "drf",
+        "migracion",
         "token"
       ],
       "level": "intermedio",
       "roadmap": [
         "Software",
         "Fullstack"
-      ]
+      ],
+      "notes": "`-r` borra el token existente y crea otro; sin él devuelve el que ya había (el que vino en el dump). `has_usable_password()` es más confiable que mirar si el hash empieza con `!`. Si una variable obligatoria del `.env` quedó vacía, `docker compose exec` ni arranca: `docker exec <contenedor>` no lee el compose."
     },
     {
       "title": "Autenticación JWT con simplejwt",

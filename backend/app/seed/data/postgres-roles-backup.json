@@ -543,6 +543,36 @@
         "DevOps"
       ],
       "notes": "Desde PG 12 se usa recovery.signal (ya no existe recovery.conf). archive_mode requiere reinicio. Herramientas como pgBackRest o Barman gestionan esto de forma más robusta que un cp casero."
+    },
+    {
+      "title": "Respaldar Postgres de un contenedor y comprobar el dump antes de borrar nada",
+      "command": "sudo docker exec <contenedor-db> sh -c 'pg_dump -U \"$POSTGRES_USER\" \"$POSTGRES_DB\"' | gzip > ~/<app>-final-$(date +%F).sql.gz && ls -lh ~/<app>-final-*.sql.gz",
+      "section": "Backup y restauración",
+      "topic": "Respaldo en contenedores",
+      "description": "Saca un dump plano comprimido de un Postgres en Docker con las credenciales del propio contenedor, y verifica que el gzip esté íntegro y que traiga datos de cada tabla.",
+      "examples": [
+        {
+          "description": "Verificarlo",
+          "code": "gunzip -t ~/<app>-final-<fecha>.sql.gz && echo \"gzip OK\" && zcat ~/<app>-final-<fecha>.sql.gz | grep -E '^COPY public\\.' | cut -d' ' -f2"
+        },
+        {
+          "description": "Sacarlo del servidor (desde WSL)",
+          "code": "mkdir -p ~/backups-vps && scp vps:<app>-final-<fecha>.sql.gz ~/backups-vps/"
+        }
+      ],
+      "tags": [
+        "docker",
+        "gzip",
+        "pg_dump",
+        "respaldo",
+        "verificacion"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "comillas simples en `sh -c '…'`: las variables se expanden **dentro** del contenedor, donde existen. Sin `-t` en `docker exec`, porque con TTY los `\\r` corrompen el dump. El `sudo` solo afecta a `docker exec`: el archivo queda del usuario. En un dump plano cada tabla con datos empieza con `COPY public.<tabla> … FROM stdin;`; si no aparece ninguna, el dump trae solo el esquema. lab-algebra: 41K, tablas `mazos`, `repasos`, `tarjetas`, `usuarios`."
     }
   ]
 }

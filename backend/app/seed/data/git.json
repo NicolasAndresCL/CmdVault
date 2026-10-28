@@ -928,19 +928,42 @@
         {
           "description": "Cuántos commits hay sin versionar desde el último tag",
           "code": "git log --oneline v1.0.0..HEAD | wc -l"
+        },
+        {
+          "description": "Etiquetar retroactivamente el commit donde se cortó una versión",
+          "code": "git tag -a v0.3.0 afb3055 -m \"v0.3.0 — resumen\""
+        },
+        {
+          "description": "Encontrar el commit del corte )",
+          "code": "git log -S'version = \"0.3.0\"' --oneline` (o el `chore(release): versión 0.3.0` en `git log --oneline"
+        },
+        {
+          "description": "Comprobar que es anotado con fecha de hoy, y debajo el commit con su fecha original)",
+          "code": "git show --no-patch v0.3.0` (sale `tag v0.3.0` + `Tagger:"
+        },
+        {
+          "description": "Ver todos con su mensaje",
+          "code": "git tag -n"
+        },
+        {
+          "description": "Pushear solo esos, no todos",
+          "code": "git push origin v0.3.0 v0.4.0"
         }
       ],
       "tags": [
         "git",
-        "tags",
-        "release"
+        "release",
+        "retroactivo",
+        "semver",
+        "tag",
+        "tags"
       ],
       "level": "intermedio",
       "roadmap": [
         "DevOps",
         "Software"
       ],
-      "notes": "Un tag ligero (`git tag v1.0.0` sin `-a`) no tiene mensaje: `git tag -n` le muestra el asunto del commit. La norma pide tags anotados."
+      "notes": "Un tag ligero (`git tag v1.0.0` sin `-a`) no tiene mensaje: `git tag -n` le muestra el asunto del commit. La norma pide tags anotados. Sin el argumento del commit, el tag cae en `HEAD`. Un tag sobre un commit sin `release.yml` en su árbol no dispara el workflow: su release va a mano con `gh release create vX.Y.Z --verify-tag --notes-file … --latest=false`. Si es la única release, GitHub la muestra como «Latest» igual; la siguiente creada por el workflow (semver mayor) le quita la insignia sola."
     },
     {
       "title": "Descartar cambios de un archivo",
@@ -1136,17 +1159,32 @@
         {
           "description": "Un archivo tal como estaba en un tag",
           "code": "git show v1.0.0:README.md"
+        },
+        {
+          "description": "Ver solo la cabecera de un commit o tag, sin el diff",
+          "code": "git show --no-patch --oneline afb3055"
+        },
+        {
+          "description": "Con autor y fecha completos",
+          "code": "git show --no-patch afb3055"
+        },
+        {
+          "description": "Sobre un tag anotado (primero el objeto tag, después el commit)",
+          "code": "git show --no-patch v0.3.0"
         }
       ],
       "tags": [
+        "commit",
         "git",
-        "show"
+        "show",
+        "tag"
       ],
       "level": "básico",
       "roadmap": [
         "DevOps",
         "Software"
-      ]
+      ],
+      "notes": "`--no-patch` (alias `-s`) quita el diff, que en un commit grande llena la pantalla."
     },
     {
       "title": "Buscar en el código versionado",
@@ -1378,18 +1416,26 @@
         {
           "description": "Usuario autenticado vía API",
           "code": "gh api user --jq .login"
+        },
+        {
+          "description": "Autenticar gh en WSL sin token manual (flujo por navegador)",
+          "code": "gh auth login --hostname github.com --git-protocol https --web"
         }
       ],
       "tags": [
+        "autenticacion",
+        "auth",
+        "device-flow",
         "gh",
         "github",
-        "auth"
+        "wsl"
       ],
       "level": "básico",
       "roadmap": [
         "DevOps",
         "Software"
-      ]
+      ],
+      "notes": "Windows y WSL guardan credenciales **por separado**: autenticarse en uno no sirve en el otro. En WSL a veces no se abre el navegador: copiar el código `XXXX-XXXX` y abrir `https://github.com/login/device` en el navegador de Windows. Si `git push` ya funcionaba en WSL, contestar **No** a «Authenticate Git with your GitHub credentials?» para no reemplazar el *credential helper* que ya se usa. `GH_TOKEN` solo hace falta en scripts o CI."
     },
     {
       "title": "Crear un repositorio desde la terminal",
@@ -1470,18 +1516,31 @@
         {
           "description": "Ver los checks y mergear con squash",
           "code": "gh pr checks 2\ngh pr merge 2 --squash --delete-branch"
+        },
+        {
+          "description": "Mezclar un PR solo si el CI está en verde",
+          "code": "gh pr checks && gh pr merge --squash --delete-branch"
+        },
+        {
+          "description": "Esperar a que GitHub registre los jobs y seguirlos",
+          "code": "sleep 20 && gh pr checks --watch"
         }
       ],
       "tags": [
+        "ci",
+        "exit-code",
         "gh",
         "pr",
-        "review"
+        "pull-request",
+        "review",
+        "seguridad"
       ],
       "level": "intermedio",
       "roadmap": [
         "DevOps",
         "Software"
-      ]
+      ],
+      "notes": "`gh pr checks` sale con **0** solo si todos pasaron, **8** si hay pendientes y **1** si alguno falló o aún no hay checks (`no checks reported`); `&&` corre el merge solo con 0. Recién creado el PR, `--watch` puede terminar al instante porque los jobs aún no existen: de ahí el `sleep`. Sin protección de rama, GitHub no impide mezclar en rojo."
     },
     {
       "title": "Comentar un PR de Dependabot",
@@ -1728,19 +1787,26 @@
         {
           "description": "¿Existe la rama main en el remoto? (sale con 2 si no)",
           "code": "git ls-remote --exit-code --heads origin main"
+        },
+        {
+          "description": "Comprobar que un tag existe en GitHub sin clonar",
+          "code": "git ls-remote --tags https://github.com/<usuario>/<repo>.git 'v1.2.0*'"
         }
       ],
       "tags": [
+        "despliegue",
         "git",
-        "remoto",
         "ls-remote",
-        "push"
+        "push",
+        "release",
+        "remoto",
+        "tags"
       ],
       "level": "intermedio",
       "roadmap": [
         "DevOps"
       ],
-      "notes": "Crear el repo en GitHub SIN README, .gitignore ni licencia: si GitHub hace un commit inicial y tú otro en local, quedan dos historias sin ancestro común y el push falla con 'rejected (fetch first)' (habría que usar --allow-unrelated-histories). Con un repo privado, si no imprime nada pero sale con error 128, es un problema de credenciales, no un repo vacío."
+      "notes": "Crear el repo en GitHub SIN README, .gitignore ni licencia: si GitHub hace un commit inicial y tú otro en local, quedan dos historias sin ancestro común y el push falla con 'rejected (fetch first)' (habría que usar --allow-unrelated-histories). Con un repo privado, si no imprime nada pero sale con error 128, es un problema de credenciales, no un repo vacío. Con el patrón entre comillas y el `*` aparece la línea `^{}`, que es el commit real. Sin salida = el tag no está pusheado: no desplegar."
     },
     {
       "title": "Crear etiquetas de un repo con GitHub CLI",
@@ -1909,6 +1975,119 @@
         "DevOps"
       ],
       "notes": "`404 Branch not protected` = se puede proteger pero no está. `403 Upgrade to GitHub Pro or make this repository public` = repo privado del plan gratuito: la función no existe ahí (verificado el 2026-10-21)."
+    },
+    {
+      "title": "Validar los workflows de GitHub Actions con actionlint en Docker desde Git Bash",
+      "command": "MSYS_NO_PATHCONV=1 docker run --rm -v \"$(pwd -W):/repo\" -w /repo rhysd/actionlint:1.7.7 -no-color",
+      "section": "Avanzado",
+      "topic": "GitHub Actions",
+      "description": "Revisa la sintaxis, las expresiones `${{ }}` y los `run:` (con shellcheck) de los workflows sin instalar nada, montando el repo en un contenedor efímero. Detecta errores que GitHub solo mostraría al pushear.",
+      "examples": [
+        {
+          "description": "Solo algunos archivos",
+          "code": "MSYS_NO_PATHCONV=1 docker run --rm -v \"$(pwd -W):/repo\" -w /repo rhysd/actionlint:1.7.7 -no-color .github/workflows/release.yml"
+        },
+        {
+          "description": "En Linux/WSL/CI",
+          "code": "docker run --rm -v \"$PWD:/repo\" -w /repo rhysd/actionlint:1.7.7"
+        }
+      ],
+      "tags": [
+        "actionlint",
+        "ci",
+        "docker",
+        "git-bash",
+        "github-actions",
+        "lint"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "Sin `MSYS_NO_PATHCONV=1`, Git Bash reescribe `-w /repo` como `C:/Program Files/Git/repo` y Docker responde `the working directory ... is invalid, it needs to be an absolute path`. `pwd -W` da la ruta en formato Windows (`C:/dev/...`) que entiende Docker Desktop. El flag para quitar colores es `-no-color` (`-color=never` falla: `-color` es booleano)."
+    },
+    {
+      "title": "Ver el fin de línea de un archivo en el índice y en el working copy",
+      "command": "git ls-files --eol <archivo>",
+      "section": "Inspección y búsqueda",
+      "topic": "Fin de línea (CRLF/LF)",
+      "description": "Muestra, por archivo, el fin de línea guardado en el repo (`i/`), el del disco (`w/`) y el atributo que aplica. Explica por qué git avisa de conversiones y si un diff de archivo completo es solo por CRLF.",
+      "examples": [
+        {
+          "description": "Todos los archivos con CRLF en el disco",
+          "code": "git ls-files --eol | grep 'w/crlf'"
+        },
+        {
+          "description": "Archivos guardados con CRLF dentro del repo (los problemáticos)",
+          "code": "git ls-files --eol | grep 'i/crlf'"
+        }
+      ],
+      "tags": [
+        "autocrlf",
+        "crlf",
+        "eol",
+        "git",
+        "gitattributes",
+        "windows"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "`i/lf w/crlf attr/text=auto eol=lf` es lo normal en Windows con `core.autocrlf`: en el repo hay LF y git convierte al commitear (de ahí el aviso, inofensivo). Al reescribir esos archivos con un script, conservar el CRLF del disco evita que el diff local marque el archivo entero."
+    },
+    {
+      "title": "Medir cuánto pesa solo lo versionado de un repo",
+      "command": "git ls-files -z | xargs -0 du -cb | tail -1",
+      "section": "Inspección y búsqueda",
+      "topic": "Tamaño del repositorio",
+      "description": "Suma el tamaño de los archivos que git rastrea, ignorando venv, node_modules, `.terraform` y todo lo del `.gitignore`: es lo que llega al servidor al clonar.",
+      "examples": [
+        {
+          "description": "Los 15 archivos versionados más pesados",
+          "code": "git ls-files -z | xargs -0 du -b | sort -rn | head -15"
+        }
+      ],
+      "tags": [
+        "du",
+        "git",
+        "ls-files",
+        "tamaño",
+        "xargs"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "`-z` + `xargs -0` separan con NUL, así no se rompe con espacios ni tildes en los nombres. `du -b` da bytes aparentes y `-c` añade la línea `total`. En `all_in_django` la carpeta pesaba ~2,6 GB (venv de 1,1 GB y `infra/terraform/.terraform` de 1,4 GB) y lo versionado **1,78 MiB**. En Git Bash de Windows funciona igual."
+    },
+    {
+      "title": "Ver cuánto ocupa la base de objetos de git",
+      "command": "git count-objects -vH",
+      "section": "Inspección y búsqueda",
+      "topic": "Tamaño del repositorio",
+      "description": "Muestra cuántos objetos sueltos y empaquetados tiene el repo y cuánto pesan, en unidades legibles.",
+      "examples": [
+        {
+          "description": "Compactar y volver a medir",
+          "code": "git gc && git count-objects -vH"
+        }
+      ],
+      "tags": [
+        "count-objects",
+        "gc",
+        "git",
+        "tamaño"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "Software"
+      ],
+      "notes": "`size` son los objetos sueltos y `size-pack` los empaquetados; el clon que baja otra máquina se parece a `size-pack` tras un `gc`. Con 972 objetos sueltos y 0 packs (3,51 MiB), el repo nunca había pasado por `gc`."
     }
   ]
 }

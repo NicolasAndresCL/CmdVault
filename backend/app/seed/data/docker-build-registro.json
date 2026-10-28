@@ -650,6 +650,32 @@
         "Software"
       ],
       "notes": "Un ARG declarado antes de FROM solo sirve para el FROM; vuelve a declararlo dentro de la etapa para usarlo."
+    },
+    {
+      "title": "Medir una imagen de un registro sin descargarla (API v2 de GHCR)",
+      "command": "tok=$(curl -s \"https://ghcr.io/token?scope=repository:<usuario>/<imagen>:pull\" | python -c \"import sys,json;print(json.load(sys.stdin)['token'])\")\ncurl -s -H \"Authorization: Bearer $tok\" -H \"Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json\" https://ghcr.io/v2/<usuario>/<imagen>/manifests/<tag>",
+      "section": "Build y registro",
+      "topic": "Registros de imágenes",
+      "description": "Pide un token anónimo a GHCR, lee el manifiesto de la imagen y suma el tamaño comprimido de sus capas: lo que bajará un `docker pull`. Sirve también para saber si la imagen es pública.",
+      "examples": [
+        {
+          "description": "Con Docker encendido, lo mismo en una línea",
+          "code": "docker manifest inspect ghcr.io/<usuario>/<imagen>:<tag>"
+        }
+      ],
+      "tags": [
+        "curl",
+        "ghcr",
+        "manifest",
+        "oci",
+        "registry"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "Cloud"
+      ],
+      "notes": "si el tag es multi-arquitectura, la primera respuesta es un *index*: hay que tomar el `digest` de `amd64` y pedir `manifests/<digest>`. Después se suman los `layers[].size`. El nombre del repo va **en minúsculas**. Si el token sale vacío, la imagen es privada y el VPS necesitará `docker login ghcr.io`. Resultado: api 219,8 MiB (11 capas) y ui 127,3 MiB (8 capas). En disco, descomprimidas, ocupan ~2–3× eso."
     }
   ]
 }
