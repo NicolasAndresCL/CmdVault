@@ -4,6 +4,42 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Sin publicar]
 
+## [1.2.2] — 28 de octubre de 2026
+
+### Agregado
+- **Tercer lote de la bandeja** (59 entradas anotadas por otras sesiones entre el 22 y el 28 de octubre:
+  `vps`, `vps-infra`, `liveops-dossiers`, `CmdVault`, POO y Comunicación): **44 comandos nuevos** y
+  **15 que enriquecen comandos existentes** con ejemplos y notas. El total pasa de 1.575 a **1.619 comandos**
+  y de 4.252 a **4.345 ejemplos**.
+  - Windows (+12): lanzadores `.bat` (`start /b` con log, candado con handle de archivo, `for /f` con
+    ejecutables entre comillas, conhost para probar la X), procesos por línea de comandos con CIM, puertos de
+    un PID y `CloseMainWindow()`, Inno Setup con defines, Word por COM a PDF, y tres trampas de PowerShell 5.1
+    (comas que arman arreglos, BOM en el pipe a programas nativos, `--jq` con comillas dobles).
+  - Docker (+10): API de un contenedor con `urllib`, override de Compose como JSON, rebuild de un solo
+    servicio con `--wait`, memoria `anon` vs caché de varios contenedores, tamaño de una imagen en GHCR sin
+    descargarla, n8n por CLI (importar credenciales, publicar y ejecutar workflows, revisar una credencial sin
+    mostrar el secreto) y Ant de NetBeans dentro de un contenedor.
+  - Terminal (+6), Cloud/gcloud (+5: llaves de cuentas de servicio, impersonación sin llaves,
+    `generateAccessToken`, Drive y Sheets con curl), Git (+4: actionlint en Docker, `ls-files --eol`, peso de
+    lo versionado y de la base de objetos), Python (+3), VPS (+3) y PostgreSQL (+1).
+
+### Cambiado
+- Enriquecidos, entre otros: «Etiquetar una versión» (tag retroactivo), «Ver un commit» (`--no-patch`),
+  «Revisar y mergear PRs» (merge solo con el CI en verde), «Autenticar GitHub CLI» (WSL), «Proyectos y APIs»,
+  «Listar imágenes» (containerd) y «Probar workflows de n8n en un contenedor desechable».
+- Secciones y roadmaps de la bandeja fuera del contrato se mapearon a los existentes (p. ej. `bash/curl` →
+  Terminal · JSON y YAML; `Automatización` → DevOps). Cuentas y usuarios reales se generalizaron.
+
+### Corregido
+- **Jenkinsfile**: el proyecto de Compose, la red y el sidecar de Postgres de cada build se llamaban
+  `cmdvault-ci-<n.º de build>`, así que el build #1 de una rama chocaba con restos del #1 de otro job
+  (`container is marked for removal and cannot be started` en «Build + smoke»). Ahora el nombre incluye el job
+  y la rama: `ci-<job>-<rama>-<build>`.
+
+### Dependencias
+- PRs de Dependabot #5 y #6, mergeados antes de esta versión: FastAPI 0.143.3 → 0.156.1,
+  SQLAlchemy 2.1.4 → 2.1.5 y pydantic-settings 2.16.0 → 2.16.1 (backend y frontend).
+
 ## [1.2.1] — 22 de octubre de 2026
 
 ### Agregado
@@ -56,6 +92,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - **`.github/workflows/release.yml`**: al pushear un tag `vX.Y.Z` verifica que coincide con
   `backend/pyproject.toml` y con una sección del CHANGELOG, y publica la GitHub Release con esas notas.
 
+
 ### Corregido
 - `lint-iac.sh` reintenta hasta 3 veces la descarga de colecciones de Ansible Galaxy: un corte TLS de Galaxy
   dejó en rojo un build de Jenkins sin cambios en el código.
@@ -88,6 +125,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   firewalld con Docker, ShellCheck `-f gcc` (SC2164, SC2015), bit de ejecución en git como paso de CI y
   `sshd -T` (en sshd gana el primer valor leído: drop-in `00-`).
 
+
 ### Corregido
 - «Crear y activar swap» y «Crear memoria swap en un VPS pequeño» se contradecían sobre `fallocate` en XFS:
   ambos usan ahora `dd` como camino principal, como recomienda `man swapon` para XFS y ext4.
@@ -114,6 +152,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - `smoke.sh` recorre los entornos que declara la API en vez de una lista fija (33 rutas).
 - `verificar.sh` usa el mismo ejecutable `pytest` que el CI, un proyecto de Compose aparte y baja el stack
   de prueba con `trap`, también si falla.
+
 
 ### Corregido
 - CI: `pythonpath` de pytest (el ejecutable `pytest` no añade el cwd al `sys.path`).

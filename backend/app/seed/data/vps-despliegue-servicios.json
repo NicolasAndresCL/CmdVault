@@ -765,6 +765,32 @@
         "SRE"
       ],
       "notes": "`echo ${#H}` debe dar 37 (`$apr1$` + sal de 8 + `$` + hash de 22); `0` = las contraseñas no coincidieron. Heredoc con `EOF` SIN comillas para que bash expanda `$(...)` y `$H`; las comillas simples sí llegan al archivo y evitan que Compose interprete los `$` del hash. `-F` en grep porque `$` es ancla en regex; `\\$` porque va entre comillas dobles. La contraseña debe ser NUEVA, nunca la de `sudo`: `apr1` es MD5, se rompe offline y el hash queda visible en `docker inspect`. `>/dev/null` evita que `tee` repita los secretos en pantalla."
+    },
+    {
+      "title": "Comprobar una contraseña contra un hash apr1 sin mostrar ninguno",
+      "command": "S=$(sudo grep '^APP_BASIC_AUTH=' .env | cut -d'$' -f3); sudo grep -q -F \"usuario:$(openssl passwd -apr1 -salt \"$S\")'\" .env && echo \"COINCIDE\" || echo \"NO coincide\"; unset S",
+      "section": "Despliegue",
+      "topic": "Basic auth de Traefik",
+      "description": "Recalcula el hash de la contraseña que escribes con la misma sal del hash guardado y comprueba si coincide, sin imprimir ni la contraseña ni el hash.",
+      "examples": [
+        {
+          "description": "Ver que la etiqueta que lee Traefik llegó entera (solo prefijo y largo)",
+          "code": "L=$(sudo docker inspect <contenedor> -f '{{index .Config.Labels \"traefik.http.middlewares.<mw>.basicauth.users\"}}'); echo \"${L:0:14}… largo ${#L}\"; unset L"
+        }
+      ],
+      "tags": [
+        "apr1",
+        "basic-auth",
+        "openssl",
+        "traefik",
+        "verificacion"
+      ],
+      "level": "avanzado",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "un hash `apr1` es `$apr1$<sal>$<resultado>`: con la misma contraseña y la misma sal, `openssl` da el mismo hash. `cut -d'$' -f3` saca la sal (no es secreta). En el caso real dio `COINCIDE`: el 401 venía de `Ctrl+V` en la terminal de WSL, que no pega (manda `^V`); se pega con `Ctrl+Shift+V`. `index` hace falta en la plantilla porque el nombre de la etiqueta tiene puntos."
     }
   ]
 }

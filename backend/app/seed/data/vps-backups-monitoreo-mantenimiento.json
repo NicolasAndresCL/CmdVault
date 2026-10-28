@@ -943,6 +943,66 @@
         "DevOps"
       ],
       "notes": "Mirar 'available', no 'free': buff/cache es caché que el kernel libera cuando hace falta. Si swapon --show no imprime nada no hay swap y un pico activa el OOM killer. En docker stats, si LIMIT es igual a la RAM total del host, el contenedor NO tiene mem_limit. Un plan de \"4 GB\" muestra ~3,6 GiB (GB decimales vs GiB binarios, más lo que reserva el kernel). Load average por debajo del número de vCPU = holgado."
+    },
+    {
+      "title": "Verificar que una copia remota es idéntica a la local (sha256 por SSH)",
+      "command": "sha256sum ~/backups-vps/<archivo> && ssh vps sha256sum <archivo>",
+      "section": "Backups",
+      "topic": "Verificación de respaldos",
+      "description": "Calcula la huella SHA-256 de la copia local y de la original en el servidor, en una sola línea, para confirmar que la transferencia no corrompió nada antes de borrar el original.",
+      "examples": [
+        {
+          "description": "Que lo compare solo y diga sí o no",
+          "code": "[ \"$(sha256sum < ~/backups-vps/<archivo>)\" = \"$(ssh vps 'sha256sum < <archivo>')\" ] && echo \"idénticas\""
+        }
+      ],
+      "tags": [
+        "integridad",
+        "respaldo",
+        "scp",
+        "sha256sum",
+        "ssh"
+      ],
+      "level": "básico",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`ssh vps <comando>` corre el comando en el servidor sin abrir una sesión y devuelve la salida. Una ruta sin `/` es relativa al home remoto. Con `< archivo` la salida trae `-` en vez del nombre y se puede comparar como texto. `scp` mostró `40KB` y `ls -h` `41K` para el mismo archivo: es redondeo, no corrupción; el hash es lo que manda."
+    },
+    {
+      "title": "Retirar un servicio de Docker Compose sin tocar a los vecinos",
+      "command": "cd /opt/<app> && sudo docker compose down",
+      "section": "Mantenimiento",
+      "topic": "Retiro de servicios",
+      "description": "Apaga el stack conservando sus datos, comprueba desde fuera que solo él dejó de responder y recién después borra volumen, imágenes y carpeta.",
+      "examples": [
+        {
+          "description": "Comprobar desde fuera los hosts del servidor",
+          "code": "for h in <app> cmdvault n8n; do printf '%-9s ' $h; curl -s -o /dev/null -w '%{http_code}\\n' https://$h.<ip-con-guiones>.sslip.io/; done"
+        },
+        {
+          "description": "Mirar antes de borrar",
+          "code": "sudo docker volume ls --filter name=<app> && sudo docker images --format 'table {{.Repository}}:{{.Tag}}\\t{{.ID}}\\t{{.Size}}' | grep -i -E 'REPOSITORY|<app>|postgres'"
+        },
+        {
+          "description": "Borrar (irreversible)",
+          "code": "sudo docker volume rm <app>-datos && sudo docker image rm <app>-api:<tag> <app>-web:<tag> && cd ~ && sudo rm -rf /opt/<app>"
+        }
+      ],
+      "tags": [
+        "docker-compose",
+        "image",
+        "retiro",
+        "traefik",
+        "volume"
+      ],
+      "level": "intermedio",
+      "roadmap": [
+        "DevOps",
+        "SRE"
+      ],
+      "notes": "`down` **sin `-v`**: el volumen sobrevive y `up -d --wait` lo devuelve tal cual; una red `external` (la de Traefik) solo se desconecta, no se borra. Desde fuera, el host retirado da **404** (Traefik ya no tiene router) y los vecinos su código de siempre. Antes de `image rm`, cruzar qué stack usa cada imagen: `postgres:16-alpine` era solo de lab-algebra, pero `postgres:15` es de n8n. Docker se niega a borrar un volumen o una imagen en uso: no forzar con `-f`. Salir de la carpeta (`cd ~`) antes de `rm -rf` sobre ella. Liberó ~1,5 GB de imágenes y 704 MiB de `mem_limit`."
     }
   ]
 }
