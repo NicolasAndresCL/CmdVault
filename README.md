@@ -342,7 +342,7 @@ mismo ejecutable `pytest` que el CI, y sale con código ≠ 0 si algo falla:
    `down -v`, también si algo falla. No toca tu stack ni tus datos.
 
 El `Jenkinsfile` corre los mismos pasos (lint, IaC, tests en paralelo con Postgres como sidecar, build y
-smoke en un proyecto `cmdvault-ci-<build>` que siempre se baja en `post`).
+smoke en un proyecto `ci-<job>-<rama>-<build>` propio de cada build, que siempre se baja en `post`).
 
 Al pushear un tag `vX.Y.Z`, [`release.yml`](.github/workflows/release.yml) comprueba que coincide con la
 versión de `backend/pyproject.toml` y publica la GitHub Release con la sección de esa versión del CHANGELOG.

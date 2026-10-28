@@ -29,6 +29,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   «Listar imágenes» (containerd) y «Probar workflows de n8n en un contenedor desechable».
 - Secciones y roadmaps de la bandeja fuera del contrato se mapearon a los existentes (p. ej. `bash/curl` →
   Terminal · JSON y YAML; `Automatización` → DevOps). Cuentas y usuarios reales se generalizaron.
+### Corregido
+- **Jenkinsfile**: el proyecto de Compose, la red y el sidecar de Postgres de cada build se llamaban
+  `cmdvault-ci-<n.º de build>`, así que el build #1 de una rama chocaba con restos del #1 de otro job
+  (`container is marked for removal and cannot be started` en «Build + smoke»). Ahora el nombre incluye el job
+  y la rama: `ci-<job>-<rama>-<build>`.
+
+### Dependencias
+- PRs de Dependabot #5 y #6, mergeados antes de esta versión, mergeados antes de esta versión): FastAPI 0.143.3 → 0.156.1,
+  SQLAlchemy 2.1.4 → 2.1.5 y pydantic-settings 2.16.0 → 2.16.1 (backend y frontend).
 
 ## [1.2.1] — 22 de octubre de 2026
 

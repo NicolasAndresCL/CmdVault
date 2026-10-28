@@ -43,8 +43,11 @@ pipeline {
 
     environment {
         PY_IMG = 'python:3.14-slim'
-        RED_PG = "cmdvault-ci-${env.BUILD_NUMBER}-net"
-        PG = "cmdvault-ci-${env.BUILD_NUMBER}-pg"
+        // Único por job + rama + build: con solo BUILD_NUMBER, el #1 de una rama chocaba con restos
+        // del #1 de otro job («container is marked for removal», 2026-10-28). Compose exige [a-z0-9_-].
+        CI_ID = "ci-${env.JOB_NAME}-${env.BUILD_NUMBER}".toLowerCase().replaceAll('[^a-z0-9]+', '-')
+        RED_PG = "${env.CI_ID}-net"
+        PG = "${env.CI_ID}-pg"
     }
 
     stages {
@@ -137,7 +140,7 @@ pipeline {
         stage('Build + smoke') {
             environment {
                 // Proyecto y puertos propios por build: no choca con el stack diario ni con el 8080 de Jenkins.
-                COMPOSE_PROJECT_NAME = "cmdvault-ci-${env.BUILD_NUMBER}"
+                COMPOSE_PROJECT_NAME = "${env.CI_ID}"
                 BACKEND_PORT = '28000'
                 FRONTEND_PORT = '28090'
             }
